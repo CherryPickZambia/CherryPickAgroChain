@@ -303,7 +303,7 @@ export async function getPlatformStats() {
     supabase.from('payments').select('amount').eq('status', 'completed'),
   ]);
 
-  const totalRevenue = payments.data?.reduce((sum, p) => sum + parseFloat(p.amount), 0) || 0;
+  const totalRevenue = payments.data?.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0) || 0;
 
   return {
     totalFarmers: farmers.count || 0,
