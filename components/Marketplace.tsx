@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Filter, ShoppingCart, TrendingUp, Package, Truck, Clock, DollarSign, MapPin, Star, Heart, MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Filter, ShoppingCart, TrendingUp, Package, Truck, Clock, DollarSign, MapPin, Star, Heart, MessageCircle, ChevronDown, ChevronUp, User, CheckCircle, Eye, Plus } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 
 interface MarketplaceListing {

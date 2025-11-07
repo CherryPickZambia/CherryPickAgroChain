@@ -6,7 +6,7 @@ import { truncateAddress } from "@/lib/utils";
 import { Sprout } from "lucide-react";
 
 interface HeaderProps {
-  userRole?: "farmer" | "officer" | "admin" | null;
+  userRole?: "farmer" | "buyer" | "officer" | "admin" | null;
   onRoleChange?: (role: null) => void;
 }
 

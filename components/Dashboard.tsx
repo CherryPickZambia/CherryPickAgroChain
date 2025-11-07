@@ -3,21 +3,23 @@
 import { useState, useEffect } from "react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import Header from "./Header";
+import LandingPage from "./LandingPage";
 import SignInScreen from "./SignInScreen";
 import FarmerDashboard from "./FarmerDashboard";
+import BuyerDashboard from "./BuyerDashboard";
 import OfficerDashboard from "./OfficerDashboard";
 import AdminDashboard from "./AdminDashboard";
 
 export default function Dashboard() {
   const { evmAddress } = useEvmAddress();
-  const [userRole, setUserRole] = useState<"farmer" | "officer" | "admin" | null>(null);
+  const [userRole, setUserRole] = useState<"farmer" | "buyer" | "officer" | "admin" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load saved role from localStorage on mount
   useEffect(() => {
     if (evmAddress) {
       const savedRole = localStorage.getItem(`agrochain_role_${evmAddress}`);
-      if (savedRole && (savedRole === "farmer" || savedRole === "officer" || savedRole === "admin")) {
+      if (savedRole && (savedRole === "farmer" || savedRole === "buyer" || savedRole === "officer" || savedRole === "admin")) {
         setUserRole(savedRole);
       }
     }
@@ -25,7 +27,7 @@ export default function Dashboard() {
   }, [evmAddress]);
 
   // Save role to localStorage when it changes
-  const handleRoleSelection = (role: "farmer" | "officer" | "admin") => {
+  const handleRoleSelection = (role: "farmer" | "buyer" | "officer" | "admin") => {
     if (evmAddress) {
       localStorage.setItem(`agrochain_role_${evmAddress}`, role);
       setUserRole(role);
@@ -52,7 +54,7 @@ export default function Dashboard() {
   }
 
   if (!evmAddress) {
-    return <SignInScreen />;
+    return <LandingPage />;
   }
 
   // Role selection if not set
@@ -69,7 +71,7 @@ export default function Dashboard() {
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">Select how you'd like to use AgroChain360 today</p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-4 gap-8">
             <button
               onClick={() => handleRoleSelection("farmer")}
               className="card-premium group text-left relative overflow-hidden"
@@ -85,6 +87,28 @@ export default function Dashboard() {
                 </p>
                 <div className="flex items-center text-[#2d5f3f] font-semibold group-hover:translate-x-2 transition-transform">
                   <span>Get Started</span>
+                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleRoleSelection("buyer")}
+              className="card-premium group text-left relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7fb069]/10 to-transparent rounded-full -mr-16 -mt-16"></div>
+              <div className="relative">
+                <div className="bg-gradient-to-br from-[#7fb069] to-[#2d5f3f] w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                  <span className="text-4xl">🛒</span>
+                </div>
+                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-3">Buyer</h3>
+                <p className="text-gray-600 leading-relaxed mb-6">
+                  Browse marketplace, purchase produce, and track orders
+                </p>
+                <div className="flex items-center text-[#2d5f3f] font-semibold group-hover:translate-x-2 transition-transform">
+                  <span>Start Shopping</span>
                   <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -146,6 +170,7 @@ export default function Dashboard() {
       <Header userRole={userRole} onRoleChange={handleRoleChange} />
       <div className="fade-in">
         {userRole === "farmer" && <FarmerDashboard />}
+        {userRole === "buyer" && <BuyerDashboard />}
         {userRole === "officer" && <OfficerDashboard />}
         {userRole === "admin" && <AdminDashboard />}
       </div>
