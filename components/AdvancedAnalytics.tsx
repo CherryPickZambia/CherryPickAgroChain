@@ -18,9 +18,9 @@ export default function AdvancedAnalytics() {
     { month: "Jan", predicted: 12000, actual: 11800 },
     { month: "Feb", predicted: 13500, actual: 13200 },
     { month: "Mar", predicted: 15000, actual: 14800 },
-    { month: "Apr", predicted: 16500, actual: null },
-    { month: "May", predicted: 18000, actual: null },
-    { month: "Jun", predicted: 19500, actual: null },
+    { month: "Apr", predicted: 16500 },
+    { month: "May", predicted: 18000 },
+    { month: "Jun", predicted: 19500 },
   ];
 
   const qualityMetrics = [
