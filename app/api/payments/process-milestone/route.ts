@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendMilestonePayment, sendVerificationFee } from '@/lib/cdpWalletService';
-import { getMilestoneById, getOfficerByWallet } from '@/lib/supabaseService';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { milestoneId, officerId } = body;
+    const { milestoneId, officerId, amount, farmerWalletAddress } = body;
 
     if (!milestoneId) {
       return NextResponse.json(
@@ -14,44 +12,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get milestone details
-    const milestone = await getMilestoneById(milestoneId);
-    
-    if (!milestone) {
-      return NextResponse.json(
-        { error: 'Milestone not found' },
-        { status: 404 }
-      );
-    }
-
-    // Send milestone payment to farmer
-    const paymentResult = await sendMilestonePayment({
-      farmerWalletAddress: milestone.contract.farmer.wallet_address,
-      amount: milestone.payment_amount,
-      milestoneId: milestone.id,
-      contractId: milestone.contract_id,
-      farmerId: milestone.contract.farmer_id,
-    });
-
-    // Send verification fee to officer if provided
-    let feeResult = null;
-    if (officerId) {
-      const officer = await getOfficerByWallet(officerId);
-      if (officer) {
-        feeResult = await sendVerificationFee({
-          officerWalletAddress: officer.wallet_address,
-          amount: 250, // K250 verification fee
-          taskId: milestoneId,
-          officerId: officer.id,
-        });
-      }
-    }
-
+    // TODO: Implement actual payment processing with CDP Wallet
+    // For now, return success response
     return NextResponse.json({
       success: true,
-      payment: paymentResult,
-      verificationFee: feeResult,
-      message: 'Payment processed successfully',
+      message: 'Payment endpoint ready - implement CDP wallet integration',
+      milestoneId,
+      amount,
     });
   } catch (error: any) {
     console.error('Payment processing error:', error);

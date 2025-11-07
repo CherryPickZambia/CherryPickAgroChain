@@ -1,22 +1,10 @@
-import { webSearchTool, Agent, AgentInputItem, Runner, withTrace } from "@openai/agents";
+import OpenAI from "openai";
 
-// Tool definitions
-const webSearchPreview = webSearchTool({
-  userLocation: {
-    type: "approximate",
-    country: undefined,
-    region: undefined,
-    city: undefined,
-    timezone: undefined
-  },
-  searchContextSize: "medium"
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Farming Analytics Agent
-const farmingAgent = new Agent({
-  name: "Farming agent",
-  instructions: `You are an advanced analytics agent designed to assist users with agricultural and market analytics. Your main objective is to perform and communicate the following tasks:
-
+const SYSTEM_PROMPT = `You are an advanced analytics agent designed to assist users with agricultural and market analytics. Your main objective is to perform and communicate the following tasks:
 - Predictive analytics: Use historical data to forecast future patterns in relevant agricultural or market variables.
 - Yield forecasting: Analyze available data to predict crop yield outcomes for given regions and crops.
 - Risk assessment: Identify and evaluate risks related to agriculture, production, and markets; communicate potential impacts and mitigation strategies.
@@ -85,56 +73,31 @@ User request: "Are soybean prices likely to rise due to weather?"
 - If necessary, generate clarifying questions before performing analysis.
 - For any forecast or assessment, be explicit about underlying assumptions and data quality.
 
-**Reminder:** As an advanced analytics agent, your priority is to provide accurate, step-by-step analytic reasoning before producing conclusions or recommendations for predictive analytics, yield forecasting, risk assessment, market price trends, weather integration, and AI-driven insights.`,
-  model: "gpt-4o-mini", // Using gpt-4o-mini as gpt-5-nano may not be available yet
-  tools: [webSearchPreview],
-  modelSettings: {
-    reasoning: {
-      effort: "medium",
-      summary: "auto"
-    },
-    store: true
-  }
-});
-
-type WorkflowInput = { input_as_text: string };
+**Reminder:** As an advanced analytics agent, your priority is to provide accurate, step-by-step analytic reasoning before producing conclusions or recommendations for predictive analytics, yield forecasting, risk assessment, market price trends, weather integration, and AI-driven insights.`;
 
 /**
- * Run analytics workflow
+ * Run analytics workflow using OpenAI
  */
-export const runAnalyticsWorkflow = async (workflow: WorkflowInput) => {
-  return await withTrace("Analytics workflow", async () => {
-    const conversationHistory: AgentInputItem[] = [
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: workflow.input_as_text
-          }
-        ]
-      }
-    ];
-
-    const runner = new Runner({
-      traceMetadata: {
-        __trace_source__: "agrochain360",
-        workflow_id: "analytics_agent"
-      }
+export const runAnalyticsWorkflow = async (query: string) => {
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: query }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
     });
 
-    const result = await runner.run(farmingAgent, [...conversationHistory]);
-    conversationHistory.push(...result.newItems.map((item) => item.rawItem));
-
-    if (!result.finalOutput) {
-      throw new Error("Agent result is undefined");
-    }
-
     return {
-      output_text: result.finalOutput ?? "",
-      conversation: conversationHistory
+      output_text: completion.choices[0]?.message?.content || "No response generated",
+      usage: completion.usage
     };
-  });
+  } catch (error) {
+    console.error("OpenAI API error:", error);
+    throw new Error("Failed to generate analytics");
+  }
 };
 
 /**
@@ -147,7 +110,7 @@ export async function getYieldForecast(params: {
 }) {
   const query = `What is the yield forecast for ${params.crop} in ${params.region} for ${params.season}? Include weather factors and risk assessment.`;
   
-  return await runAnalyticsWorkflow({ input_as_text: query });
+  return await runAnalyticsWorkflow(query);
 }
 
 /**
@@ -159,7 +122,7 @@ export async function getMarketPriceTrends(params: {
 }) {
   const query = `Analyze market price trends for ${params.crop} over the ${params.timeframe}. Include supply-demand factors and forecast.`;
   
-  return await runAnalyticsWorkflow({ input_as_text: query });
+  return await runAnalyticsWorkflow(query);
 }
 
 /**
@@ -172,7 +135,7 @@ export async function getRiskAssessment(params: {
 }) {
   const query = `Assess risks for ${params.crop} farming in ${params.region}. Consider: ${params.factors.join(', ')}. Provide mitigation strategies.`;
   
-  return await runAnalyticsWorkflow({ input_as_text: query });
+  return await runAnalyticsWorkflow(query);
 }
 
 /**
@@ -184,7 +147,7 @@ export async function getWeatherForecast(params: {
 }) {
   const query = `Provide weather forecast for ${params.region} and its impact on ${params.crop} production. Include recommendations.`;
   
-  return await runAnalyticsWorkflow({ input_as_text: query });
+  return await runAnalyticsWorkflow(query);
 }
 
 /**
@@ -197,5 +160,5 @@ export async function getAIInsights(params: {
 }) {
   const query = `Analyze farming data for ${params.cropType}. Historical performance: ${JSON.stringify(params.historicalData)}. Provide strategic insights and recommendations.`;
   
-  return await runAnalyticsWorkflow({ input_as_text: query });
+  return await runAnalyticsWorkflow(query);
 }
