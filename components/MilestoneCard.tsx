@@ -7,9 +7,12 @@ import { getStatusColor, formatDate } from "@/lib/utils";
 interface MilestoneCardProps {
   milestone: Milestone;
   contractId: string;
+  canSubmit?: boolean;
+  isNextActive?: boolean;
+  onEvidenceSubmitted?: () => void;
 }
 
-export default function MilestoneCard({ milestone, contractId }: MilestoneCardProps) {
+export default function MilestoneCard({ milestone, contractId, canSubmit, isNextActive, onEvidenceSubmitted }: MilestoneCardProps) {
   const getStatusIcon = () => {
     switch (milestone.status) {
       case "verified":
