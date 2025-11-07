@@ -6,12 +6,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function generateContractId(): string {
-  return `AC360-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `CP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-export function generateQRCode(contractId: string): string {
-  return `https://agrochain360.com/trace/${contractId}`;
-}
+export const generateQRCode = (contractId: string): string => {
+  return `https://cherrypick.co.zm/trace/${contractId}`;
+};
 
 export function calculateMilestonePayment(
   totalAmount: number,

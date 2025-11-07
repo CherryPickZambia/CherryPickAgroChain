@@ -1,6 +1,6 @@
-# AgroChain360 - Blockchain Contract Farming Platform
+# Cherry Pick - Blockchain Contract Farming Platform
 
-AgroChain360 is Cherry-Pick's blockchain-enabled smart contract platform designed to digitize, secure, and optimize contract farming for high-value fruits and vegetables.
+Cherry Pick is a blockchain-enabled smart contract platform designed to digitize, secure, and optimize contract farming for high-value fruits and vegetables.
 
 ## Features
 

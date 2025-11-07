@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "AgroChain360 - Blockchain Contract Farming Platform",
+  title: "Cherry Pick - Blockchain Contract Farming Platform",
   description: "Digitize, secure, and optimize contract farming for high-value fruits and vegetables with blockchain technology",
 };
 
