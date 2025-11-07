@@ -53,7 +53,6 @@ export default function BasePayButton({
 
       // Save payment to database
       const dbPayment = await createPayment({
-        id: payment.id,
         contract_id: contractId,
         milestone_id: milestoneId || null,
         recipient_id: recipientId,
