@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useInView } from "react-intersection-observer";
-import { AuthButton } from "@coinbase/cdp-react";
+import Link from "next/link";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { 
   Sprout, Shield, TrendingUp, Users, CheckCircle, ArrowRight, 
@@ -58,7 +58,7 @@ export default function LandingPage() {
         </motion.div>
 
         {/* Hero Content */}
-        <div className="relative z-10 h-full flex items-center">
+        <div className="relative z-0 h-full flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -127,12 +127,19 @@ export default function LandingPage() {
                 transition={{ delay: 0.8, duration: 0.6 }}
                 className="flex flex-col sm:flex-row gap-6 justify-center items-center"
               >
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <AuthButton />
-                </motion.div>
+                <Link href="/signin">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="relative group px-12 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full font-bold text-lg shadow-2xl hover:shadow-green-500/25 transition-all duration-300"
+                  >
+                    <span className="relative z-10 flex items-center gap-3">
+                      Sign In
+                      <ArrowRight className="h-5 w-5" />
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </motion.button>
+                </Link>
                 <motion.button 
                   whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.15)" }}
                   whileTap={{ scale: 0.95 }}
@@ -417,7 +424,15 @@ export default function LandingPage() {
               Join hundreds of successful farmers already using Cherry Pick
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <AuthButton />
+              <Link href="/signin">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-10 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full font-bold text-lg shadow-2xl hover:shadow-green-500/25 transition-all duration-300"
+                >
+                  Sign In Now
+                </motion.button>
+              </Link>
               <button className="px-10 py-5 bg-transparent text-white rounded-full font-bold text-lg border-2 border-white hover:bg-white/10 transition-all">
                 Contact Sales
               </button>

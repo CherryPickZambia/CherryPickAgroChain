@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import Header from "./Header";
 import LandingPage from "./LandingPage";
@@ -12,19 +13,30 @@ import AdminDashboard from "./AdminDashboard";
 
 export default function Dashboard() {
   const { evmAddress } = useEvmAddress();
+  const searchParams = useSearchParams();
   const [userRole, setUserRole] = useState<"farmer" | "buyer" | "officer" | "admin" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load saved role from localStorage on mount
+  // Load role from URL parameter or localStorage
   useEffect(() => {
     if (evmAddress) {
-      const savedRole = localStorage.getItem(`agrochain_role_${evmAddress}`);
-      if (savedRole && (savedRole === "farmer" || savedRole === "buyer" || savedRole === "officer" || savedRole === "admin")) {
-        setUserRole(savedRole);
+      // Check URL parameter first
+      const roleParam = searchParams.get('role');
+      
+      if (roleParam && (roleParam === "farmer" || roleParam === "buyer" || roleParam === "officer" || roleParam === "admin")) {
+        setUserRole(roleParam);
+        // Save to localStorage for future visits
+        localStorage.setItem(`agrochain_role_${evmAddress}`, roleParam);
+      } else {
+        // Fallback to localStorage
+        const savedRole = localStorage.getItem(`agrochain_role_${evmAddress}`);
+        if (savedRole && (savedRole === "farmer" || savedRole === "buyer" || savedRole === "officer" || savedRole === "admin")) {
+          setUserRole(savedRole);
+        }
       }
     }
     setIsLoading(false);
-  }, [evmAddress]);
+  }, [evmAddress, searchParams]);
 
   // Save role to localStorage when it changes
   const handleRoleSelection = (role: "farmer" | "buyer" | "officer" | "admin") => {
