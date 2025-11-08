@@ -1,14 +1,14 @@
 "use client";
 
 import Providers from "@/components/Providers";
-import LandingPage from "@/components/LandingPage";
+import Dashboard from "@/components/Dashboard";
 
 export const dynamic = 'force-dynamic';
 
-export default function Home() {
+export default function DashboardPage() {
   return (
     <Providers>
-      <LandingPage />
+      <Dashboard />
     </Providers>
   );
 }

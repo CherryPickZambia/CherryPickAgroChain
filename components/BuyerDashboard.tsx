@@ -147,6 +147,13 @@ export default function BuyerDashboard() {
     toast.success("Order payment completed!");
   };
 
+  const handleOrderClick = (orderId: string) => {
+    setActiveTab("orders");
+    setSearchQuery("");
+    setFilterStatus("all");
+    toast.success(`Viewing details for Order #${orderId}`);
+  };
+
   const filteredOrders = orders.filter(order => {
     const matchesStatus = filterStatus === "all" || 
       order.payment_status === filterStatus || 
@@ -289,10 +296,11 @@ export default function BuyerDashboard() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="p-6 hover:bg-gray-50 transition-colors"
+                    onClick={() => handleOrderClick(order.id)}
+                    className="p-6 hover:bg-gray-50 transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-4 flex-1">
                         {order.image_url && (
                           <img
                             src={order.image_url}
@@ -308,9 +316,10 @@ export default function BuyerDashboard() {
                           <p className="text-xs text-gray-500 mt-1">{order.order_date}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">K{order.total_amount.toLocaleString()}</p>
-                        <div className="flex items-center space-x-2 mt-2">
+                      <div className="text-right flex items-center space-x-3">
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">K{order.total_amount.toLocaleString()}</p>
+                          <div className="flex items-center space-x-2 mt-2">
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             order.payment_status === "completed"
                               ? "bg-green-100 text-green-700"
@@ -329,7 +338,9 @@ export default function BuyerDashboard() {
                           }`}>
                             {order.delivery_status}
                           </span>
+                          </div>
                         </div>
+                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-green-600 transition-colors" />
                       </div>
                     </div>
                   </motion.div>

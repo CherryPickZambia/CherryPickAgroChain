@@ -44,7 +44,7 @@ export default function Marketplace() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
-  const [cart, setCart] = useState<string[]>([]);
+  const [cart, setCart] = useState<Array<{id: string, listing: MarketplaceListing}>>([]);
   const [showFilters, setShowFilters] = useState(false);
 
   // Mock data - Replace with actual Supabase queries
@@ -121,8 +121,21 @@ export default function Marketplace() {
   };
 
   const addToCart = (listingId: string) => {
-    setCart([...cart, listingId]);
-    toast.success("Added to cart!");
+    const listing = listings.find(l => l.id === listingId);
+    if (!listing) {
+      toast.error("Product not found!");
+      return;
+    }
+    
+    // Check if already in cart
+    const existingItem = cart.find(item => item.id === listingId);
+    if (existingItem) {
+      toast.error("Already in cart!");
+      return;
+    }
+    
+    setCart([...cart, { id: listingId, listing }]);
+    toast.success(`${listing.cropType} added to cart!`);
   };
 
   const filteredListings = listings.filter(listing => {
@@ -426,9 +439,17 @@ export default function Marketplace() {
       {/* Cart Badge */}
       {cart.length > 0 && (
         <div className="fixed bottom-8 right-8 z-50">
-          <button className="bg-[#2d5f3f] hover:bg-[#1d4029] text-white p-4 rounded-full shadow-2xl flex items-center gap-2">
+          <button 
+            onClick={() => toast.success(`You have ${cart.length} item(s) in cart. Cart checkout coming soon!`)}
+            className="bg-[#2d5f3f] hover:bg-[#1d4029] text-white p-4 rounded-full shadow-2xl flex items-center gap-2 relative group"
+          >
             <ShoppingCart className="h-6 w-6" />
-            <span className="font-bold">{cart.length}</span>
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+              {cart.length}
+            </span>
+            <span className="absolute bottom-full mb-2 right-0 bg-gray-900 text-white text-sm py-2 px-3 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              View Cart ({cart.length} items)
+            </span>
           </button>
         </div>
       )}

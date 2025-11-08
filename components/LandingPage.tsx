@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { AuthButton } from "@coinbase/cdp-react";
+import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { 
   Sprout, Shield, TrendingUp, Users, CheckCircle, ArrowRight, 
   Leaf, DollarSign, BarChart3, Globe, Smartphone, Lock, 
@@ -11,30 +13,52 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
+  const router = useRouter();
+  const { evmAddress } = useEvmAddress();
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.8]);
+  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
+  const y = useTransform(scrollYProgress, [0, 0.2], [0, 100]);
+
+  // Redirect to dashboard if user is signed in
+  useEffect(() => {
+    if (evmAddress) {
+      router.push('/dashboard');
+    }
+  }, [evmAddress, router]);
 
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section with Parallax */}
       <section className="relative h-screen overflow-hidden">
-        {/* Background Image with Parallax */}
+        {/* Background with Advanced Parallax */}
         <motion.div
-          style={{ opacity, scale }}
+          style={{ y }}
           className="absolute inset-0 z-0"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-green-900/90 to-emerald-800/90 z-10"></div>
-          <div 
-            className="absolute inset-0 bg-cover bg-center"
+          <div className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage: "url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1920&q=80')",
+              filter: "brightness(0.7) contrast(1.1)",
             }}
           ></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-green-900/95 via-emerald-800/90 to-green-700/95"></div>
+          {/* Animated gradient overlay */}
+          <motion.div 
+            className="absolute inset-0 bg-gradient-to-tr from-green-600/20 to-emerald-500/20"
+            animate={{ 
+              background: [
+                "linear-gradient(to top right, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2))",
+                "linear-gradient(to top right, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))",
+                "linear-gradient(to top right, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2))",
+              ]
+            }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
         </motion.div>
 
         {/* Hero Content */}
-        <div className="relative z-20 h-full flex items-center">
+        <div className="relative z-10 h-full flex items-center">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -43,24 +67,48 @@ export default function LandingPage() {
               className="text-center"
             >
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring" }}
-                className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md px-6 py-3 rounded-full mb-8 border border-white/20"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ 
+                  delay: 0.2, 
+                  type: "spring", 
+                  stiffness: 200, 
+                  damping: 20 
+                }}
+                whileHover={{ scale: 1.05 }}
+                className="inline-flex items-center space-x-3 bg-white/10 backdrop-blur-lg px-7 py-3.5 rounded-full mb-8 border border-white/30 shadow-2xl"
               >
-                <Sprout className="h-5 w-5 text-green-300" />
-                <span className="text-white font-semibold">Blockchain-Powered Agriculture</span>
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Sprout className="h-5 w-5 text-green-300" />
+                </motion.div>
+                <span className="text-white font-semibold tracking-wide">Blockchain-Powered Agriculture</span>
               </motion.div>
 
               <motion.h1
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="text-6xl md:text-7xl lg:text-8xl font-bold text-white mb-6 leading-tight"
+                transition={{ 
+                  delay: 0.4,
+                  duration: 0.8,
+                  ease: [0.22, 1, 0.36, 1]
+                }}
+                className="text-6xl md:text-7xl lg:text-8xl font-extrabold text-white mb-6 leading-[1.1] tracking-tight"
               >
-                Grow Your Farm,
+                <span className="inline-block">Grow Your Farm,</span>
                 <br />
-                <span className="text-green-300">Harvest Success</span>
+                <motion.span 
+                  className="inline-block bg-gradient-to-r from-green-300 via-emerald-300 to-green-400 bg-clip-text text-transparent"
+                  animate={{ 
+                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] 
+                  }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                  style={{ backgroundSize: "200% 200%" }}
+                >
+                  Harvest Success
+                </motion.span>
               </motion.h1>
 
               <motion.p
@@ -76,46 +124,106 @@ export default function LandingPage() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+                transition={{ delay: 0.8, duration: 0.6 }}
+                className="flex flex-col sm:flex-row gap-6 justify-center items-center"
               >
-                <AuthButton />
-                <button className="px-8 py-4 bg-transparent text-white rounded-full font-bold text-lg border-2 border-white hover:bg-white/10 transition-all backdrop-blur-sm">
-                  Watch Demo
-                </button>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <AuthButton />
+                </motion.div>
+                <motion.button 
+                  whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.15)" }}
+                  whileTap={{ scale: 0.95 }}
+                  className="group px-10 py-5 bg-white/5 text-white rounded-full font-bold text-lg border-2 border-white/80 hover:border-white transition-all backdrop-blur-md shadow-2xl relative overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Watch Demo
+                    <motion.span
+                      animate={{ x: [0, 5, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      →
+                    </motion.span>
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-400/10 to-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </motion.button>
               </motion.div>
 
-              {/* Stats */}
+              {/* Stats with Advanced Animations */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1 }}
-                className="grid grid-cols-3 gap-8 mt-20 max-w-3xl mx-auto"
+                transition={{ delay: 1, duration: 0.8 }}
+                className="grid grid-cols-3 gap-12 mt-24 max-w-4xl mx-auto"
               >
                 {[
-                  { value: "500+", label: "Active Farmers" },
-                  { value: "K2.5M", label: "Paid Out" },
-                  { value: "98%", label: "Success Rate" },
-                ].map((stat, index) => (
-                  <div key={index} className="text-center">
-                    <p className="text-4xl md:text-5xl font-bold text-white mb-2">{stat.value}</p>
-                    <p className="text-green-200 text-sm md:text-base">{stat.label}</p>
-                  </div>
-                ))}
+                  { value: "500+", label: "Active Farmers", icon: Users },
+                  { value: "K2.5M", label: "Paid Out", icon: DollarSign },
+                  { value: "98%", label: "Success Rate", icon: Award },
+                ].map((stat, index) => {
+                  const Icon = stat.icon;
+                  return (
+                    <motion.div 
+                      key={index} 
+                      className="relative group"
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ 
+                        delay: 1.2 + index * 0.1, 
+                        type: "spring",
+                        stiffness: 150,
+                        damping: 15
+                      }}
+                    >
+                      <motion.div 
+                        className="absolute inset-0 bg-white/5 backdrop-blur-md rounded-2xl"
+                        whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                        transition={{ duration: 0.3 }}
+                      />
+                      <div className="relative text-center p-8">
+                        <motion.div
+                          className="inline-flex items-center justify-center w-14 h-14 bg-green-400/20 rounded-2xl mb-4"
+                          whileHover={{ rotate: 360, scale: 1.1 }}
+                          transition={{ duration: 0.6 }}
+                        >
+                          <Icon className="h-7 w-7 text-green-300" />
+                        </motion.div>
+                        <motion.p 
+                          className="text-5xl md:text-6xl font-extrabold text-white mb-3"
+                          whileHover={{ scale: 1.1 }}
+                          transition={{ type: "spring", stiffness: 300 }}
+                        >
+                          {stat.value}
+                        </motion.p>
+                        <p className="text-green-100 text-base font-medium tracking-wide">{stat.label}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </motion.div>
             </motion.div>
           </div>
         </div>
 
-        {/* Scroll Indicator */}
+        {/* Premium Scroll Indicator */}
         <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
+          animate={{ y: [0, 12, 0] }}
+          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+          className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-30 cursor-pointer group"
         >
-          <div className="w-6 h-10 border-2 border-white/50 rounded-full flex items-start justify-center p-2">
-            <div className="w-1 h-3 bg-white/70 rounded-full"></div>
-          </div>
+          <motion.div 
+            className="w-7 h-12 border-2 border-white/40 rounded-full flex items-start justify-center p-2 backdrop-blur-sm bg-white/5"
+            whileHover={{ borderColor: "rgba(255, 255, 255, 0.8)", scale: 1.1 }}
+          >
+            <motion.div 
+              className="w-1.5 h-4 bg-white/80 rounded-full"
+              animate={{ y: [0, 12, 0], opacity: [1, 0.5, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            />
+          </motion.div>
+          <p className="text-white/60 text-xs mt-3 text-center font-medium tracking-wider">SCROLL</p>
         </motion.div>
       </section>
 
@@ -150,17 +258,48 @@ export default function LandingPage() {
         </div>
       </ScrollSection>
 
-      {/* How It Works - Scroll Telling */}
-      <section className="py-32 bg-gradient-to-br from-green-50 to-emerald-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* How It Works - Premium Scroll Telling */}
+      <section className="py-40 bg-gradient-to-br from-green-50 via-emerald-50 to-green-50 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 left-0 w-full h-full">
+          <motion.div 
+            className="absolute top-20 left-20 w-64 h-64 bg-green-200 rounded-full blur-3xl opacity-30"
+            animate={{ scale: [1, 1.3, 1], rotate: [0, 90, 0] }}
+            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div 
+            className="absolute bottom-20 right-20 w-80 h-80 bg-emerald-200 rounded-full blur-3xl opacity-30"
+            animate={{ scale: [1, 1.2, 1], rotate: [0, -90, 0] }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <ScrollReveal>
-            <div className="text-center mb-20">
-              <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-                How It Works
+            <div className="text-center mb-32">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <span className="inline-block px-6 py-2 bg-green-500/10 border-2 border-green-500/30 rounded-full text-green-700 font-semibold mb-6">
+                  Simple Process
+                </span>
+              </motion.div>
+              <h2 className="text-6xl md:text-7xl lg:text-8xl font-black text-gray-900 mb-8 tracking-tight leading-[1.1]">
+                How It <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">Works</span>
               </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              <p className="text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
                 From seed to sale, we're with you every step of the way
               </p>
+              <motion.div 
+                initial={{ scaleX: 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.4, duration: 0.8 }}
+                className="w-32 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mx-auto mt-10"
+              />
             </div>
           </ScrollReveal>
 
@@ -339,16 +478,49 @@ function ScrollSection({ title, subtitle, children, className = "bg-gray-50" }: 
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
 
   return (
-    <section ref={ref} className={`py-32 ${className}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={ref} className={`py-32 ${className} relative overflow-hidden`}>
+      {/* Decorative background elements */}
+      <motion.div 
+        className="absolute top-20 right-10 w-72 h-72 bg-green-100 rounded-full blur-3xl opacity-20"
+        animate={{ scale: [1, 1.2, 1], x: [0, 50, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div 
+        className="absolute bottom-20 left-10 w-96 h-96 bg-emerald-100 rounded-full blur-3xl opacity-20"
+        animate={{ scale: [1, 1.1, 1], x: [0, -30, 0] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 40 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-20"
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="text-center mb-24"
         >
-          <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">{title}</h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">{subtitle}</p>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={inView ? { opacity: 1, scale: 1 } : {}}
+            transition={{ delay: 0.2 }}
+          >
+            <h2 className="text-5xl md:text-6xl lg:text-7xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
+              {title}
+            </h2>
+          </motion.div>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={inView ? { opacity: 1 } : {}}
+            transition={{ delay: 0.4 }}
+            className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
+          >
+            {subtitle}
+          </motion.p>
+          <motion.div 
+            initial={{ scaleX: 0 }}
+            animate={inView ? { scaleX: 1 } : {}}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="w-24 h-1.5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mx-auto mt-8"
+          />
         </motion.div>
         {children}
       </div>
@@ -362,16 +534,38 @@ function FeatureCard({ icon: Icon, title, description, color, delay }: any) {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.6, delay }}
-      className="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2"
+      initial={{ opacity: 0, y: 50, scale: 0.95 }}
+      animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ 
+        duration: 0.7, 
+        delay,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }}
+      whileHover={{ y: -12, scale: 1.02 }}
+      className="group bg-white rounded-3xl p-10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] transition-all relative overflow-hidden"
     >
-      <div className={`w-16 h-16 bg-gradient-to-br ${color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-        <Icon className="h-8 w-8 text-white" />
+      {/* Animated gradient background on hover */}
+      <motion.div 
+        className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+      />
+      
+      <div className="relative z-10">
+        <motion.div 
+          className={`w-20 h-20 bg-gradient-to-br ${color} rounded-2xl flex items-center justify-center mb-7 shadow-xl`}
+          whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Icon className="h-9 w-9 text-white" />
+        </motion.div>
+        
+        <h3 className="text-2xl font-extrabold text-gray-900 mb-4 tracking-tight">{title}</h3>
+        <p className="text-gray-600 leading-relaxed text-lg">{description}</p>
+        
+        {/* Decorative element */}
+        <motion.div 
+          className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-emerald-500 transform scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500"
+        />
       </div>
-      <h3 className="text-2xl font-bold text-gray-900 mb-4">{title}</h3>
-      <p className="text-gray-600 leading-relaxed">{description}</p>
     </motion.div>
   );
 }
@@ -382,30 +576,91 @@ function HowItWorksStep({ step, title, description, image, features, reverse }: 
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, x: reverse ? 50 : -50 }}
+      initial={{ opacity: 0, x: reverse ? 60 : -60 }}
       animate={inView ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 0.8 }}
-      className={`flex flex-col ${reverse ? "md:flex-row-reverse" : "md:flex-row"} gap-12 items-center`}
+      transition={{ 
+        duration: 0.9,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }}
+      className={`flex flex-col ${reverse ? "md:flex-row-reverse" : "md:flex-row"} gap-16 items-center`}
     >
-      <div className="flex-1">
-        <div className="text-6xl font-bold text-green-200 mb-4">{step}</div>
-        <h3 className="text-4xl font-bold text-gray-900 mb-6">{title}</h3>
-        <p className="text-xl text-gray-600 mb-8 leading-relaxed">{description}</p>
-        <ul className="space-y-4">
+      <div className="flex-1 space-y-8">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0 }}
+          animate={inView ? { opacity: 1, scale: 1 } : {}}
+          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          className="inline-block"
+        >
+          <div className="text-8xl font-black bg-gradient-to-br from-green-200 to-emerald-300 bg-clip-text text-transparent mb-6">
+            {step}
+          </div>
+        </motion.div>
+        
+        <motion.h3 
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ delay: 0.3 }}
+          className="text-5xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight"
+        >
+          {title}
+        </motion.h3>
+        
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={inView ? { opacity: 1 } : {}}
+          transition={{ delay: 0.4 }}
+          className="text-xl text-gray-600 leading-relaxed"
+        >
+          {description}
+        </motion.p>
+        
+        <motion.ul 
+          className="space-y-5"
+          initial="hidden"
+          animate={inView ? "visible" : "hidden"}
+          variants={{
+            visible: {
+              transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.5
+              }
+            }
+          }}
+        >
           {features.map((feature: string, index: number) => (
-            <li key={index} className="flex items-center space-x-3">
-              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-              <span className="text-lg text-gray-700">{feature}</span>
-            </li>
+            <motion.li 
+              key={index} 
+              variants={{
+                hidden: { opacity: 0, x: -20 },
+                visible: { opacity: 1, x: 0 }
+              }}
+              className="flex items-center space-x-4 group"
+            >
+              <motion.div
+                whileHover={{ scale: 1.2, rotate: 360 }}
+                transition={{ duration: 0.6 }}
+                className="flex-shrink-0"
+              >
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-500 transition-colors">
+                  <CheckCircle className="h-5 w-5 text-green-600 group-hover:text-white transition-colors" />
+                </div>
+              </motion.div>
+              <span className="text-lg text-gray-700 font-medium">{feature}</span>
+            </motion.li>
           ))}
-        </ul>
+        </motion.ul>
       </div>
+      
       <div className="flex-1">
         <motion.div
-          whileHover={{ scale: 1.05 }}
-          className="rounded-2xl overflow-hidden shadow-2xl"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={inView ? { opacity: 1, scale: 1 } : {}}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          whileHover={{ scale: 1.03, rotate: reverse ? 2 : -2 }}
+          className="relative rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] group"
         >
-          <img src={image} alt={title} className="w-full h-96 object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-emerald-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
+          <img src={image} alt={title} className="w-full h-[28rem] object-cover" />
         </motion.div>
       </div>
     </motion.div>
@@ -418,14 +673,32 @@ function BenefitCard({ icon: Icon, title, description, delay }: any) {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={inView ? { opacity: 1, scale: 1 } : {}}
-      transition={{ duration: 0.5, delay }}
-      className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-100 hover:border-green-500 hover:shadow-lg transition-all"
+      initial={{ opacity: 0, scale: 0.8, y: 30 }}
+      animate={inView ? { opacity: 1, scale: 1, y: 0 } : {}}
+      transition={{ 
+        duration: 0.6, 
+        delay,
+        ease: [0.22, 1, 0.36, 1]
+      }}
+      whileHover={{ y: -8, scale: 1.03 }}
+      className="group bg-gradient-to-br from-white via-gray-50 to-white p-8 rounded-2xl border-2 border-gray-100 hover:border-green-400 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all relative overflow-hidden"
     >
-      <Icon className="h-10 w-10 text-green-600 mb-4" />
-      <h4 className="text-lg font-bold text-gray-900 mb-2">{title}</h4>
-      <p className="text-sm text-gray-600">{description}</p>
+      {/* Hover gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      <div className="relative z-10">
+        <motion.div
+          whileHover={{ rotate: 360, scale: 1.2 }}
+          transition={{ duration: 0.7 }}
+          className="inline-block"
+        >
+          <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mb-5 shadow-lg group-hover:shadow-xl transition-shadow">
+            <Icon className="h-7 w-7 text-white" />
+          </div>
+        </motion.div>
+        <h4 className="text-xl font-extrabold text-gray-900 mb-3 tracking-tight">{title}</h4>
+        <p className="text-base text-gray-600 leading-relaxed">{description}</p>
+      </div>
     </motion.div>
   );
 }
@@ -436,21 +709,56 @@ function TestimonialCard({ name, role, quote, avatar, delay }: any) {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 30 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.6, delay }}
-      className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20"
+      initial={{ opacity: 0, y: 40, rotateX: -15 }}
+      animate={inView ? { opacity: 1, y: 0, rotateX: 0 } : {}}
+      transition={{ 
+        duration: 0.7, 
+        delay,
+        ease: [0.22, 1, 0.36, 1]
+      }}
+      whileHover={{ y: -10, scale: 1.02 }}
+      className="bg-white/15 backdrop-blur-lg rounded-3xl p-10 border border-white/30 shadow-[0_20px_60px_rgba(0,0,0,0.3)] group relative overflow-hidden"
     >
-      <div className="flex items-center space-x-4 mb-6">
-        <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center">
-          <span className="text-white font-bold text-xl">{avatar}</span>
+      {/* Decorative gradient on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 to-emerald-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      <div className="relative z-10">
+        <div className="flex items-center space-x-5 mb-8">
+          <motion.div 
+            className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl"
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            transition={{ type: "spring", stiffness: 300 }}
+          >
+            <span className="text-white font-extrabold text-2xl">{avatar}</span>
+          </motion.div>
+          <div>
+            <h4 className="text-2xl font-extrabold text-white mb-1 tracking-tight">{name}</h4>
+            <p className="text-green-300 text-base font-medium">{role}</p>
+          </div>
         </div>
-        <div>
-          <h4 className="text-xl font-bold text-white">{name}</h4>
-          <p className="text-green-300 text-sm">{role}</p>
+        
+        {/* Quote marks */}
+        <div className="text-6xl text-green-300/20 font-serif mb-4 leading-none">"</div>
+        <p className="text-gray-100 text-lg leading-relaxed italic font-light -mt-6 mb-4">
+          {quote}
+        </p>
+        
+        {/* Star rating */}
+        <div className="flex space-x-1">
+          {[...Array(5)].map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={inView ? { opacity: 1, scale: 1 } : {}}
+              transition={{ delay: delay + 0.5 + i * 0.1 }}
+            >
+              <svg className="w-5 h-5 text-yellow-400 fill-current" viewBox="0 0 20 20">
+                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+              </svg>
+            </motion.div>
+          ))}
         </div>
       </div>
-      <p className="text-gray-200 text-lg leading-relaxed italic">"{quote}"</p>
     </motion.div>
   );
 }
