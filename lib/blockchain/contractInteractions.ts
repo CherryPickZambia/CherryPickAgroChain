@@ -377,7 +377,7 @@ export function watchContractEvents(
   return publicClient.watchContractEvent({
     address: contractAddress,
     abi,
-    eventName,
+    eventName: eventName as any,
     onLogs: callback,
   });
 }

@@ -24,6 +24,9 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   
+  // Typed routes (moved from experimental in Next.js 16)
+  typedRoutes: false,
+  
   // Webpack configuration to suppress specific warnings
   webpack: (config, { isServer }) => {
     // Suppress Next.js prop serialization warnings for client components
@@ -37,7 +40,6 @@ const nextConfig: NextConfig = {
   
   // Experimental features
   experimental: {
-    typedRoutes: false,
     // Suppress client component prop serialization warnings
     serverActions: {
       bodySizeLimit: '2mb',

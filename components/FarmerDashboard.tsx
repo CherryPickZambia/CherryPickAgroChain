@@ -64,6 +64,8 @@ export default function FarmerDashboard() {
           location_lng: 0,
           location_address: "",
           farm_size: 0,
+          status: "pending",
+          rejection_reason: null,
         });
         toast.success("Welcome! Your farmer profile has been created.");
       }
