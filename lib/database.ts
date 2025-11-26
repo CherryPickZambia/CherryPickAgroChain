@@ -1,6 +1,129 @@
 import { supabase } from './supabase';
 
 // ============================================
+// SAMPLE DATA FALLBACK (when Supabase is unavailable)
+// ============================================
+
+const SAMPLE_LISTINGS: MarketplaceListing[] = [
+  {
+    id: 'sample-1',
+    farmer_id: 'farmer-1',
+    farmer_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1',
+    crop_type: 'Mangoes',
+    quantity: 500,
+    unit: 'kg',
+    price_per_unit: 25,
+    total_price: 12500,
+    description: 'Fresh Kent mangoes from Lusaka province. Hand-picked at peak ripeness for the best flavor.',
+    location: 'Lusaka',
+    harvest_date: '2024-11-15',
+    available_quantity: 450,
+    status: 'active',
+    quality_grade: 'Premium',
+    organic: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'sample-2',
+    farmer_id: 'farmer-2',
+    farmer_address: '0x8ba1F109551bD432803012645Ac136ddd64DBA72',
+    crop_type: 'Tomatoes',
+    quantity: 1000,
+    unit: 'kg',
+    price_per_unit: 15,
+    total_price: 15000,
+    description: 'Roma tomatoes, perfect for processing. Grown using sustainable farming practices.',
+    location: 'Kabwe',
+    harvest_date: '2024-11-10',
+    available_quantity: 800,
+    status: 'active',
+    quality_grade: 'A',
+    organic: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'sample-3',
+    farmer_id: 'farmer-3',
+    farmer_address: '0x9f2dF0fed2C77648de5860a4dc508cd0572B6C1a',
+    crop_type: 'Pineapples',
+    quantity: 300,
+    unit: 'kg',
+    price_per_unit: 30,
+    total_price: 9000,
+    description: 'Sweet Sugarloaf pineapples. Naturally ripened and pesticide-free.',
+    location: 'Mansa',
+    harvest_date: '2024-11-08',
+    available_quantity: 280,
+    status: 'active',
+    quality_grade: 'Premium',
+    organic: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'sample-4',
+    farmer_id: 'farmer-4',
+    farmer_address: '0x3c8a2b7e9F1dE6Ca4B5a3e7d9C1f2A8b4D6e5F7a',
+    crop_type: 'Cashew nuts',
+    quantity: 200,
+    unit: 'kg',
+    price_per_unit: 120,
+    total_price: 24000,
+    description: 'Premium raw cashew nuts. W320 grade, ready for export or processing.',
+    location: 'Chipata',
+    harvest_date: '2024-10-20',
+    available_quantity: 180,
+    status: 'active',
+    quality_grade: 'Premium',
+    organic: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'sample-5',
+    farmer_id: 'farmer-5',
+    farmer_address: '0x5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e',
+    crop_type: 'Bananas',
+    quantity: 800,
+    unit: 'kg',
+    price_per_unit: 12,
+    total_price: 9600,
+    description: 'Fresh Cavendish bananas. Yellow and ready for retail.',
+    location: 'Ndola',
+    harvest_date: '2024-11-12',
+    available_quantity: 750,
+    status: 'active',
+    quality_grade: 'A',
+    organic: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'sample-6',
+    farmer_id: 'farmer-6',
+    farmer_address: '0x6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f',
+    crop_type: 'Beetroot',
+    quantity: 400,
+    unit: 'kg',
+    price_per_unit: 18,
+    total_price: 7200,
+    description: 'Organic beetroot, perfect for juicing or salads. Rich in color and nutrients.',
+    location: 'Livingstone',
+    harvest_date: '2024-11-05',
+    available_quantity: 350,
+    status: 'active',
+    quality_grade: 'A',
+    organic: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+const SAMPLE_ORDERS: MarketplaceOrder[] = [];
+
+// ============================================
 // MARKETPLACE TYPES
 // ============================================
 
@@ -102,6 +225,12 @@ export async function getMarketplaceListings(filters?: {
   max_price?: number;
 }) {
   try {
+    // Check if supabase is available
+    if (!supabase) {
+      console.log('Using sample marketplace data (Supabase not configured)');
+      return filterSampleListings(SAMPLE_LISTINGS, filters);
+    }
+
     let query = supabase
       .from('marketplace_listings')
       .select('*')
@@ -126,8 +255,37 @@ export async function getMarketplaceListings(filters?: {
     return data as MarketplaceListing[];
   } catch (error) {
     console.error('Error fetching marketplace listings:', error);
-    return [];
+    console.log('Falling back to sample data');
+    return filterSampleListings(SAMPLE_LISTINGS, filters);
   }
+}
+
+// Helper function to filter sample listings
+function filterSampleListings(
+  listings: MarketplaceListing[],
+  filters?: {
+    crop_type?: string;
+    status?: string;
+    min_price?: number;
+    max_price?: number;
+  }
+): MarketplaceListing[] {
+  let filtered = [...listings];
+  
+  if (filters?.crop_type) {
+    filtered = filtered.filter(l => l.crop_type === filters.crop_type);
+  }
+  if (filters?.status) {
+    filtered = filtered.filter(l => l.status === filters.status);
+  }
+  if (filters?.min_price) {
+    filtered = filtered.filter(l => l.price_per_unit >= filters.min_price!);
+  }
+  if (filters?.max_price) {
+    filtered = filtered.filter(l => l.price_per_unit <= filters.max_price!);
+  }
+  
+  return filtered;
 }
 
 export async function createMarketplaceListing(listing: Omit<MarketplaceListing, 'id' | 'created_at' | 'updated_at'>) {
@@ -330,10 +488,10 @@ export async function getMarketplaceAnalytics() {
     ]);
 
     const totalListings = listings.data?.length || 0;
-    const activeListings = listings.data?.filter(l => l.status === 'active').length || 0;
+    const activeListings = listings.data?.filter((l: MarketplaceListing) => l.status === 'active').length || 0;
     const totalOrders = orders.data?.length || 0;
-    const completedOrders = orders.data?.filter(o => o.payment_status === 'completed').length || 0;
-    const totalRevenue = orders.data?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+    const completedOrders = orders.data?.filter((o: MarketplaceOrder) => o.payment_status === 'completed').length || 0;
+    const totalRevenue = orders.data?.reduce((sum: number, o: MarketplaceOrder) => sum + (o.total_amount || 0), 0) || 0;
 
     return {
       totalListings,

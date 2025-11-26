@@ -1,10 +1,56 @@
 /**
  * Base Pay Integration Service
- * Handles payments using Coinbase Base Pay
+ * Handles USDC payments on Base Network
  */
 
-import { createPublicClient, createWalletClient, custom, parseEther, http } from 'viem';
+import { createPublicClient, createWalletClient, custom, parseUnits, http, encodeFunctionData } from 'viem';
 import { base } from 'viem/chains';
+
+// USDC Contract on Base Mainnet
+const USDC_CONTRACT_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
+
+// USDC ABI (only transfer function needed)
+const USDC_ABI = [
+  {
+    name: 'transfer',
+    type: 'function',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  },
+  {
+    name: 'balanceOf',
+    type: 'function',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }]
+  },
+  {
+    name: 'allowance',
+    type: 'function',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' }
+    ],
+    outputs: [{ name: '', type: 'uint256' }]
+  },
+  {
+    name: 'approve',
+    type: 'function',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  },
+  {
+    name: 'decimals',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint8' }]
+  }
+] as const;
 
 // Extend Window interface for ethereum
 declare global {
@@ -15,7 +61,7 @@ declare global {
 
 export interface PaymentRequest {
   to: string; // Recipient wallet address
-  amount: number; // Amount in ZMW
+  amount: number; // Amount in USDC
   orderId: string;
   cropType: string;
   quantity: number;
@@ -28,8 +74,33 @@ export interface PaymentResult {
 }
 
 /**
- * Send payment using Base Pay
- * This uses the user's connected wallet to send payment to the farmer
+ * Get USDC balance for an address
+ */
+export async function getUSDCBalance(address: string): Promise<string> {
+  try {
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: http(),
+    });
+
+    const balance = await publicClient.readContract({
+      address: USDC_CONTRACT_ADDRESS,
+      abi: USDC_ABI,
+      functionName: 'balanceOf',
+      args: [address as `0x${string}`],
+    });
+
+    // USDC has 6 decimals
+    return (Number(balance) / 1_000_000).toFixed(2);
+  } catch (error) {
+    console.error('Error getting USDC balance:', error);
+    return '0.00';
+  }
+}
+
+/**
+ * Send USDC payment on Base Network
+ * This uses the user's connected wallet to send USDC to the farmer
  */
 export async function sendPayment(
   request: PaymentRequest
@@ -59,15 +130,22 @@ export async function sendPayment(
       };
     }
 
-    // Convert ZMW to ETH (simplified - in production, use oracle for conversion)
-    // For demo: 1 ZMW ≈ 0.00005 ETH
-    const ethAmount = (request.amount * 0.00005).toString();
+    // Convert amount to USDC units (6 decimals)
+    // Amount is already in USD/USDC
+    const usdcAmount = parseUnits(request.amount.toString(), 6);
 
-    // Send transaction
+    // Encode the transfer function call
+    const data = encodeFunctionData({
+      abi: USDC_ABI,
+      functionName: 'transfer',
+      args: [request.to as `0x${string}`, usdcAmount],
+    });
+
+    // Send USDC transfer transaction
     const hash = await walletClient.sendTransaction({
       account: address,
-      to: request.to as `0x${string}`,
-      value: parseEther(ethAmount),
+      to: USDC_CONTRACT_ADDRESS,
+      data: data,
       chain: base,
     });
 
@@ -77,9 +155,20 @@ export async function sendPayment(
     };
   } catch (error: any) {
     console.error('Payment error:', error);
+    
+    // Provide user-friendly error messages
+    let errorMessage = 'Payment failed';
+    if (error.message?.includes('insufficient funds')) {
+      errorMessage = 'Insufficient USDC balance';
+    } else if (error.message?.includes('user rejected')) {
+      errorMessage = 'Transaction was rejected';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     return {
       success: false,
-      error: error.message || 'Payment failed',
+      error: errorMessage,
     };
   }
 }
@@ -150,7 +239,7 @@ export function getExplorerUrl(transactionHash: string): string {
 }
 
 /**
- * Estimate gas for payment
+ * Estimate gas for USDC payment
  */
 export async function estimatePaymentGas(
   to: string,
@@ -177,12 +266,20 @@ export async function estimatePaymentGas(
       return null;
     }
 
-    const ethAmount = (amount * 0.00005).toString();
+    // Convert amount to USDC units (6 decimals)
+    const usdcAmount = parseUnits(amount.toString(), 6);
+
+    // Encode the transfer function call
+    const data = encodeFunctionData({
+      abi: USDC_ABI,
+      functionName: 'transfer',
+      args: [to as `0x${string}`, usdcAmount],
+    });
 
     const gas = await publicClient.estimateGas({
       account: address,
-      to: to as `0x${string}`,
-      value: parseEther(ethAmount),
+      to: USDC_CONTRACT_ADDRESS,
+      data: data,
     });
 
     return gas;

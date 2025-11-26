@@ -5,11 +5,13 @@ import { motion } from "framer-motion";
 import { 
   ShoppingBag, Package, Clock, CheckCircle, TrendingUp, 
   DollarSign, MapPin, User, Mail, Phone, Building, 
-  Calendar, Filter, Search, Eye, Download, ArrowRight
+  Calendar, Filter, Search, Eye, Download, ArrowRight,
+  Store, Leaf, Award, ShoppingCart, X
 } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import PaymentModal from "./PaymentModal";
 import toast from "react-hot-toast";
+import { getMarketplaceOrders, getBuyerProfile, createOrUpdateBuyerProfile, getMarketplaceListings } from "@/lib/database";
 
 interface Order {
   id: string;
@@ -41,78 +43,85 @@ interface BuyerProfile {
 
 export default function BuyerDashboard() {
   const { evmAddress } = useEvmAddress();
-  const [activeTab, setActiveTab] = useState<"overview" | "orders" | "profile">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "marketplace" | "orders" | "profile">("overview");
   const [orders, setOrders] = useState<Order[]>([]);
   const [profile, setProfile] = useState<BuyerProfile | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<Order | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [marketplaceListings, setMarketplaceListings] = useState<any[]>([]);
+  const [selectedListing, setSelectedListing] = useState<any | null>(null);
+  const [orderQuantity, setOrderQuantity] = useState(1);
 
-  // Mock data - replace with real API calls
+  // Load real data from Supabase
   useEffect(() => {
-    // Simulate API call
-    setProfile({
-      name: "John Buyer",
-      email: "john@example.com",
-      phone: "+260 97 123 4567",
-      company_name: "Fresh Foods Ltd",
-      delivery_address: "123 Market Street, Lusaka",
-      total_spent: 45000,
-      total_orders: 28,
-      verified: true,
-    });
-
-    setOrders([
-      {
-        id: "1",
-        listing_id: "L1",
-        crop_type: "Tomatoes",
-        quantity: 500,
-        unit: "kg",
-        unit_price: 15,
-        total_amount: 7500,
-        farmer_name: "Mary Banda",
-        farmer_address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-        payment_status: "completed",
-        delivery_status: "delivered",
-        order_date: "2024-11-01",
-        delivery_date: "2024-11-05",
-        image_url: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&q=80",
-      },
-      {
-        id: "2",
-        listing_id: "L2",
-        crop_type: "Mangoes",
-        quantity: 200,
-        unit: "kg",
-        unit_price: 25,
-        total_amount: 5000,
-        farmer_name: "Peter Phiri",
-        farmer_address: "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
-        payment_status: "pending",
-        delivery_status: "preparing",
-        order_date: "2024-11-06",
-        image_url: "https://images.unsplash.com/photo-1553279768-865429fa0078?w=400&q=80",
-      },
-      {
-        id: "3",
-        listing_id: "L3",
-        crop_type: "Pineapples",
-        quantity: 150,
-        unit: "kg",
-        unit_price: 20,
-        total_amount: 3000,
-        farmer_name: "John Mwale",
-        farmer_address: "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8",
-        payment_status: "processing",
-        delivery_status: "in_transit",
-        order_date: "2024-11-04",
-        delivery_date: "2024-11-08",
-        image_url: "https://images.unsplash.com/photo-1550828520-4cb496926fc9?w=400&q=80",
-      },
-    ]);
+    if (!evmAddress) return;
+    
+    loadBuyerData();
   }, [evmAddress]);
+
+  const loadBuyerData = async () => {
+    if (!evmAddress) return;
+
+    try {
+      // Fetch buyer profile
+      const buyerProfile = await getBuyerProfile(evmAddress);
+      
+      if (buyerProfile) {
+        setProfile({
+          name: buyerProfile.name,
+          email: buyerProfile.email || "",
+          phone: buyerProfile.phone || "",
+          company_name: buyerProfile.company_name || "",
+          delivery_address: buyerProfile.delivery_address || "",
+          total_spent: 0, // Calculate from orders
+          total_orders: 0, // Calculate from orders
+          verified: buyerProfile.verified,
+        });
+      }
+
+      // Fetch orders for this buyer
+      const dbOrders = await getMarketplaceOrders(evmAddress);
+      
+      // Transform orders to component format
+      const transformedOrders: Order[] = dbOrders.map((order) => ({
+        id: order.id,
+        listing_id: order.listing_id,
+        crop_type: "Crop", // TODO: Join with listings table
+        quantity: Number(order.quantity),
+        unit: "kg",
+        unit_price: Number(order.unit_price),
+        total_amount: Number(order.total_amount),
+        farmer_name: order.buyer_name || "Farmer",
+        farmer_address: order.farmer_address,
+        payment_status: order.payment_status,
+        delivery_status: order.delivery_status,
+        order_date: new Date(order.created_at).toISOString().split('T')[0],
+        delivery_date: order.delivery_date,
+        image_url: undefined,
+      }));
+
+      setOrders(transformedOrders);
+
+      // Update profile stats
+      if (buyerProfile) {
+        const totalSpent = transformedOrders.reduce((sum, o) => sum + o.total_amount, 0);
+        setProfile(prev => prev ? {
+          ...prev,
+          total_spent: totalSpent,
+          total_orders: transformedOrders.length,
+        } : null);
+      }
+
+      // Load marketplace listings
+      const listings = await getMarketplaceListings();
+      setMarketplaceListings(listings.filter(l => l.status === 'active'));
+    } catch (error) {
+      console.error('Error loading buyer data:', error);
+      toast.error('Failed to load buyer data');
+    }
+  };
 
   const stats = {
     totalOrders: orders.length,
@@ -129,22 +138,26 @@ export default function BuyerDashboard() {
   const handlePaymentSuccess = async (transactionHash: string) => {
     if (!selectedOrderForPayment) return;
 
-    // TODO: Update order status in Supabase
-    // await supabase.from('marketplace_orders')
-    //   .update({ 
-    //     payment_status: 'completed',
-    //     payment_tx_hash: transactionHash 
-    //   })
-    //   .eq('id', selectedOrderForPayment.id);
+    try {
+      // Update order status in Supabase
+      const { updateMarketplaceOrder } = await import('@/lib/database');
+      await updateMarketplaceOrder(selectedOrderForPayment.id, { 
+        payment_status: 'completed',
+        payment_tx_hash: transactionHash 
+      });
 
-    // Update local state
-    setOrders(prev => prev.map(o => 
-      o.id === selectedOrderForPayment.id 
-        ? { ...o, payment_status: "completed" }
-        : o
-    ));
+      // Update local state
+      setOrders(prev => prev.map(o => 
+        o.id === selectedOrderForPayment.id 
+          ? { ...o, payment_status: "completed" }
+          : o
+      ));
 
-    toast.success("Order payment completed!");
+      toast.success("Order payment completed!");
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      toast.error('Failed to update payment status');
+    }
   };
 
   const handleOrderClick = (orderId: string) => {
@@ -152,6 +165,50 @@ export default function BuyerDashboard() {
     setSearchQuery("");
     setFilterStatus("all");
     toast.success(`Viewing details for Order #${orderId}`);
+  };
+
+  const handlePlaceOrder = async (listing: any) => {
+    if (!evmAddress || !profile) {
+      toast.error("Please complete your profile first");
+      return;
+    }
+
+    if (orderQuantity <= 0 || orderQuantity > listing.available_quantity) {
+      toast.error("Invalid quantity");
+      return;
+    }
+
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      
+      const totalAmount = orderQuantity * listing.price_per_unit;
+      
+      const { error } = await supabase
+        .from('marketplace_orders')
+        .insert({
+          listing_id: listing.id,
+          buyer_address: evmAddress,
+          buyer_name: profile.name,
+          farmer_address: listing.farmer_address,
+          quantity: orderQuantity,
+          unit_price: listing.price_per_unit,
+          total_amount: totalAmount,
+          payment_status: 'pending',
+          delivery_status: 'pending',
+          delivery_address: profile.delivery_address,
+        });
+
+      if (error) throw error;
+
+      toast.success("Order placed successfully!");
+      setSelectedListing(null);
+      setOrderQuantity(1);
+      await loadBuyerData();
+      setActiveTab("orders");
+    } catch (error) {
+      console.error("Error placing order:", error);
+      toast.error("Failed to place order");
+    }
   };
 
   const filteredOrders = orders.filter(order => {
@@ -185,6 +242,7 @@ export default function BuyerDashboard() {
           <div className="flex space-x-1 mt-6 border-b border-gray-200">
             {[
               { id: "overview", label: "Overview", icon: TrendingUp },
+              { id: "marketplace", label: "Marketplace", icon: Store },
               { id: "orders", label: "My Orders", icon: ShoppingBag },
               { id: "profile", label: "Profile", icon: User },
             ].map((tab) => {
@@ -346,6 +404,124 @@ export default function BuyerDashboard() {
                   </motion.div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Marketplace Tab */}
+        {activeTab === "marketplace" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Browse Marketplace</h2>
+                  <p className="text-gray-600 mt-1">Fresh produce directly from verified farmers</p>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Package className="h-5 w-5" />
+                  <span>{marketplaceListings.length} listings available</span>
+                </div>
+              </div>
+
+              {/* Marketplace Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {marketplaceListings.map((listing, index) => (
+                  <motion.div
+                    key={listing.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-white rounded-xl border-2 border-gray-100 hover:border-green-300 hover:shadow-lg transition-all overflow-hidden group"
+                  >
+                    {/* Listing Image Placeholder */}
+                    <div className="h-48 bg-gradient-to-br from-green-100 to-emerald-50 flex items-center justify-center">
+                      <Leaf className="h-16 w-16 text-green-600 opacity-50" />
+                    </div>
+
+                    <div className="p-5">
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">{listing.crop_type}</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            <MapPin className="inline h-3 w-3 mr-1" />
+                            {listing.location || 'Zambia'}
+                          </p>
+                        </div>
+                        {listing.organic && (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
+                            <Leaf className="h-3 w-3 text-green-600" />
+                            <span className="text-xs font-medium text-green-700">Organic</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Details */}
+                      <div className="space-y-2 mb-4">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Available:</span>
+                          <span className="font-semibold text-gray-900">{listing.available_quantity} kg</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Quality:</span>
+                          <div className="flex items-center gap-1">
+                            <Award className="h-4 w-4 text-yellow-500" />
+                            <span className="font-semibold text-gray-900">{listing.quality_grade}</span>
+                          </div>
+                        </div>
+                        {listing.harvest_date && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Harvested:</span>
+                            <span className="font-semibold text-gray-900">
+                              {new Date(listing.harvest_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Description */}
+                      {listing.description && (
+                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                          {listing.description}
+                        </p>
+                      )}
+
+                      {/* Price and Action */}
+                      <div className="pt-4 border-t border-gray-100">
+                        <div className="flex items-end justify-between mb-3">
+                          <div>
+                            <p className="text-xs text-gray-500">Price per kg</p>
+                            <p className="text-2xl font-bold text-green-600">K{listing.price_per_unit}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500">Total Value</p>
+                            <p className="text-lg font-bold text-gray-900">K{listing.total_price.toLocaleString()}</p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setSelectedListing(listing);
+                            setOrderQuantity(Math.min(1, listing.available_quantity));
+                          }}
+                          className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                          <span>Order Now</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {marketplaceListings.length === 0 && (
+                <div className="text-center py-12">
+                  <Store className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings available</h3>
+                  <p className="text-gray-600">Check back later for fresh produce from our farmers</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -587,6 +763,86 @@ export default function BuyerDashboard() {
           </div>
         )}
       </div>
+
+      {/* Order Modal */}
+      {selectedListing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl max-w-md w-full p-6"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Place Order</h3>
+              <button
+                onClick={() => {
+                  setSelectedListing(null);
+                  setOrderQuantity(1);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Product Info */}
+              <div className="p-4 bg-gray-50 rounded-xl">
+                <h4 className="font-bold text-gray-900 mb-2">{selectedListing.crop_type}</h4>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p>Quality: {selectedListing.quality_grade}</p>
+                  <p>Available: {selectedListing.available_quantity} kg</p>
+                  <p>Price: K{selectedListing.price_per_unit}/kg</p>
+                </div>
+              </div>
+
+              {/* Quantity Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quantity (kg)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={selectedListing.available_quantity}
+                  value={orderQuantity}
+                  onChange={(e) => setOrderQuantity(Math.max(1, Math.min(selectedListing.available_quantity, parseInt(e.target.value) || 1)))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Total */}
+              <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 font-medium">Total Amount:</span>
+                  <span className="text-2xl font-bold text-green-600">
+                    K{(orderQuantity * selectedListing.price_per_unit).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => handlePlaceOrder(selectedListing)}
+                  className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Confirm Order
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedListing(null);
+                    setOrderQuantity(1);
+                  }}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Payment Modal */}
       {selectedOrderForPayment && (

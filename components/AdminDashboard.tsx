@@ -1,14 +1,207 @@
 "use client";
 
-import { useState } from "react";
-import { Users, FileText, TrendingUp, DollarSign, Activity, ArrowUp, MapPin, Clock, CheckCircle2, Settings, Package, Search, Plus, Sun, Menu, ShoppingBag, User } from "lucide-react";
-import { motion } from "framer-motion";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useState, useEffect } from "react";
+import { 
+  Users, FileText, TrendingUp, DollarSign, Activity, ArrowUp, ArrowDown,
+  MapPin, Clock, CheckCircle2, Settings, Package, Search, Plus, Sun, Menu, 
+  ShoppingBag, User, UserPlus, Shield, XCircle, AlertCircle, Eye, 
+  MoreVertical, Filter, Download, Calendar, Leaf, Globe, Phone, Mail,
+  ChevronRight, ExternalLink, Landmark, Award, BarChart3, PieChart,
+  Wallet, Zap, Target, RefreshCw
+} from "lucide-react";
+import { promoteToOfficer, demoteOfficer, isOfficer } from "./Dashboard";
+import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart as RePieChart, Pie, Cell } from "recharts";
+import FarmerDetailModal from "./FarmerDetailModal";
+import NewJobModal, { JobData } from "./NewJobModal";
+
+// Sample jobs data
+const SAMPLE_JOBS: JobData[] = [
+  { id: "job-1", title: "Harrowing Season", description: "Prepare land for next planting", jobType: "harrowing", farmLocation: "ABY Farm - Bay Land", dueDate: "2024-12-05", priority: "high", status: "pending", createdAt: new Date().toISOString() },
+  { id: "job-2", title: "Harrowing Season", description: "Prepare land for next planting", jobType: "harrowing", farmLocation: "YNS Farm - ARD Land", dueDate: "2024-12-08", priority: "medium", status: "pending", createdAt: new Date().toISOString() },
+];
+
+// Comprehensive sample data for demo
+const SAMPLE_FARMERS = [
+  { 
+    id: "1", 
+    wallet: "0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1", 
+    name: "John Mwale", 
+    email: "john@farm.zm",
+    phone: "+260 97 123 4567",
+    role: "farmer", 
+    location: "Lusaka", 
+    locationLat: -15.4167,
+    locationLng: 28.2833,
+    farmSize: 12.5,
+    crops: ["Mangoes", "Tomatoes"],
+    joined: "Oct 15, 2024", 
+    verified: true,
+    totalEarnings: 45000,
+    completedMilestones: 8,
+    pendingMilestones: 2,
+    contracts: [
+      { id: "c1", cropType: "Mangoes", status: "active" as const, value: 25000, createdAt: "Oct 20, 2024", harvestDate: "Jan 15, 2025", milestones: [
+        { id: "m1", name: "Land Preparation", status: "verified" as const, payment: 5000, dueDate: "Oct 25" },
+        { id: "m2", name: "Planting Complete", status: "verified" as const, payment: 7500, dueDate: "Nov 10" },
+        { id: "m3", name: "Flowering Stage", status: "submitted" as const, payment: 5000, dueDate: "Dec 15" },
+        { id: "m4", name: "Harvest Ready", status: "pending" as const, payment: 7500, dueDate: "Jan 15" },
+      ]},
+      { id: "c2", cropType: "Tomatoes", status: "completed" as const, value: 20000, createdAt: "Aug 10, 2024", harvestDate: "Oct 5, 2024", milestones: [
+        { id: "m5", name: "Land Preparation", status: "verified" as const, payment: 5000, dueDate: "Aug 15" },
+        { id: "m6", name: "Seedling Stage", status: "verified" as const, payment: 5000, dueDate: "Sep 1" },
+        { id: "m7", name: "Harvest Complete", status: "verified" as const, payment: 10000, dueDate: "Oct 5" },
+      ]},
+    ]
+  },
+  { 
+    id: "2", 
+    wallet: "0x8ba1F109551bD432803012645Ac136ddd64DBA72", 
+    name: "Mary Banda", 
+    email: "mary@farm.zm",
+    phone: "+260 96 234 5678",
+    role: "farmer", 
+    location: "Kabwe", 
+    locationLat: -14.4469,
+    locationLng: 28.4464,
+    farmSize: 8.2,
+    crops: ["Pineapples", "Cashews"],
+    joined: "Oct 20, 2024", 
+    verified: true,
+    totalEarnings: 32000,
+    completedMilestones: 5,
+    pendingMilestones: 3,
+    contracts: [
+      { id: "c3", cropType: "Pineapples", status: "active" as const, value: 18000, createdAt: "Nov 1, 2024", harvestDate: "Feb 20, 2025", milestones: [
+        { id: "m8", name: "Land Preparation", status: "verified" as const, payment: 4000, dueDate: "Nov 5" },
+        { id: "m9", name: "Planting Complete", status: "submitted" as const, payment: 6000, dueDate: "Nov 20" },
+        { id: "m10", name: "Growth Stage", status: "pending" as const, payment: 4000, dueDate: "Jan 10" },
+        { id: "m11", name: "Harvest Ready", status: "pending" as const, payment: 4000, dueDate: "Feb 20" },
+      ]},
+    ]
+  },
+  { 
+    id: "3", 
+    wallet: "0x9f2dF0fed2C77648de5860a4dc508cd0572B6C1a", 
+    name: "Peter Phiri", 
+    email: "peter@farm.zm",
+    phone: "+260 95 345 6789",
+    role: "farmer", 
+    location: "Kitwe", 
+    locationLat: -12.8024,
+    locationLng: 28.2132,
+    farmSize: 15.0,
+    crops: ["Bananas", "Beetroot"],
+    joined: "Oct 25, 2024", 
+    verified: false,
+    totalEarnings: 0,
+    completedMilestones: 0,
+    pendingMilestones: 4,
+    contracts: [
+      { id: "c4", cropType: "Bananas", status: "pending" as const, value: 22000, createdAt: "Nov 10, 2024", harvestDate: "Mar 15, 2025", milestones: [
+        { id: "m12", name: "Land Preparation", status: "pending" as const, payment: 5000, dueDate: "Nov 15" },
+        { id: "m13", name: "Planting Complete", status: "pending" as const, payment: 7000, dueDate: "Dec 1" },
+        { id: "m14", name: "Growth Stage", status: "pending" as const, payment: 5000, dueDate: "Feb 1" },
+        { id: "m15", name: "Harvest Ready", status: "pending" as const, payment: 5000, dueDate: "Mar 15" },
+      ]},
+    ]
+  },
+  { 
+    id: "7", 
+    wallet: "0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b", 
+    name: "David Tembo", 
+    email: "david@farm.zm",
+    phone: "+260 97 456 7890",
+    role: "farmer", 
+    location: "Chipata", 
+    locationLat: -13.6333,
+    locationLng: 32.6500,
+    farmSize: 20.0,
+    crops: ["Cashews", "Mangoes"],
+    joined: "Sep 10, 2024", 
+    verified: true,
+    totalEarnings: 68000,
+    completedMilestones: 12,
+    pendingMilestones: 2,
+    contracts: [
+      { id: "c5", cropType: "Cashews", status: "active" as const, value: 35000, createdAt: "Sep 15, 2024", harvestDate: "Jan 30, 2025", milestones: [
+        { id: "m16", name: "Land Preparation", status: "verified" as const, payment: 8000, dueDate: "Sep 20" },
+        { id: "m17", name: "Planting Complete", status: "verified" as const, payment: 10000, dueDate: "Oct 5" },
+        { id: "m18", name: "Growth Stage", status: "verified" as const, payment: 7000, dueDate: "Nov 30" },
+        { id: "m19", name: "Harvest Ready", status: "pending" as const, payment: 10000, dueDate: "Jan 30" },
+      ]},
+    ]
+  },
+  { 
+    id: "8", 
+    wallet: "0x8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c", 
+    name: "Agnes Mulenga", 
+    email: "agnes@farm.zm",
+    phone: "+260 96 567 8901",
+    role: "farmer", 
+    location: "Livingstone", 
+    locationLat: -17.8419,
+    locationLng: 25.8544,
+    farmSize: 6.5,
+    crops: ["Tomatoes", "Beetroot"],
+    joined: "Nov 1, 2024", 
+    verified: true,
+    totalEarnings: 18000,
+    completedMilestones: 3,
+    pendingMilestones: 1,
+    contracts: [
+      { id: "c6", cropType: "Tomatoes", status: "active" as const, value: 12000, createdAt: "Nov 5, 2024", harvestDate: "Feb 10, 2025", milestones: [
+        { id: "m20", name: "Land Preparation", status: "verified" as const, payment: 3000, dueDate: "Nov 10" },
+        { id: "m21", name: "Planting Complete", status: "verified" as const, payment: 4000, dueDate: "Nov 25" },
+        { id: "m22", name: "Growth Stage", status: "submitted" as const, payment: 2500, dueDate: "Jan 10" },
+        { id: "m23", name: "Harvest Ready", status: "pending" as const, payment: 2500, dueDate: "Feb 10" },
+      ]},
+    ]
+  },
+];
+
+const SAMPLE_USERS = [
+  ...SAMPLE_FARMERS,
+  { id: "4", wallet: "0x3c8a2b7e9F1dE6Ca4B5a3e7d9C1f2A8b4D6e5F7a", name: "Sarah Phiri", email: "sarah@buyer.zm", phone: "+260 97 111 2222", role: "buyer", location: "Ndola", locationLat: -12.9587, locationLng: 28.6366, farmSize: 0, crops: [], joined: "Nov 1, 2024", verified: true, totalEarnings: 0, completedMilestones: 0, pendingMilestones: 0, contracts: [] },
+  { id: "5", wallet: "0x5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e", name: "James Mwamba", email: "james@buyer.zm", phone: "+260 96 333 4444", role: "buyer", location: "Lusaka", locationLat: -15.3875, locationLng: 28.3228, farmSize: 0, crops: [], joined: "Nov 5, 2024", verified: true, totalEarnings: 0, completedMilestones: 0, pendingMilestones: 0, contracts: [] },
+  { id: "6", wallet: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", name: "Grace Zulu", email: "grace@verify.zm", phone: "+260 95 555 6666", role: "officer", location: "Lusaka", locationLat: -15.4000, locationLng: 28.3000, farmSize: 0, crops: [], joined: "Sep 15, 2024", verified: true, totalEarnings: 0, completedMilestones: 0, pendingMilestones: 0, contracts: [] },
+];
+
+// Map marker positions (Zambia-centric)
+const MAP_POSITIONS = {
+  "Lusaka": { x: 55, y: 65 },
+  "Kabwe": { x: 54, y: 52 },
+  "Kitwe": { x: 48, y: 38 },
+  "Ndola": { x: 50, y: 40 },
+  "Livingstone": { x: 40, y: 85 },
+  "Chipata": { x: 80, y: 55 },
+  "Mansa": { x: 52, y: 30 },
+};
 
 export default function AdminDashboard() {
   const [selectedView, setSelectedView] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [users, setUsers] = useState(SAMPLE_USERS);
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<typeof SAMPLE_USERS[0] | null>(null);
+  const [showFarmerModal, setShowFarmerModal] = useState(false);
+  const [selectedFarmer, setSelectedFarmer] = useState<typeof SAMPLE_FARMERS[0] | null>(null);
+  const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
+  const [showNewJobModal, setShowNewJobModal] = useState(false);
+  const [jobs, setJobs] = useState<JobData[]>(SAMPLE_JOBS);
+
+  // Handle creating a new job
+  const handleCreateJob = (newJob: JobData) => {
+    setJobs([newJob, ...jobs]);
+  };
+
+  // Handle farmer card click
+  const handleFarmerClick = (farmer: typeof SAMPLE_FARMERS[0]) => {
+    setSelectedFarmer(farmer);
+    setShowFarmerModal(true);
+  };
 
   // Cost analysis data
   const costData = [
@@ -48,6 +241,34 @@ export default function AdminDashboard() {
     { icon: DollarSign, label: "Payments", id: "payments" },
     { icon: Settings, label: "Settings", id: "settings" },
   ];
+
+  // Handle promoting a user to officer
+  const handlePromoteToOfficer = (user: typeof SAMPLE_USERS[0]) => {
+    try {
+      promoteToOfficer(user.wallet);
+      setUsers(prev => prev.map(u => 
+        u.id === user.id ? { ...u, role: "officer" } : u
+      ));
+      toast.success(`${user.name} has been promoted to Extension Officer!`);
+      setShowPromoteModal(false);
+      setSelectedUser(null);
+    } catch (error) {
+      toast.error("Failed to promote user");
+    }
+  };
+
+  // Handle demoting an officer
+  const handleDemoteOfficer = (user: typeof SAMPLE_USERS[0]) => {
+    try {
+      demoteOfficer(user.wallet);
+      setUsers(prev => prev.map(u => 
+        u.id === user.id ? { ...u, role: "farmer" } : u
+      ));
+      toast.success(`${user.name} has been demoted from Officer role.`);
+    } catch (error) {
+      toast.error("Failed to demote officer");
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -116,17 +337,13 @@ export default function AdminDashboard() {
               />
             </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 px-3 py-1.5 bg-gray-50 rounded-lg">
-              <Sun className="h-4 w-4 text-orange-500" />
-              <span className="text-sm font-medium text-gray-700">18°C</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">FS</span>
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 px-4 py-2 bg-gradient-to-r from-purple-50 to-violet-50 rounded-xl border border-purple-200">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-violet-600 rounded-lg flex items-center justify-center shadow-sm">
+                <Shield className="h-4 w-4 text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-800">Fletch Skinner</p>
+                <p className="text-sm font-semibold text-purple-700">Administrator</p>
               </div>
             </div>
           </div>
@@ -231,9 +448,12 @@ export default function AdminDashboard() {
                     className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                 </div>
-                <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <button 
+                  onClick={() => setShowNewJobModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/25"
+                >
                   <Plus className="h-4 w-4" />
-                  <span className="text-sm font-medium">New Job</span>
+                  <span className="text-sm font-semibold">New Job</span>
                 </button>
                 <div className="ml-2 flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg">
                   <Sun className="h-4 w-4 text-orange-500" />
@@ -491,49 +711,226 @@ export default function AdminDashboard() {
 
           {/* Farmers View */}
           {selectedView === "farmers" && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Farmers Directory</h2>
-                  <p className="text-gray-600 mt-1">156 active farmers on platform</p>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search farmers..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { name: "John Mwale", location: "Lusaka", crops: "Mangoes, Cashews", contracts: 5, verified: true },
-                  { name: "Mary Banda", location: "Kabwe", crops: "Tomatoes, Peppers", contracts: 8, verified: true },
-                  { name: "Peter Phiri", location: "Kitwe", crops: "Pineapples", contracts: 3, verified: true },
-                  { name: "Sarah Phiri", location: "Ndola", crops: "Cashews, Mangoes", contracts: 6, verified: false },
-                  { name: "James Mwamba", location: "Lusaka", crops: "Tomatoes", contracts: 4, verified: true },
-                  { name: "Grace Banda", location: "Kabwe", crops: "Pineapples, Mangoes", contracts: 7, verified: true },
-                ].map((farmer, index) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg hover:border-green-500 transition-colors cursor-pointer">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="text-lg font-bold text-green-700">{farmer.name.charAt(0)}</span>
-                      </div>
-                      {farmer.verified && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+            <div className="space-y-6">
+              {/* Interactive Map Section */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+              >
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <Globe className="h-5 w-5 text-emerald-600" />
+                        Farmer Locations Map
+                      </h2>
+                      <p className="text-sm text-gray-500 mt-1">Click on markers to view farmer details</p>
                     </div>
-                    <h3 className="font-semibold text-gray-900">{farmer.name}</h3>
-                    <p className="text-sm text-gray-600 flex items-center mt-1">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {farmer.location}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2">{farmer.crops}</p>
-                    <p className="text-xs text-gray-500 mt-1">{farmer.contracts} contracts</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-500">{SAMPLE_FARMERS.length} farmers</span>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                        <span className="text-xs text-gray-500">Verified</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                        <span className="text-xs text-gray-500">Pending</span>
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+                <div className="relative h-80 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+                  {/* Zambia Map SVG Background */}
+                  <svg className="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    {/* Grid lines */}
+                    {[...Array(10)].map((_, i) => (
+                      <g key={i}>
+                        <line x1="0" y1={i * 10} x2="100" y2={i * 10} stroke="#059669" strokeWidth="0.1" />
+                        <line x1={i * 10} y1="0" x2={i * 10} y2="100" stroke="#059669" strokeWidth="0.1" />
+                      </g>
+                    ))}
+                    {/* Zambia shape approximation */}
+                    <path d="M30,25 L70,20 L85,45 L80,70 L55,85 L35,80 L20,55 L30,25" 
+                      fill="none" stroke="#059669" strokeWidth="0.5" strokeDasharray="2,2" />
+                  </svg>
+                  
+                  {/* Farmer Markers */}
+                  {SAMPLE_FARMERS.map((farmer) => {
+                    const pos = MAP_POSITIONS[farmer.location as keyof typeof MAP_POSITIONS] || { x: 50, y: 50 };
+                    return (
+                      <motion.div
+                        key={farmer.id}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        whileHover={{ scale: 1.2 }}
+                        onHoverStart={() => setHoveredMarker(farmer.id)}
+                        onHoverEnd={() => setHoveredMarker(null)}
+                        onClick={() => handleFarmerClick(farmer)}
+                        className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
+                        style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+                      >
+                        <div className={`relative w-10 h-10 rounded-full flex items-center justify-center border-3 border-white shadow-lg transition-all ${
+                          farmer.verified ? 'bg-emerald-500' : 'bg-amber-500'
+                        }`}>
+                          <span className="text-white font-bold text-sm">{farmer.name.charAt(0)}</span>
+                          {/* Pulse effect */}
+                          <div className={`absolute inset-0 rounded-full animate-ping opacity-30 ${
+                            farmer.verified ? 'bg-emerald-500' : 'bg-amber-500'
+                          }`} style={{ animationDuration: '2s' }} />
+                        </div>
+                        
+                        {/* Tooltip */}
+                        <AnimatePresence>
+                          {hoveredMarker === farmer.id && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 10 }}
+                              className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-10"
+                            >
+                              <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-3 min-w-48">
+                                <p className="font-semibold text-gray-900">{farmer.name}</p>
+                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                  <MapPin className="h-3 w-3" />{farmer.location}
+                                </p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
+                                    {farmer.farmSize} ha
+                                  </span>
+                                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                                    {farmer.contracts.length} contracts
+                                  </span>
+                                </div>
+                                <p className="text-xs text-emerald-600 mt-2 font-medium">Click to view details →</p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
+                  
+                  {/* Map Legend */}
+                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur rounded-xl p-3 shadow-lg">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Zambia Regions</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
+                      <span>• Lusaka</span>
+                      <span>• Kabwe</span>
+                      <span>• Kitwe</span>
+                      <span>• Chipata</span>
+                      <span>• Ndola</span>
+                      <span>• Livingstone</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Farmers Directory */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Farmers Directory</h2>
+                    <p className="text-sm text-gray-500 mt-1">{SAMPLE_FARMERS.length} registered farmers</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search farmers..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm w-64"
+                      />
+                    </div>
+                    <button className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                      <Filter className="h-4 w-4 text-gray-500" />
+                    </button>
+                    <button className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+                      <Download className="h-4 w-4 text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {SAMPLE_FARMERS.filter(f => 
+                    f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    f.location.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).map((farmer) => (
+                    <motion.div 
+                      key={farmer.id}
+                      whileHover={{ y: -4 }}
+                      onClick={() => handleFarmerClick(farmer)}
+                      className="group p-5 bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-2xl hover:border-emerald-300 hover:shadow-lg transition-all cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg ${
+                            farmer.verified ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-amber-400 to-orange-500'
+                          }`}>
+                            {farmer.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">{farmer.name}</h3>
+                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />{farmer.location}
+                            </p>
+                          </div>
+                        </div>
+                        {farmer.verified ? (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-emerald-100 rounded-full">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                            <span className="text-xs font-medium text-emerald-700">Verified</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 rounded-full">
+                            <Clock className="h-3 w-3 text-amber-600" />
+                            <span className="text-xs font-medium text-amber-700">Pending</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div className="text-center p-2 bg-white rounded-lg border border-gray-100">
+                          <p className="text-lg font-bold text-gray-900">{farmer.farmSize}</p>
+                          <p className="text-xs text-gray-500">Hectares</p>
+                        </div>
+                        <div className="text-center p-2 bg-white rounded-lg border border-gray-100">
+                          <p className="text-lg font-bold text-gray-900">{farmer.contracts.length}</p>
+                          <p className="text-xs text-gray-500">Contracts</p>
+                        </div>
+                        <div className="text-center p-2 bg-white rounded-lg border border-gray-100">
+                          <p className="text-lg font-bold text-emerald-600">K{(farmer.totalEarnings / 1000).toFixed(0)}k</p>
+                          <p className="text-xs text-gray-500">Earned</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {farmer.crops.map((crop, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">
+                            {crop}
+                          </span>
+                        ))}
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />{farmer.email}
+                          </span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
             </div>
           )}
 
@@ -573,34 +970,193 @@ export default function AdminDashboard() {
 
           {/* Officers View */}
           {selectedView === "officers" && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Extension Officers</h2>
-                  <p className="text-gray-600 mt-1">Verification officers and performance</p>
+            <div className="space-y-6">
+              {/* Officer Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Active Officers</p>
+                      <p className="text-3xl font-bold text-gray-900">{users.filter(u => u.role === 'officer').length}</p>
+                    </div>
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <Shield className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Eligible for Promotion</p>
+                      <p className="text-3xl font-bold text-gray-900">{users.filter(u => u.role === 'farmer' && u.verified).length}</p>
+                    </div>
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <UserPlus className="h-6 w-6 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Total Verifications</p>
+                      <p className="text-3xl font-bold text-gray-900">176</p>
+                    </div>
+                    <div className="p-3 bg-purple-50 rounded-lg">
+                      <CheckCircle2 className="h-6 w-6 text-purple-600" />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { name: "Officer James", verifications: 45, approved: 42, earnings: "K2,250", rating: 4.9 },
-                  { name: "Officer Grace", verifications: 38, approved: 36, earnings: "K1,900", rating: 4.8 },
-                  { name: "Officer David", verifications: 52, approved: 48, earnings: "K2,600", rating: 4.7 },
-                  { name: "Officer Sarah", verifications: 41, approved: 39, earnings: "K2,050", rating: 4.9 },
-                ].map((officer, index) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg hover:border-green-500 transition-colors cursor-pointer">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-lg font-bold text-blue-700">{officer.name.charAt(8)}</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">{officer.rating} ⭐</span>
-                    </div>
-                    <h3 className="font-semibold text-gray-900">{officer.name}</h3>
-                    <p className="text-sm text-gray-600 mt-2">{officer.verifications} verifications</p>
-                    <p className="text-sm text-gray-600">{officer.approved} approved</p>
-                    <p className="text-sm font-semibold text-green-600 mt-2">{officer.earnings} earned</p>
+
+              {/* Promote User Section */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Promote Users to Officers</h3>
+                    <p className="text-sm text-gray-600 mt-1">Select verified users to promote to Extension Officer role</p>
                   </div>
-                ))}
+                  <button 
+                    onClick={() => setShowPromoteModal(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>Promote User</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Current Officers */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Current Extension Officers</h2>
+                    <p className="text-gray-600 mt-1">Manage verification officers and their performance</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {users.filter(u => u.role === 'officer').map((officer, index) => (
+                    <div key={officer.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-lg font-bold text-blue-700">{officer.name.charAt(0)}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Shield className="h-4 w-4 text-blue-600" />
+                          <span className="text-xs font-medium text-blue-600">Officer</span>
+                        </div>
+                      </div>
+                      <h3 className="font-semibold text-gray-900">{officer.name}</h3>
+                      <p className="text-sm text-gray-600 flex items-center mt-1">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {officer.location}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-2">{officer.email}</p>
+                      <p className="text-xs font-mono text-gray-400 mt-1">{officer.wallet.slice(0, 10)}...{officer.wallet.slice(-6)}</p>
+                      <div className="mt-4 pt-3 border-t border-gray-100">
+                        <button
+                          onClick={() => handleDemoteOfficer(officer)}
+                          className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center space-x-1"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          <span>Demote Officer</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {users.filter(u => u.role === 'officer').length === 0 && (
+                    <div className="col-span-full text-center py-8">
+                      <Shield className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500">No officers yet. Promote verified users to get started.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Promote User Modal */}
+          {showPromoteModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-2xl max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-gray-900">Promote to Extension Officer</h3>
+                  <button
+                    onClick={() => {
+                      setShowPromoteModal(false);
+                      setSelectedUser(null);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <XCircle className="h-5 w-5 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="mb-4">
+                  <div className="flex items-start space-x-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-800">
+                      Only verified farmers can be promoted to officers. Officers can verify milestones and earn fees.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {users.filter(u => u.role === 'farmer' && u.verified).map((user) => (
+                    <div
+                      key={user.id}
+                      onClick={() => setSelectedUser(user)}
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        selectedUser?.id === user.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-bold text-green-700">{user.name.charAt(0)}</span>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">{user.name}</h4>
+                          <p className="text-sm text-gray-600">{user.location} • {user.email}</p>
+                        </div>
+                        {user.verified && (
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {users.filter(u => u.role === 'farmer' && u.verified).length === 0 && (
+                    <div className="text-center py-8">
+                      <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500">No eligible users to promote</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex space-x-3 mt-6 pt-4 border-t border-gray-100">
+                  <button
+                    onClick={() => {
+                      setShowPromoteModal(false);
+                      setSelectedUser(null);
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => selectedUser && handlePromoteToOfficer(selectedUser)}
+                    disabled={!selectedUser}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>Promote to Officer</span>
+                  </button>
+                </div>
+              </motion.div>
             </div>
           )}
 
@@ -746,6 +1302,24 @@ export default function AdminDashboard() {
           )}
         </main>
       </div>
+
+      {/* Farmer Detail Modal */}
+      <FarmerDetailModal
+        isOpen={showFarmerModal}
+        onCloseAction={() => {
+          setShowFarmerModal(false);
+          setSelectedFarmer(null);
+        }}
+        farmer={selectedFarmer}
+      />
+
+      {/* New Job Modal */}
+      <NewJobModal
+        isOpen={showNewJobModal}
+        onCloseAction={() => setShowNewJobModal(false)}
+        onCreateJobAction={handleCreateJob}
+        farmers={SAMPLE_FARMERS.map(f => ({ id: f.id, name: f.name, location: f.location }))}
+      />
     </div>
   );
 }

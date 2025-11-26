@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { TrendingUp, TrendingDown, BarChart3, PieChart, Calendar, Download, Filter } from "lucide-react";
+import { useState, useEffect } from "react";
+import { TrendingUp, TrendingDown, BarChart3, PieChart, Calendar, Download, Filter, Loader2, Sparkles, DollarSign } from "lucide-react";
+import { getYieldForecast, getMarketPriceTrends, getRiskAssessment, getWeatherForecast } from "@/lib/analyticsAgent";
+import { getCropPriceAnalytics } from "@/lib/database";
+import toast from "react-hot-toast";
 
 interface ForecastData {
   month: string;
@@ -12,6 +15,10 @@ interface ForecastData {
 export default function AdvancedAnalytics() {
   const [timeRange, setTimeRange] = useState("6months");
   const [selectedMetric, setSelectedMetric] = useState("supply");
+  const [aiInsights, setAiInsights] = useState<string>("");
+  const [priceAnalytics, setPriceAnalytics] = useState<any[]>([]);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [selectedCrop, setSelectedCrop] = useState("maize");
 
   // Sample forecast data
   const forecastData: ForecastData[] = [
@@ -35,30 +42,146 @@ export default function AdvancedAnalytics() {
     { name: "Agro Tools", onTime: 92, quality: 95, rating: 4.7 },
   ];
 
+  // Load real analytics data
+  useEffect(() => {
+    loadAnalytics();
+  }, [selectedCrop]);
+
+  const loadAnalytics = async () => {
+    try {
+      // Load crop price analytics from database
+      const prices = await getCropPriceAnalytics(selectedCrop);
+      setPriceAnalytics(prices);
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+    }
+  };
+
+  const generateAIInsights = async () => {
+    setLoadingAI(true);
+    try {
+      // Get AI-powered yield forecast
+      const forecast = await getYieldForecast({
+        crop: selectedCrop,
+        region: "Zambia",
+        season: "2024-2025"
+      });
+
+      // Get market price trends
+      const priceTrends = await getMarketPriceTrends({
+        crop: selectedCrop,
+        timeframe: "next 3 months"
+      });
+
+      // Get risk assessment
+      const risks = await getRiskAssessment({
+        crop: selectedCrop,
+        region: "Zambia",
+        factors: ["weather", "market volatility", "pests", "supply chain"]
+      });
+
+      // Combine insights
+      const combinedInsights = `
+**Yield Forecast:**
+${forecast.output_text}
+
+**Market Price Trends:**
+${priceTrends.output_text}
+
+**Risk Assessment:**
+${risks.output_text}
+      `;
+
+      setAiInsights(combinedInsights);
+      toast.success('AI insights generated successfully!');
+    } catch (error) {
+      console.error('Error generating AI insights:', error);
+      toast.error('Failed to generate AI insights');
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-[#1a1a1a]">Advanced Analytics</h2>
-          <p className="text-gray-600">Deep insights and forecasting</p>
+          <p className="text-gray-600">AI-powered insights and forecasting</p>
         </div>
         <div className="flex gap-3">
           <select
-            value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
+            value={selectedCrop}
+            onChange={(e) => setSelectedCrop(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg font-medium"
           >
-            <option value="3months">Last 3 Months</option>
-            <option value="6months">Last 6 Months</option>
-            <option value="1year">Last Year</option>
+            <option value="maize">Maize</option>
+            <option value="tomatoes">Tomatoes</option>
+            <option value="mangoes">Mangoes</option>
+            <option value="pineapples">Pineapples</option>
           </select>
+          <button 
+            onClick={generateAIInsights}
+            disabled={loadingAI}
+            className="btn-primary flex items-center gap-2"
+          >
+            {loadingAI ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Generate AI Insights
+              </>
+            )}
+          </button>
           <button className="btn-secondary flex items-center gap-2">
             <Download className="h-4 w-4" />
             Export
           </button>
         </div>
       </div>
+
+      {/* AI Insights Panel */}
+      {aiInsights && (
+        <div className="card-premium bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="h-6 w-6 text-green-600" />
+            <h3 className="text-xl font-bold text-[#1a1a1a]">AI-Powered Insights for {selectedCrop}</h3>
+          </div>
+          <div className="prose prose-sm max-w-none">
+            <pre className="whitespace-pre-wrap text-gray-700 font-sans text-sm leading-relaxed">
+              {aiInsights}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Real-Time Price Analytics */}
+      {priceAnalytics.length > 0 && (
+        <div className="card-premium">
+          <h3 className="text-xl font-bold text-[#1a1a1a] mb-4 flex items-center gap-2">
+            <DollarSign className="h-6 w-6 text-[#2d5f3f]" />
+            Market Price Analytics
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {priceAnalytics.map((item) => (
+              <div key={item.crop} className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-gray-900 mb-2">{item.crop}</h4>
+                <div className="space-y-1 text-sm">
+                  <p className="text-gray-600">Avg: K{item.averagePrice.toFixed(2)}/kg</p>
+                  <p className="text-gray-600">Min: K{item.minPrice.toFixed(2)}/kg</p>
+                  <p className="text-gray-600">Max: K{item.maxPrice.toFixed(2)}/kg</p>
+                  <p className="text-gray-500">{item.listingCount} listings</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Supply Forecasting */}
       <div className="card-premium">

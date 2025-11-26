@@ -10,7 +10,7 @@ interface ProvidersProps {
 }
 
 export default function Providers({ children }: ProvidersProps) {
-  // Suppress expected 401 errors from logout endpoint
+  // Suppress expected errors
   useEffect(() => {
     const originalError = console.error;
     console.error = (...args: any[]) => {
@@ -22,6 +22,15 @@ export default function Providers({ children }: ProvidersProps) {
       ) {
         return; // This is expected when logging out
       }
+      
+      // Suppress MetaMask connection errors (we use email/SMS/OAuth auth)
+      if (
+        typeof args[0] === 'string' && 
+        (args[0].includes('MetaMask') || args[0].includes('ethereum'))
+      ) {
+        return; // MetaMask is not required for this app
+      }
+      
       originalError.apply(console, args);
     };
 

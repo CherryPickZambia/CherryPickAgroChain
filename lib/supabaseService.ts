@@ -45,6 +45,27 @@ export async function updateFarmer(id: string, updates: Partial<Farmer>) {
   return data;
 }
 
+export async function getFarmers() {
+  const { data, error } = await supabase
+    .from('farmers')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return data || [];
+}
+
+export async function approveFarmer(id: string) {
+  return updateFarmer(id, { status: 'approved' });
+}
+
+export async function rejectFarmer(id: string, reason?: string) {
+  return updateFarmer(id, { 
+    status: 'rejected',
+    rejection_reason: reason 
+  });
+}
+
 // ==================== CONTRACTS ====================
 
 export async function createContract(contract: Omit<Contract, 'id' | 'created_at' | 'updated_at'>) {
@@ -126,6 +147,49 @@ export async function updateMilestone(id: string, updates: Partial<Milestone>) {
   
   if (error) throw error;
   return data;
+}
+
+export async function submitMilestoneEvidence(
+  milestoneId: string,
+  evidence: {
+    images: string[];
+    iot_readings: any[];
+    notes: string;
+  }
+) {
+  // Create evidence record
+  const { data: evidenceData, error: evidenceError } = await supabase
+    .from('evidence')
+    .insert({
+      milestone_id: milestoneId,
+      evidence_type: 'photo',
+      ipfs_hash: evidence.images[0], // Store first image as main hash
+      metadata: {
+        images: evidence.images,
+        iot_readings: evidence.iot_readings,
+        notes: evidence.notes,
+        submitted_at: new Date().toISOString(),
+      },
+    })
+    .select()
+    .single();
+
+  if (evidenceError) throw evidenceError;
+
+  // Update milestone status to submitted
+  const { data: milestoneData, error: milestoneError } = await supabase
+    .from('milestones')
+    .update({
+      status: 'submitted',
+      completed_date: new Date().toISOString(),
+    })
+    .eq('id', milestoneId)
+    .select()
+    .single();
+
+  if (milestoneError) throw milestoneError;
+
+  return { evidence: evidenceData, milestone: milestoneData };
 }
 
 // ==================== EXTENSION OFFICERS ====================
@@ -289,6 +353,88 @@ export async function updatePayment(id: string, updates: Partial<Payment>) {
     .select()
     .single();
   
+  if (error) throw error;
+  return data;
+}
+
+// ==================== ADMIN APPROVAL ====================
+
+export async function approveMilestone(
+  milestoneId: string,
+  adminNotes: string,
+  releasePayment: boolean = false
+) {
+  // Update milestone status to verified
+  const { data: milestoneData, error: milestoneError } = await supabase
+    .from('milestones')
+    .update({
+      status: 'verified',
+      metadata: {
+        admin_notes: adminNotes,
+        approved_at: new Date().toISOString(),
+        payment_released: releasePayment,
+      },
+    })
+    .eq('id', milestoneId)
+    .select()
+    .single();
+
+  if (milestoneError) throw milestoneError;
+
+  // If payment should be released, update payment status
+  if (releasePayment) {
+    await supabase
+      .from('milestones')
+      .update({
+        payment_status: 'completed',
+      })
+      .eq('id', milestoneId);
+  }
+
+  return milestoneData;
+}
+
+export async function rejectMilestone(
+  milestoneId: string,
+  adminNotes: string
+) {
+  const { data, error } = await supabase
+    .from('milestones')
+    .update({
+      status: 'rejected',
+      metadata: {
+        admin_notes: adminNotes,
+        rejected_at: new Date().toISOString(),
+      },
+    })
+    .eq('id', milestoneId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getMilestonesForAdminReview() {
+  const { data, error } = await supabase
+    .from('milestones')
+    .select(`
+      *,
+      contract:contracts(
+        id,
+        crop_type,
+        farmer_id,
+        farmer:farmers(
+          name,
+          wallet_address,
+          location_address
+        )
+      ),
+      evidence(*)
+    `)
+    .eq('status', 'submitted')
+    .order('completed_date', { ascending: true });
+
   if (error) throw error;
   return data;
 }

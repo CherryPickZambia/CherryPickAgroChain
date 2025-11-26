@@ -5,8 +5,9 @@ export const cdpConfig: Config = {
   ethereum: {
     createOnLogin: "smart",
   },
-  appName: "AgroChain360",
+  appName: "Cherry Pick",
   appLogoUrl: "/logo.png",
+  // Use email/SMS/OAuth instead of wallet connections to avoid MetaMask errors
   authMethods: ["email", "sms", "oauth:google", "oauth:apple", "oauth:x"],
   showCoinbaseFooter: true,
 };

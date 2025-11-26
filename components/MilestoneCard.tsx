@@ -1,8 +1,11 @@
 "use client";
 
-import { CheckCircle, Clock, XCircle, Upload } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle, Clock, XCircle, Activity, FileText } from "lucide-react";
 import { type Milestone } from "@/lib/types";
 import { getStatusColor, formatDate } from "@/lib/utils";
+import FarmerMilestoneEntryModal from "./FarmerMilestoneEntryModal";
+import toast from "react-hot-toast";
 
 interface MilestoneCardProps {
   milestone: Milestone;
@@ -13,6 +16,8 @@ interface MilestoneCardProps {
 }
 
 export default function MilestoneCard({ milestone, contractId, canSubmit, isNextActive, onEvidenceSubmitted }: MilestoneCardProps) {
+  const [showEntryModal, setShowEntryModal] = useState(false);
+
   const getStatusIcon = () => {
     switch (milestone.status) {
       case "verified":
@@ -23,6 +28,31 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
         return <XCircle className="h-5 w-5 text-red-600" />;
       default:
         return <Clock className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
+  const handleFarmerEntries = async (activities: any[]) => {
+    try {
+      // Save farmer entries to database
+      const { supabase } = await import('@/lib/supabase');
+      
+      // Store activities in milestone metadata
+      await supabase
+        .from('milestones')
+        .update({
+          metadata: { farmer_activities: activities },
+          status: 'submitted',
+        })
+        .eq('id', milestone.id);
+
+      toast.success("Entries submitted! Awaiting officer verification.");
+      
+      if (onEvidenceSubmitted) {
+        onEvidenceSubmitted();
+      }
+    } catch (error) {
+      console.error("Error submitting entries:", error);
+      throw error;
     }
   };
 
@@ -56,10 +86,29 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
         </div>
 
         {milestone.status === "pending" && (
-          <button className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center space-x-2 mt-3">
-            <Upload className="h-4 w-4" />
-            <span>Submit Evidence</span>
+          <button 
+            onClick={() => setShowEntryModal(true)}
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center space-x-2 mt-3"
+          >
+            <FileText className="h-4 w-4" />
+            <span>Log Farm Activities</span>
           </button>
+        )}
+
+        {milestone.status === "submitted" && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="h-4 w-4 text-blue-600" />
+              <p className="text-xs text-blue-700 font-medium">
+                Verification Requested - Officer will visit farm
+              </p>
+            </div>
+            {milestone.completedDate && (
+              <p className="text-xs text-blue-600">
+                Requested: {formatDate(milestone.completedDate)}
+              </p>
+            )}
+          </div>
         )}
 
         {milestone.status === "verified" && milestone.paymentStatus === "completed" && (
@@ -70,6 +119,15 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
           </div>
         )}
       </div>
+
+      {/* Farmer Entry Modal */}
+      <FarmerMilestoneEntryModal
+        isOpen={showEntryModal}
+        onClose={() => setShowEntryModal(false)}
+        milestoneId={milestone.id}
+        milestoneName={milestone.name}
+        onSubmit={handleFarmerEntries}
+      />
     </div>
   );
 }

@@ -1,21 +1,41 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
-import CreateContractModal from "./CreateContractModal";
 import MilestoneCard from "./MilestoneCard";
+import NetworkStatus from "./NetworkStatus";
 import { type SmartContract } from "@/lib/types";
 import { getContractsByFarmer, getFarmerByWallet, createFarmer } from "@/lib/supabaseService";
+import { getFarmerListings, type MarketplaceListing } from "@/lib/database";
 import toast from "react-hot-toast";
 
 export default function FarmerDashboard() {
   const { evmAddress } = useEvmAddress();
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [contracts, setContracts] = useState<SmartContract[]>([]);
+  const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>([]);
   const [expandedContracts, setExpandedContracts] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [farmerId, setFarmerId] = useState<string | null>(null);
+  const [farmerData, setFarmerData] = useState<any>(null);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    location_address: '',
+    farm_size: 0,
+  });
+  const [showCreateListing, setShowCreateListing] = useState(false);
+  const [listingForm, setListingForm] = useState({
+    crop_type: '',
+    quantity: 0,
+    price_per_unit: 0,
+    quality_grade: 'A',
+    description: '',
+    harvest_date: '',
+    organic: false,
+  });
 
   // Load farmer data and contracts
   useEffect(() => {
@@ -49,12 +69,32 @@ export default function FarmerDashboard() {
       }
       
       setFarmerId(farmer.id);
+      setFarmerData(farmer);
+      setProfileForm({
+        name: farmer.name || '',
+        email: farmer.email || '',
+        phone: farmer.phone || '',
+        location_address: farmer.location_address || '',
+        farm_size: farmer.farm_size || 0,
+      });
       await loadContracts(farmer.id);
+      await loadMarketplaceListings();
     } catch (error: any) {
       console.error("Error loading farmer data:", error);
       toast.error("Failed to load your data. Please refresh the page.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMarketplaceListings = async () => {
+    if (!evmAddress) return;
+    
+    try {
+      const listings = await getFarmerListings(evmAddress);
+      setMarketplaceListings(listings);
+    } catch (error) {
+      console.error("Error loading marketplace listings:", error);
     }
   };
 
@@ -243,6 +283,89 @@ export default function FarmerDashboard() {
     return contract.milestones.findIndex(m => m.status === "pending");
   };
 
+  const handleSaveProfile = async () => {
+    if (!farmerId) return;
+    
+    try {
+      const { updateFarmer } = await import('@/lib/supabaseService');
+      await updateFarmer(farmerId, profileForm);
+      setFarmerData({ ...farmerData, ...profileForm });
+      setIsEditingProfile(false);
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (farmerData) {
+      setProfileForm({
+        name: farmerData.name || '',
+        email: farmerData.email || '',
+        phone: farmerData.phone || '',
+        location_address: farmerData.location_address || '',
+        farm_size: farmerData.farm_size || 0,
+      });
+    }
+    setIsEditingProfile(false);
+  };
+
+  const handleCreateListing = async () => {
+    if (!evmAddress || !farmerId) {
+      toast.error("Please connect your wallet");
+      return;
+    }
+
+    if (!listingForm.crop_type || !listingForm.quantity || !listingForm.price_per_unit) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      
+      const totalPrice = listingForm.quantity * listingForm.price_per_unit;
+      
+      const { error } = await supabase
+        .from('marketplace_listings')
+        .insert({
+          farmer_id: farmerId,
+          farmer_address: evmAddress,
+          crop_type: listingForm.crop_type,
+          quantity: listingForm.quantity,
+          unit: 'kg',
+          price_per_unit: listingForm.price_per_unit,
+          total_price: totalPrice,
+          available_quantity: listingForm.quantity,
+          description: listingForm.description,
+          quality_grade: listingForm.quality_grade,
+          organic: listingForm.organic,
+          harvest_date: listingForm.harvest_date || null,
+          location: farmerData?.location_address || '',
+          status: 'active',
+        });
+
+      if (error) throw error;
+
+      toast.success("Marketplace listing created successfully!");
+      setShowCreateListing(false);
+      setListingForm({
+        crop_type: '',
+        quantity: 0,
+        price_per_unit: 0,
+        quality_grade: 'A',
+        description: '',
+        harvest_date: '',
+        organic: false,
+      });
+      await loadMarketplaceListings();
+    } catch (error) {
+      console.error("Error creating listing:", error);
+      toast.error("Failed to create listing");
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -276,8 +399,15 @@ export default function FarmerDashboard() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#1a1a1a] mb-2">Farmer Dashboard</h1>
-        <p className="text-gray-600">Manage your contracts and track your farming progress</p>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-50 rounded-2xl">
+            <Sprout className="h-8 w-8 text-green-600" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-[#1a1a1a]">Farmer Dashboard</h1>
+            <p className="text-gray-600">Manage your farm and track your progress</p>
+          </div>
+        </div>
       </div>
 
       {/* Premium Stats Grid */}
@@ -346,15 +476,454 @@ export default function FarmerDashboard() {
         </div>
       </div>
 
-      {/* Action Button */}
+      {/* Network Status & Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Base Network Status - Full Panel */}
+        <NetworkStatus showComparison={true} />
+        
+        {/* Quick Stats Summary */}
+        <div className="lg:col-span-2 card-premium">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-gradient-to-br from-green-100 to-emerald-50 rounded-xl">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+            </div>
+            <h3 className="text-lg font-bold text-[#1a1a1a]">Why Base Network?</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+              <p className="text-2xl font-bold text-green-700">~$0.001</p>
+              <p className="text-sm text-green-600">Per Transaction</p>
+            </div>
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+              <p className="text-2xl font-bold text-blue-700">2 sec</p>
+              <p className="text-sm text-blue-600">Block Time</p>
+            </div>
+            <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
+              <p className="text-2xl font-bold text-purple-700">99%+</p>
+              <p className="text-sm text-purple-600">Cheaper than Ethereum</p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 mt-4">
+            Base is a secure, low-cost L2 built on Ethereum. Perfect for agricultural contracts with frequent milestone payments.
+          </p>
+        </div>
+      </div>
+
+      {/* Farmer Profile & Farm Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Farmer Profile Card */}
+        <div className="card-premium">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl">
+                <User className="h-6 w-6 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-[#1a1a1a]">Farmer Profile</h3>
+            </div>
+            {!isEditingProfile ? (
+              <button
+                onClick={() => setIsEditingProfile(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Edit Profile"
+              >
+                <Edit2 className="h-5 w-5 text-gray-600" />
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveProfile}
+                  className="p-2 hover:bg-green-100 rounded-lg transition-colors"
+                  title="Save Changes"
+                >
+                  <Save className="h-5 w-5 text-green-600" />
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                  title="Cancel"
+                >
+                  <X className="h-5 w-5 text-red-600" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {/* Name */}
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-2 block">Full Name</label>
+              {isEditingProfile ? (
+                <input
+                  type="text"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Enter your full name"
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-gray-900">
+                  <User className="h-4 w-4 text-gray-400" />
+                  <span>{farmerData?.name || 'Not set'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-2 block">Email</label>
+              {isEditingProfile ? (
+                <input
+                  type="email"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="your.email@example.com"
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-gray-900">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                  <span>{farmerData?.email || 'Not set'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-2 block">Phone Number</label>
+              {isEditingProfile ? (
+                <input
+                  type="tel"
+                  value={profileForm.phone}
+                  onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="+260 XXX XXX XXX"
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-gray-900">
+                  <Phone className="h-4 w-4 text-gray-400" />
+                  <span>{farmerData?.phone || 'Not set'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-2 block">Farm Location</label>
+              {isEditingProfile ? (
+                <input
+                  type="text"
+                  value={profileForm.location_address}
+                  onChange={(e) => setProfileForm({ ...profileForm, location_address: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="City, District, Zambia"
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-gray-900">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                  <span>{farmerData?.location_address || 'Not set'}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Farm Details Card */}
+        <div className="card-premium">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-2xl">
+              <Sprout className="h-6 w-6 text-green-600" />
+            </div>
+            <h3 className="text-xl font-bold text-[#1a1a1a]">Farm Details</h3>
+          </div>
+
+          <div className="space-y-4">
+            {/* Farm Size */}
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-2 block">Farm Size (Hectares)</label>
+              {isEditingProfile ? (
+                <input
+                  type="number"
+                  value={profileForm.farm_size}
+                  onChange={(e) => setProfileForm({ ...profileForm, farm_size: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="0.0"
+                  step="0.1"
+                  min="0"
+                />
+              ) : (
+                <div className="text-2xl font-bold text-gray-900">
+                  {farmerData?.farm_size || 0} Ha
+                </div>
+              )}
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl">
+                <p className="text-sm text-gray-600 mb-1">Total Contracts</p>
+                <p className="text-2xl font-bold text-green-600">{contracts.length}</p>
+              </div>
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl">
+                <p className="text-sm text-gray-600 mb-1">Completion Rate</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {contracts.length > 0
+                    ? Math.round(
+                        (contracts.reduce((acc, c) => 
+                          acc + c.milestones.filter(m => m.status === "verified").length, 0
+                        ) / contracts.reduce((acc, c) => acc + c.milestones.length, 0)) * 100
+                      )
+                    : 0}%
+                </p>
+              </div>
+            </div>
+
+            {/* Wallet Address */}
+            <div className="bg-gray-50 p-4 rounded-xl mt-4">
+              <p className="text-sm font-medium text-gray-600 mb-2">Wallet Address</p>
+              <p className="text-xs font-mono text-gray-700 break-all">
+                {evmAddress || 'Not connected'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Marketplace Listings Section */}
       <div className="mb-8">
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="btn-primary flex items-center space-x-2"
-        >
-          <Plus className="h-5 w-5" />
-          <span>Create New Contract</span>
-        </button>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-2xl">
+              <ShoppingBag className="h-6 w-6 text-purple-600" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-[#1a1a1a]">Marketplace Listings</h2>
+              <p className="text-sm text-gray-600">Sell your produce directly to buyers</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowCreateListing(!showCreateListing)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Create Listing</span>
+          </button>
+        </div>
+
+        {/* Create Listing Form */}
+        {showCreateListing && (
+          <div className="card-premium mb-6">
+            <h3 className="text-lg font-bold text-[#1a1a1a] mb-4">New Marketplace Listing</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Crop Type */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Crop Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={listingForm.crop_type}
+                  onChange={(e) => setListingForm({ ...listingForm, crop_type: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="">Select crop type</option>
+                  <option value="Mangoes">Mangoes</option>
+                  <option value="Pineapples">Pineapples</option>
+                  <option value="Cashew nuts">Cashew nuts</option>
+                  <option value="Tomatoes">Tomatoes</option>
+                  <option value="Beetroot">Beetroot</option>
+                  <option value="Bananas">Bananas</option>
+                  <option value="Pawpaw">Pawpaw</option>
+                  <option value="Strawberries">Strawberries</option>
+                </select>
+              </div>
+
+              {/* Quantity */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Quantity (kg) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={listingForm.quantity}
+                  onChange={(e) => setListingForm({ ...listingForm, quantity: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="0"
+                  min="0"
+                  step="0.1"
+                />
+              </div>
+
+              {/* Price per Unit */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Price per kg (K) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={listingForm.price_per_unit}
+                  onChange={(e) => setListingForm({ ...listingForm, price_per_unit: parseFloat(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              {/* Quality Grade */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Quality Grade</label>
+                <select
+                  value={listingForm.quality_grade}
+                  onChange={(e) => setListingForm({ ...listingForm, quality_grade: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="Premium">Premium</option>
+                  <option value="A">Grade A</option>
+                  <option value="B">Grade B</option>
+                  <option value="C">Grade C</option>
+                </select>
+              </div>
+
+              {/* Harvest Date */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Harvest Date</label>
+                <input
+                  type="date"
+                  value={listingForm.harvest_date}
+                  onChange={(e) => setListingForm({ ...listingForm, harvest_date: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Organic Checkbox */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="organic"
+                  checked={listingForm.organic}
+                  onChange={(e) => setListingForm({ ...listingForm, organic: e.target.checked })}
+                  className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                />
+                <label htmlFor="organic" className="ml-2 text-sm font-medium text-gray-700">
+                  Organic Certified
+                </label>
+              </div>
+
+              {/* Description */}
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Description</label>
+                <textarea
+                  value={listingForm.description}
+                  onChange={(e) => setListingForm({ ...listingForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  placeholder="Describe your produce, growing conditions, certifications, etc."
+                />
+              </div>
+            </div>
+
+            {/* Total Price Preview */}
+            {listingForm.quantity > 0 && listingForm.price_per_unit > 0 && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-gray-600">Total Value</p>
+                <p className="text-2xl font-bold text-green-600">
+                  K{(listingForm.quantity * listingForm.price_per_unit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCreateListing}
+                className="btn-primary flex-1"
+              >
+                Create Listing
+              </button>
+              <button
+                onClick={() => {
+                  setShowCreateListing(false);
+                  setListingForm({
+                    crop_type: '',
+                    quantity: 0,
+                    price_per_unit: 0,
+                    quality_grade: 'A',
+                    description: '',
+                    harvest_date: '',
+                    organic: false,
+                  });
+                }}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Existing Listings */}
+        {marketplaceListings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {marketplaceListings.map((listing) => (
+              <div key={listing.id} className="card-premium hover:shadow-xl transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-5 w-5 text-purple-600" />
+                    <h4 className="font-bold text-gray-900">{listing.crop_type}</h4>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    listing.status === 'active' ? 'bg-green-100 text-green-700' :
+                    listing.status === 'sold' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {listing.status}
+                  </span>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Quantity:</span>
+                    <span className="font-semibold">{listing.available_quantity} kg</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Price:</span>
+                    <span className="font-semibold">K{listing.price_per_unit}/kg</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Quality:</span>
+                    <span className="font-semibold">{listing.quality_grade}</span>
+                  </div>
+                  {listing.organic && (
+                    <div className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      <span className="text-xs font-medium">Organic</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="text-lg font-bold text-purple-600">
+                    K{listing.total_price.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Listed {new Date(listing.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : !showCreateListing && (
+          <div className="card-premium p-8 text-center">
+            <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-600 mb-4">No marketplace listings yet</p>
+            <button
+              onClick={() => setShowCreateListing(true)}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Create Your First Listing</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Contracts List */}
@@ -363,22 +932,21 @@ export default function FarmerDashboard() {
           <div className="bg-gradient-to-br from-[#f0f7f4] to-[#e8f5e9] w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6">
             <FileText className="h-12 w-12 text-[#2d5f3f]" />
           </div>
-          <h3 className="text-2xl font-bold text-[#1a1a1a] mb-3">No Contracts Yet</h3>
-          <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            Create your first smart contract to start farming with AgroChain360 and unlock secure payments
+          <h3 className="text-2xl font-bold text-[#1a1a1a] mb-3">No Contracts Assigned</h3>
+          <p className="text-gray-600 mb-4 max-w-md mx-auto">
+            You don't have any contracts assigned yet. Contracts are created by administrators and assigned to farmers.
           </p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary inline-flex items-center space-x-2"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Create Your First Contract</span>
-          </button>
+          <p className="text-sm text-gray-500 max-w-md mx-auto">
+            Once a contract is assigned to you, you'll be able to log your farm activities and track milestone progress here.
+          </p>
         </div>
       ) : (
         <div className="space-y-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-[#1a1a1a]">Your Contracts</h2>
+            <div>
+              <h2 className="text-2xl font-bold text-[#1a1a1a]">Your Assigned Contracts</h2>
+              <p className="text-sm text-gray-600 mt-1">Log activities for each milestone to request verification</p>
+            </div>
             <button className="text-sm font-medium text-[#2d5f3f] hover:text-[#1d4029] flex items-center gap-2">
               <Download className="h-4 w-4" />
               Export Report
@@ -520,20 +1088,6 @@ export default function FarmerDashboard() {
             );
           })}
         </div>
-      )}
-
-      {/* Create Contract Modal */}
-      {showCreateModal && farmerId && (
-        <CreateContractModal
-          farmerId={farmerId}
-          onClose={() => setShowCreateModal(false)}
-          onContractCreated={async (contract: SmartContract) => {
-            setShowCreateModal(false);
-            if (farmerId) await loadContracts(farmerId);
-            setExpandedContracts(prev => new Set(prev).add(contract.id));
-            toast.success("Contract created successfully!");
-          }}
-        />
       )}
     </div>
   );

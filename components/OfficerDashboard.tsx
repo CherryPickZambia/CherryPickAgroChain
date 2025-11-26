@@ -9,23 +9,24 @@ import {
 } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import toast from "react-hot-toast";
+import OfficerVerificationModal from "./OfficerVerificationModal";
+import { supabase } from "@/lib/supabase";
+import type { Milestone } from "@/lib/types";
 
-interface PendingVerification {
+interface MilestoneVerificationTask {
   id: string;
-  type: "listing" | "quality" | "delivery" | "dispute";
-  listing_id?: string;
-  order_id?: string;
-  farmer_name: string;
-  farmer_address: string;
-  crop_type: string;
-  quantity: number;
-  price: number;
-  location: string;
-  harvest_date: string;
-  quality_grade: string;
-  images: string[];
-  description: string;
-  certifications: string[];
+  milestone: Milestone & {
+    contract: {
+      id: string;
+      crop_type: string;
+      farmer_id: string;
+      farmer: {
+        name: string;
+        wallet_address: string;
+        location_address: string;
+      };
+    };
+  };
   submitted_date: string;
   priority: "high" | "medium" | "low";
 }
@@ -44,155 +45,120 @@ interface VerificationHistory {
 export default function OfficerDashboard() {
   const { evmAddress } = useEvmAddress();
   const [activeTab, setActiveTab] = useState<"pending" | "history" | "stats">("pending");
-  const [pendingVerifications, setPendingVerifications] = useState<PendingVerification[]>([]);
+  const [pendingVerifications, setPendingVerifications] = useState<MilestoneVerificationTask[]>([]);
   const [history, setHistory] = useState<VerificationHistory[]>([]);
-  const [selectedVerification, setSelectedVerification] = useState<PendingVerification | null>(null);
-  const [verificationNotes, setVerificationNotes] = useState("");
+  const [selectedVerification, setSelectedVerification] = useState<MilestoneVerificationTask | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Mock data - replace with Supabase queries
+  // Load milestone verification tasks from Supabase
   useEffect(() => {
     loadVerifications();
   }, [evmAddress]);
 
-  const loadVerifications = () => {
-    const mockPending: PendingVerification[] = [
-      {
-        id: "V1",
-        type: "listing",
-        listing_id: "L1",
-        farmer_name: "John Mwale",
-        farmer_address: "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
-        crop_type: "Mangoes",
-        quantity: 500,
-        price: 18,
-        location: "Lusaka, Zambia",
-        harvest_date: "2024-12-15",
-        quality_grade: "Premium",
-        images: ["https://images.unsplash.com/photo-1553279768-865429fa0078?w=800&q=80"],
-        description: "Premium Kent mangoes, organically grown without pesticides. Ready for harvest in December.",
-        certifications: ["Organic", "GlobalGAP"],
-        submitted_date: "2024-11-07",
-        priority: "high",
-      },
-      {
-        id: "V2",
-        type: "listing",
-        listing_id: "L2",
-        farmer_name: "Mary Banda",
-        farmer_address: "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
-        crop_type: "Tomatoes",
-        quantity: 1000,
-        price: 12,
-        location: "Kabwe, Zambia",
-        harvest_date: "2024-11-20",
-        quality_grade: "Grade A",
-        images: ["https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=800&q=80"],
-        description: "Fresh Roma tomatoes, perfect for processing and canning.",
-        certifications: ["HACCP"],
-        submitted_date: "2024-11-06",
-        priority: "medium",
-      },
-      {
-        id: "V3",
-        type: "quality",
-        order_id: "O1",
-        farmer_name: "Peter Phiri",
-        farmer_address: "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8",
-        crop_type: "Pineapples",
-        quantity: 300,
-        price: 20,
-        location: "Kitwe, Zambia",
-        harvest_date: "2024-11-10",
-        quality_grade: "Premium",
-        images: ["https://images.unsplash.com/photo-1550828520-4cb496926fc9?w=800&q=80"],
-        description: "Quality check requested for pineapple delivery.",
-        certifications: ["Organic"],
-        submitted_date: "2024-11-07",
-        priority: "high",
-      },
-    ];
-
-    const mockHistory: VerificationHistory[] = [
-      {
-        id: "H1",
-        type: "listing",
-        crop_type: "Cashew Nuts",
-        farmer_name: "Sarah Phiri",
-        status: "approved",
-        verified_date: "2024-11-05",
-        notes: "Excellent quality, all documentation in order",
-        fee_earned: 50,
-      },
-      {
-        id: "H2",
-        type: "listing",
-        crop_type: "Avocados",
-        farmer_name: "James Mwamba",
-        status: "approved",
-        verified_date: "2024-11-04",
-        notes: "Good quality, meets standards",
-        fee_earned: 50,
-      },
-      {
-        id: "H3",
-        type: "quality",
-        crop_type: "Mangoes",
-        farmer_name: "Alice Banda",
-        status: "rejected",
-        verified_date: "2024-11-03",
-        notes: "Quality below stated grade, requested re-grading",
-        fee_earned: 25,
-      },
-    ];
-
-    setPendingVerifications(mockPending);
-    setHistory(mockHistory);
-  };
-
-  const stats = {
-    pending: pendingVerifications.length,
-    approvedToday: 5,
-    totalEarnings: 1250,
-    approvalRate: 92,
-    avgVerificationTime: "12 min",
-  };
-
-  const handleApprove = async (verification: PendingVerification) => {
+  const loadVerifications = async () => {
     try {
-      // TODO: Update Supabase
-      toast.success(`${verification.crop_type} listing approved!`);
-      setPendingVerifications(prev => prev.filter(v => v.id !== verification.id));
-      setSelectedVerification(null);
-      setVerificationNotes("");
+      setLoading(true);
+      
+      // Fetch milestones with status 'submitted' (awaiting officer verification)
+      const { data: milestones, error } = await supabase
+        .from('milestones')
+        .select(`
+          *,
+          contract:contracts(
+            id,
+            crop_type,
+            farmer_id,
+            farmer:farmers(
+              name,
+              wallet_address,
+              location_address
+            )
+          )
+        `)
+        .eq('status', 'submitted')
+        .order('completed_date', { ascending: true });
+
+      if (error) throw error;
+
+      // Transform to verification tasks
+      const tasks: MilestoneVerificationTask[] = (milestones || []).map((m: any) => ({
+        id: m.id,
+        milestone: m,
+        submitted_date: m.completed_date || m.created_at,
+        priority: calculatePriority(m),
+      }));
+
+      setPendingVerifications(tasks);
+
+      // Load verification history
+      const { data: historyData, error: historyError } = await supabase
+        .from('milestones')
+        .select(`
+          *,
+          contract:contracts(
+            crop_type,
+            farmer:farmers(name)
+          ),
+          evidence(*)
+        `)
+        .in('status', ['verified', 'rejected'])
+        .order('updated_at', { ascending: false })
+        .limit(10);
+
+      if (!historyError && historyData) {
+        const historyItems: VerificationHistory[] = historyData.map((m: any) => ({
+          id: m.id,
+          type: 'milestone',
+          crop_type: m.contract?.crop_type || 'Unknown',
+          farmer_name: m.contract?.farmer?.name || 'Unknown',
+          status: m.status === 'verified' ? 'approved' : 'rejected',
+          verified_date: new Date(m.updated_at).toLocaleDateString(),
+          notes: m.evidence?.[0]?.metadata?.notes || '',
+          fee_earned: 50,
+        }));
+        setHistory(historyItems);
+      }
     } catch (error) {
-      toast.error("Failed to approve verification");
+      console.error('Error loading verifications:', error);
+      toast.error('Failed to load verification tasks');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleReject = async (verification: PendingVerification) => {
-    if (!verificationNotes.trim()) {
-      toast.error("Please provide rejection notes");
-      return;
-    }
-    try {
-      // TODO: Update Supabase
-      toast.success(`${verification.crop_type} listing rejected`);
-      setPendingVerifications(prev => prev.filter(v => v.id !== verification.id));
-      setSelectedVerification(null);
-      setVerificationNotes("");
-    } catch (error) {
-      toast.error("Failed to reject verification");
-    }
+  const calculatePriority = (milestone: any): "high" | "medium" | "low" => {
+    const daysOld = Math.floor(
+      (Date.now() - new Date(milestone.completed_date || milestone.created_at).getTime()) / (1000 * 60 * 60 * 24)
+    );
+    if (daysOld > 3) return 'high';
+    if (daysOld > 1) return 'medium';
+    return 'low';
+  };
+
+  const handleVerificationComplete = () => {
+    setShowVerificationModal(false);
+    setSelectedVerification(null);
+    loadVerifications(); // Reload the list
   };
 
   const filteredVerifications = pendingVerifications.filter(v => {
-    const matchesType = filterType === "all" || v.type === filterType;
-    const matchesSearch = v.crop_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.farmer_name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesType && matchesSearch;
+    const cropType = v.milestone.contract?.crop_type || '';
+    const farmerName = v.milestone.contract?.farmer?.name || '';
+    const matchesSearch = cropType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      farmerName.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
   });
+
+  const stats = {
+    pending: pendingVerifications.length,
+    approvedToday: history.filter(h => h.status === 'approved' && h.verified_date === new Date().toLocaleDateString()).length,
+    totalEarnings: history.reduce((sum, h) => sum + h.fee_earned, 0),
+    approvalRate: history.length > 0 ? Math.round((history.filter(h => h.status === 'approved').length / history.length) * 100) : 0,
+    avgVerificationTime: "12 min",
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -202,7 +168,7 @@ export default function OfficerDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Officer Dashboard</h1>
-              <p className="text-gray-600 mt-1">Verify listings and ensure quality standards</p>
+              <p className="text-gray-600 mt-1">Verify milestones and ensure quality standards</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2 px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
@@ -280,237 +246,89 @@ export default function OfficerDashboard() {
                       className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
-                  <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="all">All Types</option>
-                    <option value="listing">New Listings</option>
-                    <option value="quality">Quality Checks</option>
-                    <option value="delivery">Delivery Verification</option>
-                    <option value="dispute">Disputes</option>
-                  </select>
                 </div>
 
                 {/* Verification List */}
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                  {filteredVerifications.map((verification, index) => (
-                    <motion.button
-                      key={verification.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      onClick={() => setSelectedVerification(verification)}
-                      className={`w-full text-left p-4 rounded-lg border transition-all ${
-                        selectedVerification?.id === verification.id
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-green-300 bg-white"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{verification.crop_type}</h3>
-                          <p className="text-sm text-gray-600">{verification.farmer_name}</p>
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <Clock className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Loading verification tasks...</p>
+                    </div>
+                  ) : filteredVerifications.length === 0 ? (
+                    <div className="text-center py-8">
+                      <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">No pending verifications</p>
+                    </div>
+                  ) : (
+                    filteredVerifications.map((verification, index) => (
+                      <motion.button
+                        key={verification.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        onClick={() => {
+                          setSelectedVerification(verification);
+                          setShowVerificationModal(true);
+                        }}
+                        className={`w-full text-left p-4 rounded-lg border transition-all ${
+                          selectedVerification?.id === verification.id
+                            ? "border-green-500 bg-green-50"
+                            : "border-gray-200 hover:border-green-300 bg-white"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">{verification.milestone.name}</h3>
+                            <p className="text-sm text-gray-600">{verification.milestone.contract?.farmer?.name || 'Unknown Farmer'}</p>
+                            <p className="text-xs text-gray-500">{verification.milestone.contract?.crop_type || 'Unknown Crop'}</p>
+                          </div>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            verification.priority === "high"
+                              ? "bg-red-100 text-red-700"
+                              : verification.priority === "medium"
+                              ? "bg-orange-100 text-orange-700"
+                              : "bg-gray-100 text-gray-700"
+                          }`}>
+                            {verification.priority}
+                          </span>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          verification.priority === "high"
-                            ? "bg-red-100 text-red-700"
-                            : verification.priority === "medium"
-                            ? "bg-orange-100 text-orange-700"
-                            : "bg-gray-100 text-gray-700"
-                        }`}>
-                          {verification.priority}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span className="flex items-center">
-                          <Package className="h-3 w-3 mr-1" />
-                          {verification.quantity} kg
-                        </span>
-                        <span className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {verification.submitted_date}
-                        </span>
-                      </div>
-                      <div className="mt-2">
-                        <span className="inline-flex px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                          {verification.type}
-                        </span>
-                      </div>
-                    </motion.button>
-                  ))}
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span className="flex items-center">
+                            <Package className="h-3 w-3 mr-1" />
+                            K{verification.milestone.paymentAmount?.toLocaleString() || 0}
+                          </span>
+                          <span className="flex items-center">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {new Date(verification.submitted_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="mt-2">
+                          <span className="inline-flex px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                            Milestone Verification
+                          </span>
+                        </div>
+                      </motion.button>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Verification Details */}
             <div className="lg:col-span-2">
-              {selectedVerification ? (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
-                >
-                  {/* Header */}
-                  <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                          {selectedVerification.crop_type}
-                        </h2>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 mr-1" />
-                            {selectedVerification.farmer_name}
-                          </div>
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-1" />
-                            {selectedVerification.location}
-                          </div>
-                        </div>
-                      </div>
-                      <span className={`px-4 py-2 rounded-lg font-medium ${
-                        selectedVerification.priority === "high"
-                          ? "bg-red-100 text-red-700"
-                          : selectedVerification.priority === "medium"
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}>
-                        {selectedVerification.priority} priority
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-6 space-y-6">
-                    {/* Images */}
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
-                        <ImageIcon className="h-5 w-5 mr-2" />
-                        Product Images
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        {selectedVerification.images.map((image, index) => (
-                          <div key={index} className="relative group">
-                            <img
-                              src={image}
-                              alt={`${selectedVerification.crop_type} ${index + 1}`}
-                              className="w-full h-48 object-cover rounded-lg"
-                            />
-                            <button className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
-                              <Eye className="h-8 w-8 text-white" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Details Grid */}
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Quantity</h4>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {selectedVerification.quantity} kg
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Price per kg</h4>
-                        <p className="text-lg font-semibold text-gray-900">
-                          K{selectedVerification.price}
-                        </p>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Quality Grade</h4>
-                        <span className="inline-flex px-3 py-1 bg-green-100 text-green-700 rounded-lg font-medium">
-                          {selectedVerification.quality_grade}
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Harvest Date</h4>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {selectedVerification.harvest_date}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-500 mb-2">Description</h4>
-                      <p className="text-gray-700 leading-relaxed">
-                        {selectedVerification.description}
-                      </p>
-                    </div>
-
-                    {/* Certifications */}
-                    {selectedVerification.certifications.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-500 mb-2">Certifications</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedVerification.certifications.map((cert, index) => (
-                            <span
-                              key={index}
-                              className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium"
-                            >
-                              {cert}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Farmer Info */}
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-500 mb-2">Farmer Wallet</h4>
-                      <p className="text-sm font-mono text-gray-700 break-all">
-                        {selectedVerification.farmer_address}
-                      </p>
-                    </div>
-
-                    {/* Verification Notes */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Verification Notes
-                      </label>
-                      <textarea
-                        value={verificationNotes}
-                        onChange={(e) => setVerificationNotes(e.target.value)}
-                        rows={4}
-                        placeholder="Add notes about this verification..."
-                        className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                      />
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center space-x-4 pt-4 border-t border-gray-100">
-                      <button
-                        onClick={() => handleApprove(selectedVerification)}
-                        className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
-                      >
-                        <CheckCircle className="h-5 w-5" />
-                        <span>Approve & Earn K50</span>
-                      </button>
-                      <button
-                        onClick={() => handleReject(selectedVerification)}
-                        className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
-                      >
-                        <XCircle className="h-5 w-5" />
-                        <span>Reject</span>
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-                  <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                    Select a Verification
-                  </h3>
-                  <p className="text-gray-600">
-                    Choose a pending verification from the queue to review
-                  </p>
-                </div>
-              )}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
+                <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Select a Verification Task
+                </h3>
+                <p className="text-gray-600">
+                  Click on a milestone from the queue to start verification
+                </p>
+                <p className="text-sm text-gray-500 mt-4">
+                  You'll be able to upload evidence, capture IoT readings, and approve or reject the milestone
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -641,7 +459,7 @@ export default function OfficerDashboard() {
                 </div>
                 <div>
                   <p className="text-green-100 text-sm mb-1">This Month</p>
-                  <p className="text-2xl font-bold">47 verified</p>
+                  <p className="text-2xl font-bold">{history.length} verified</p>
                 </div>
                 <div>
                   <p className="text-green-100 text-sm mb-1">Rating</p>
@@ -655,6 +473,19 @@ export default function OfficerDashboard() {
           </div>
         )}
       </div>
+
+      {/* Officer Verification Modal */}
+      {selectedVerification && (
+        <OfficerVerificationModal
+          isOpen={showVerificationModal}
+          onClose={() => {
+            setShowVerificationModal(false);
+            setSelectedVerification(null);
+          }}
+          milestone={selectedVerification.milestone}
+          onVerificationComplete={handleVerificationComplete}
+        />
+      )}
     </div>
   );
 }

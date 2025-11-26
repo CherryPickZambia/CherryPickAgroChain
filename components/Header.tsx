@@ -2,54 +2,111 @@
 
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { AuthButton } from "@coinbase/cdp-react";
-import { truncateAddress } from "@/lib/utils";
-import { Sprout } from "lucide-react";
+import { Cherry, Shield, Wallet, Sparkles, Leaf } from "lucide-react";
 
 interface HeaderProps {
   userRole?: "farmer" | "buyer" | "officer" | "admin" | null;
-  onRoleChange?: (role: null) => void;
 }
 
-export default function Header({ userRole, onRoleChange }: HeaderProps) {
+export default function Header({ userRole }: HeaderProps) {
   const { evmAddress } = useEvmAddress();
 
+  // Get role display info with enhanced styling
+  const getRoleDisplay = () => {
+    switch (userRole) {
+      case "admin":
+        return { 
+          label: "Admin", 
+          color: "text-purple-700", 
+          bg: "bg-gradient-to-r from-purple-50 to-violet-50", 
+          border: "border-purple-200",
+          icon: Shield,
+          gradient: "from-purple-500 to-violet-600"
+        };
+      case "farmer":
+        return { 
+          label: "Farmer", 
+          color: "text-emerald-700", 
+          bg: "bg-gradient-to-r from-emerald-50 to-teal-50", 
+          border: "border-emerald-200",
+          icon: Leaf,
+          gradient: "from-emerald-500 to-teal-600"
+        };
+      case "buyer":
+        return { 
+          label: "Buyer", 
+          color: "text-blue-700", 
+          bg: "bg-gradient-to-r from-blue-50 to-cyan-50", 
+          border: "border-blue-200",
+          icon: Wallet,
+          gradient: "from-blue-500 to-cyan-600"
+        };
+      case "officer":
+        return { 
+          label: "Officer", 
+          color: "text-amber-700", 
+          bg: "bg-gradient-to-r from-amber-50 to-orange-50", 
+          border: "border-amber-200",
+          icon: Shield,
+          gradient: "from-amber-500 to-orange-600"
+        };
+      default:
+        return null;
+    }
+  };
+
+  const roleDisplay = getRoleDisplay();
+
   return (
-    <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50 backdrop-blur-sm bg-white/95">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          <div className="flex items-center space-x-4">
-            <div className="bg-gradient-to-br from-[#7fb069] to-[#2d5f3f] p-2.5 rounded-xl shadow-md">
-              <Sprout className="h-7 w-7 text-white" />
+    <header className="sticky top-0 z-50">
+      {/* Gradient line accent at top */}
+      <div className="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+      
+      <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo Section */}
+            <div className="flex items-center space-x-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-red-400 to-rose-600 rounded-xl blur-lg opacity-40" />
+                <div className="relative bg-gradient-to-br from-red-500 to-rose-600 p-2.5 rounded-xl shadow-lg">
+                  <Cherry className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h1 className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent tracking-tight">
+                  Cherry Pick
+                </h1>
+                {roleDisplay && (
+                  <p className={`text-xs font-medium ${roleDisplay.color} flex items-center gap-1`}>
+                    <roleDisplay.icon className="h-3 w-3" />
+                    {roleDisplay.label} Dashboard
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-[#1a1a1a] tracking-tight">AgroChain360</h1>
-              {userRole && (
-                <p className="text-xs text-gray-500 font-medium capitalize">{userRole} Dashboard</p>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            {evmAddress && (
-              <>
-                <div className="hidden sm:block">
-                  <div className="bg-[#f0f7f4] px-4 py-2.5 rounded-xl border border-[#2d5f3f]/10">
-                    <p className="text-sm font-semibold text-[#2d5f3f]">
-                      {truncateAddress(evmAddress)}
-                    </p>
+            
+            {/* Right Section - Only Role Badge and Auth Button */}
+            <div className="flex items-center space-x-3">
+              {/* Role Badge - Only show when logged in */}
+              {evmAddress && roleDisplay && (
+                <div className={`hidden sm:flex px-4 py-2 rounded-xl ${roleDisplay.bg} border ${roleDisplay.border} shadow-sm`}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${roleDisplay.gradient} flex items-center justify-center shadow-sm`}>
+                      <roleDisplay.icon className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    <span className={`text-sm font-semibold ${roleDisplay.color}`}>
+                      {roleDisplay.label}
+                    </span>
                   </div>
                 </div>
-                {userRole && onRoleChange && (
-                  <button
-                    onClick={() => onRoleChange(null)}
-                    className="text-sm font-medium text-gray-600 hover:text-[#2d5f3f] transition-colors px-4 py-2 rounded-lg hover:bg-[#f0f7f4]"
-                  >
-                    Change Role
-                  </button>
-                )}
-              </>
-            )}
-            <AuthButton />
+              )}
+              
+              {/* Auth Button */}
+              <div className="[&>button]:!rounded-xl [&>button]:!font-semibold [&>button]:!shadow-sm [&>button]:!border-gray-200 hover:[&>button]:!border-emerald-300 [&>button]:!transition-all [&>button]:!px-5">
+                <AuthButton />
+              </div>
+            </div>
           </div>
         </div>
       </div>

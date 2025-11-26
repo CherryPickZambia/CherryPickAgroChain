@@ -18,6 +18,37 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  
+  // TypeScript configuration
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  
+  // Webpack configuration to suppress specific warnings
+  webpack: (config, { isServer }) => {
+    // Suppress Next.js prop serialization warnings for client components
+    if (!isServer) {
+      config.infrastructureLogging = {
+        level: 'error',
+      };
+    }
+    return config;
+  },
+  
+  // Experimental features
+  experimental: {
+    typedRoutes: false,
+    // Suppress client component prop serialization warnings
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+  
+  // Suppress specific warnings
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
 };
 
 export default nextConfig;

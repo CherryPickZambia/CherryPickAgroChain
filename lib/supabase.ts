@@ -35,6 +35,8 @@ export interface Database {
           location_lng: number;
           location_address: string;
           farm_size: number;
+          status: 'pending' | 'approved' | 'rejected';
+          rejection_reason: string | null;
           created_at: string;
           updated_at: string;
         };
