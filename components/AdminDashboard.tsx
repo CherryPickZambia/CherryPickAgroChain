@@ -16,6 +16,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import FarmerDetailModal from "./FarmerDetailModal";
 import NewJobModal, { JobData } from "./NewJobModal";
 import FarmMap from "./FarmMap";
+import AdminCreateContractModal from "./AdminCreateContractModal";
 
 // Sample jobs data
 const SAMPLE_JOBS: JobData[] = [
@@ -192,10 +193,32 @@ export default function AdminDashboard() {
   const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
   const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [jobs, setJobs] = useState<JobData[]>(SAMPLE_JOBS);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [contracts, setContracts] = useState([
+    { id: "C001", farmer: "John Mwale", crop: "Mangoes", amount: "K15,000", status: "active", date: "2024-11-01" },
+    { id: "C002", farmer: "Mary Banda", crop: "Tomatoes", amount: "K12,000", status: "active", date: "2024-11-03" },
+    { id: "C003", farmer: "Peter Phiri", crop: "Pineapples", amount: "K8,500", status: "pending", date: "2024-11-05" },
+    { id: "C004", farmer: "Sarah Phiri", crop: "Cashews", amount: "K10,000", status: "active", date: "2024-11-02" },
+  ]);
 
   // Handle creating a new job
   const handleCreateJob = (newJob: JobData) => {
     setJobs([newJob, ...jobs]);
+  };
+
+  // Handle creating a new contract
+  const handleCreateContract = (contract: any) => {
+    const newContract = {
+      id: `C00${contracts.length + 1}`,
+      farmer: contract.farmerName || "New Farmer",
+      crop: contract.cropType,
+      amount: `K${Number(contract.totalValue || 0).toLocaleString()}`,
+      status: "pending",
+      date: new Date().toISOString().split('T')[0],
+    };
+    setContracts([newContract, ...contracts]);
+    setShowContractModal(false);
+    toast.success("Contract created successfully!");
   };
 
   // Handle farmer card click
@@ -647,18 +670,16 @@ export default function AdminDashboard() {
                   <h2 className="text-2xl font-bold text-gray-900">All Contracts</h2>
                   <p className="text-gray-600 mt-1">Manage farming contracts and agreements</p>
                 </div>
-                <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
+                <button 
+                  onClick={() => setShowContractModal(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/25 flex items-center space-x-2"
+                >
                   <Plus className="h-4 w-4" />
                   <span>New Contract</span>
                 </button>
               </div>
               <div className="space-y-4">
-                {[
-                  { id: "C001", farmer: "John Mwale", crop: "Mangoes", amount: "K15,000", status: "active", date: "2024-11-01" },
-                  { id: "C002", farmer: "Mary Banda", crop: "Tomatoes", amount: "K12,000", status: "active", date: "2024-11-03" },
-                  { id: "C003", farmer: "Peter Phiri", crop: "Pineapples", amount: "K8,500", status: "pending", date: "2024-11-05" },
-                  { id: "C004", farmer: "Sarah Phiri", crop: "Cashews", amount: "K10,000", status: "active", date: "2024-11-02" },
-                ].map((contract) => (
+                {contracts.map((contract) => (
                   <div key={contract.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-green-500 transition-colors cursor-pointer">
                     <div className="flex items-center space-x-4">
                       <div className="p-3 bg-green-50 rounded-lg">
@@ -1294,6 +1315,14 @@ export default function AdminDashboard() {
         onCreateJobAction={handleCreateJob}
         farmers={SAMPLE_FARMERS.map(f => ({ id: f.id, name: f.name, location: f.location }))}
       />
+
+      {/* Create Contract Modal */}
+      {showContractModal && (
+        <AdminCreateContractModal
+          onClose={() => setShowContractModal(false)}
+          onContractCreated={handleCreateContract}
+        />
+      )}
     </div>
   );
 }
