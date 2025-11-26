@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart as RePieChart, Pie, Cell } from "recharts";
 import FarmerDetailModal from "./FarmerDetailModal";
 import NewJobModal, { JobData } from "./NewJobModal";
+import FarmMap from "./FarmMap";
 
 // Sample jobs data
 const SAMPLE_JOBS: JobData[] = [
@@ -460,36 +461,9 @@ export default function AdminDashboard() {
                   <span className="text-sm font-medium text-gray-700">18°C</span>
                 </div>
               </div>
-              <div className="relative h-96 bg-gradient-to-br from-green-50 to-emerald-50">
-                {/* Placeholder for map */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                    <p className="text-gray-600 font-medium">Interactive Farm Map</p>
-                    <p className="text-sm text-gray-400 mt-2">Showing 14 fields across 54,862 hectares</p>
-                    {/* Farm markers */}
-                    <div className="mt-8 flex justify-center space-x-4">
-                      <div className="px-4 py-2 bg-yellow-500 text-white rounded-lg shadow-lg text-sm font-medium">
-                        Bay Land
-                      </div>
-                      <div className="px-4 py-2 bg-green-600 text-white rounded-lg shadow-lg text-sm font-medium">
-                        YNS Farm
-                      </div>
-                      <div className="px-4 py-2 bg-red-500 text-white rounded-lg shadow-lg text-sm font-medium">
-                        ARD Farm
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Map controls */}
-                <div className="absolute left-4 top-4 bg-white rounded-lg shadow-md">
-                  <button className="p-2 hover:bg-gray-50 border-b border-gray-100">
-                    <Plus className="h-4 w-4 text-gray-600" />
-                  </button>
-                  <button className="p-2 hover:bg-gray-50">
-                    <span className="text-gray-600 font-bold">−</span>
-                  </button>
-                </div>
+              <div className="relative h-96 rounded-xl overflow-hidden">
+                {/* Real Interactive Map */}
+                <FarmMap />
               </div>
             </motion.div>
 
