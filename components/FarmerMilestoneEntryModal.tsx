@@ -7,12 +7,18 @@ import toast from "react-hot-toast";
 
 interface FarmActivity {
   id: string;
-  type: "planting" | "fertilizer" | "pesticide" | "irrigation" | "pruning" | "harvesting" | "other";
+  type: "planting" | "weeding" | "fertilizer" | "pesticide" | "irrigation" | "pruning" | "harvesting" | "other";
   description: string;
   quantity?: number;
   unit?: string;
   date: string;
   notes?: string;
+  isKeyMilestone?: boolean;
+  fertilizerDetails?: {
+    brand: string;
+    type: string;
+    npkRatio?: string;
+  };
 }
 
 interface FarmerMilestoneEntryModalProps {
@@ -37,6 +43,12 @@ export default function FarmerMilestoneEntryModal({
 
   // Activity Form State
   const [activityType, setActivityType] = useState<FarmActivity["type"]>("planting");
+  const [isKeyMilestone, setIsKeyMilestone] = useState(false);
+  const [fertilizerBrand, setFertilizerBrand] = useState("");
+  const [fertilizerType, setFertilizerType] = useState("organic");
+  const [npkRatio, setNpkRatio] = useState("");
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [farmLocation, setFarmLocation] = useState<{lat: number; lng: number} | null>(null);
   const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("seedlings");
@@ -57,6 +69,12 @@ export default function FarmerMilestoneEntryModal({
       unit: quantity ? unit : undefined,
       date,
       notes: notes.trim() || undefined,
+      isKeyMilestone,
+      fertilizerDetails: activityType === 'fertilizer' ? {
+        brand: fertilizerBrand,
+        type: fertilizerType,
+        npkRatio: npkRatio || undefined,
+      } : undefined,
     };
 
     setActivities([...activities, newActivity]);
@@ -65,6 +83,10 @@ export default function FarmerMilestoneEntryModal({
     setDescription("");
     setQuantity("");
     setNotes("");
+    setIsKeyMilestone(false);
+    setFertilizerBrand("");
+    setFertilizerType("organic");
+    setNpkRatio("");
     setShowActivityForm(false);
     toast.success("Activity added");
   };
@@ -182,6 +204,7 @@ export default function FarmerMilestoneEntryModal({
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="planting">Planting</option>
+                      <option value="weeding">Weeding</option>
                       <option value="fertilizer">Fertilizer Application</option>
                       <option value="pesticide">Pesticide Application</option>
                       <option value="irrigation">Irrigation</option>
@@ -250,6 +273,69 @@ export default function FarmerMilestoneEntryModal({
                       <option value="hours">Hours</option>
                       <option value="units">Units</option>
                     </select>
+                  </div>
+
+                  {/* Fertilizer Details - Only show for fertilizer type */}
+                  {activityType === 'fertilizer' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Fertilizer Brand *
+                        </label>
+                        <input
+                          type="text"
+                          value={fertilizerBrand}
+                          onChange={(e) => setFertilizerBrand(e.target.value)}
+                          placeholder="e.g., Compound D, Urea"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Fertilizer Type
+                        </label>
+                        <select
+                          value={fertilizerType}
+                          onChange={(e) => setFertilizerType(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        >
+                          <option value="organic">Organic</option>
+                          <option value="inorganic">Inorganic/Chemical</option>
+                          <option value="compound">Compound</option>
+                          <option value="foliar">Foliar</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          NPK Ratio (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={npkRatio}
+                          onChange={(e) => setNpkRatio(e.target.value)}
+                          placeholder="e.g., 10-20-10"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Key Milestone Checkbox */}
+                  <div className="md:col-span-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isKeyMilestone}
+                        onChange={(e) => setIsKeyMilestone(e.target.checked)}
+                        className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        Mark as Key Milestone (requires verification visit)
+                      </span>
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1 ml-6">
+                      Key milestones like planting, first fertilizer application, and harvest will appear on verifier maps for physical verification.
+                    </p>
                   </div>
 
                   {/* Notes */}

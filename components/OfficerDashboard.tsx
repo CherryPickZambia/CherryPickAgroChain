@@ -5,8 +5,9 @@ import { motion } from "framer-motion";
 import {
   CheckCircle, XCircle, Clock, Eye, Image as ImageIcon, FileText,
   TrendingUp, Award, AlertCircle, Filter, Search, Calendar,
-  MapPin, User, Package, DollarSign, Star, ChevronRight, Download
+  MapPin, User, Package, DollarSign, Star, ChevronRight, Download, Navigation
 } from "lucide-react";
+import VerificationMap from "./VerificationMap";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import toast from "react-hot-toast";
 import OfficerVerificationModal from "./OfficerVerificationModal";
@@ -44,7 +45,7 @@ interface VerificationHistory {
 
 export default function OfficerDashboard() {
   const { evmAddress } = useEvmAddress();
-  const [activeTab, setActiveTab] = useState<"pending" | "history" | "stats">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "map" | "history" | "stats">("pending");
   const [pendingVerifications, setPendingVerifications] = useState<MilestoneVerificationTask[]>([]);
   const [history, setHistory] = useState<VerificationHistory[]>([]);
   const [selectedVerification, setSelectedVerification] = useState<MilestoneVerificationTask | null>(null);
@@ -182,6 +183,7 @@ export default function OfficerDashboard() {
           <div className="flex space-x-1 mt-6 border-b border-gray-200">
             {[
               { id: "pending", label: "Pending Verifications", icon: Clock, count: stats.pending },
+              { id: "map", label: "Nearby Farms", icon: Navigation },
               { id: "history", label: "History", icon: FileText },
               { id: "stats", label: "Statistics", icon: TrendingUp },
             ].map((tab) => {
@@ -331,6 +333,16 @@ export default function OfficerDashboard() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Map Tab - Nearby Farms */}
+        {activeTab === "map" && (
+          <VerificationMap 
+            onSelectRequest={(request) => {
+              // Reload verifications when a request is accepted
+              loadVerifications();
+            }}
+          />
         )}
 
         {/* History Tab */}

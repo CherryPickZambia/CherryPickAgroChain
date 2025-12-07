@@ -10,6 +10,8 @@ import FarmerDashboard from "./FarmerDashboard";
 import BuyerDashboard from "./BuyerDashboard";
 import OfficerDashboard from "./OfficerDashboard";
 import AdminDashboard from "./AdminDashboard";
+import { getOrCreateUser, getUserByWallet } from "@/lib/supabaseService";
+import toast from "react-hot-toast";
 
 // Admin wallet addresses - these users automatically get admin access
 const ADMIN_WALLETS = [
@@ -55,9 +57,14 @@ export default function Dashboard() {
     return ADMIN_WALLETS.includes(address.toLowerCase());
   };
 
-  // Load role from URL parameter or localStorage
+  // Load role from URL parameter, localStorage, or database
   useEffect(() => {
-    if (evmAddress) {
+    const loadUserRole = async () => {
+      if (!evmAddress) {
+        setIsLoading(false);
+        return;
+      }
+      
       // Log wallet address for admin setup
       console.log("🔐 Your wallet address:", evmAddress);
       
@@ -66,6 +73,12 @@ export default function Dashboard() {
         setIsAdmin(true);
         setUserRole("admin");
         localStorage.setItem(`cherrypick_role_${evmAddress}`, "admin");
+        // Save admin to database
+        try {
+          await getOrCreateUser(evmAddress, "admin");
+        } catch (error) {
+          console.error("Error saving admin to database:", error);
+        }
         setIsLoading(false);
         return;
       }
@@ -74,34 +87,75 @@ export default function Dashboard() {
       if (isOfficer(evmAddress)) {
         setUserRole("officer");
         localStorage.setItem(`cherrypick_role_${evmAddress}`, "officer");
+        // Save officer to database
+        try {
+          await getOrCreateUser(evmAddress, "officer");
+        } catch (error) {
+          console.error("Error saving officer to database:", error);
+        }
         setIsLoading(false);
         return;
       }
 
-      // Check URL parameter first (for non-admin users) - only farmer or buyer allowed
+      // Check if user exists in database first
+      try {
+        const existingUser = await getUserByWallet(evmAddress);
+        if (existingUser) {
+          setUserRole(existingUser.role);
+          localStorage.setItem(`cherrypick_role_${evmAddress}`, existingUser.role);
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking user in database:", error);
+      }
+
+      // Check URL parameter (for non-admin users) - only farmer or buyer allowed
       const roleParam = searchParams.get('role');
       
       if (roleParam && (roleParam === "farmer" || roleParam === "buyer")) {
         setUserRole(roleParam);
-        // Save to localStorage permanently
         localStorage.setItem(`cherrypick_role_${evmAddress}`, roleParam);
+        // Save to database
+        try {
+          await getOrCreateUser(evmAddress, roleParam);
+        } catch (error) {
+          console.error("Error saving user to database:", error);
+        }
       } else {
         // Fallback to localStorage - role is permanent once chosen
         const savedRole = localStorage.getItem(`cherrypick_role_${evmAddress}`);
         if (savedRole && (savedRole === "farmer" || savedRole === "buyer" || savedRole === "officer" || savedRole === "admin")) {
           setUserRole(savedRole as "farmer" | "buyer" | "officer" | "admin");
+          // Sync to database if not already there
+          try {
+            await getOrCreateUser(evmAddress, savedRole as any);
+          } catch (error) {
+            console.error("Error syncing user to database:", error);
+          }
         }
       }
-    }
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    loadUserRole();
   }, [evmAddress, searchParams]);
 
-  // Save role to localStorage when it changes - PERMANENT, no role change allowed
+  // Save role to localStorage and database when it changes - PERMANENT, no role change allowed
   // Users can only choose farmer or buyer - officers are promoted by admin
-  const handleRoleSelection = (role: "farmer" | "buyer") => {
+  const handleRoleSelection = async (role: "farmer" | "buyer") => {
     if (evmAddress && !isAdmin) {
       localStorage.setItem(`cherrypick_role_${evmAddress}`, role);
       setUserRole(role);
+      
+      // Save to database
+      try {
+        await getOrCreateUser(evmAddress, role);
+        toast.success(`Account created as ${role === 'farmer' ? 'Farmer' : 'Buyer'}!`);
+      } catch (error) {
+        console.error("Error saving user to database:", error);
+        toast.error("Failed to save account. Please try again.");
+      }
     }
   };
 

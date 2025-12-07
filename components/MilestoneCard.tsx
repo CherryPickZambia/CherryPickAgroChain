@@ -36,14 +36,67 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
       // Save farmer entries to database
       const { supabase } = await import('@/lib/supabase');
       
-      // Store activities in milestone metadata
+      // Get GPS location for verification
+      let location: { lat: number; lng: number } | null = null;
+      const hasKeyMilestone = activities.some((a: any) => a.isKeyMilestone);
+      
+      if (hasKeyMilestone && navigator.geolocation) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            });
+          });
+          location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+        } catch (geoError) {
+          console.warn("Could not get GPS location:", geoError);
+        }
+      }
+      
+      // Store activities in milestone metadata with location
       await supabase
         .from('milestones')
         .update({
-          metadata: { farmer_activities: activities },
+          metadata: { 
+            farmer_activities: activities,
+            verification_location: location,
+            has_key_milestone: hasKeyMilestone,
+            submitted_at: new Date().toISOString()
+          },
           status: 'submitted',
+          completed_date: new Date().toISOString(),
         })
         .eq('id', milestone.id);
+
+      // If there's a key milestone, create a verification request
+      if (hasKeyMilestone && location) {
+        // Get contract info for the verification request
+        const { data: milestoneData } = await supabase
+          .from('milestones')
+          .select('contract_id, contract:contracts(farmer_id, crop_type, farmer:farmers(name, location_address))')
+          .eq('id', milestone.id)
+          .single();
+        
+        if (milestoneData) {
+          await supabase
+            .from('verification_requests')
+            .insert({
+              milestone_id: milestone.id,
+              contract_id: milestoneData.contract_id,
+              farmer_id: (milestoneData.contract as any)?.farmer_id,
+              location_lat: location.lat,
+              location_lng: location.lng,
+              status: 'pending',
+              priority: 'normal',
+              activities: activities.filter((a: any) => a.isKeyMilestone),
+            });
+        }
+      }
 
       toast.success("Entries submitted! Awaiting officer verification.");
       

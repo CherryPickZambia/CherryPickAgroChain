@@ -9,6 +9,121 @@ import type {
   Payment 
 } from './supabase';
 
+// ==================== USERS ====================
+
+export interface User {
+  id: string;
+  wallet_address: string;
+  role: 'farmer' | 'buyer' | 'officer' | 'admin';
+  name: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function createUser(user: Omit<User, 'id' | 'created_at' | 'updated_at' | 'verified'>) {
+  const { data, error } = await supabase
+    .from('users')
+    .insert({
+      ...user,
+      verified: false,
+    })
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getUserByWallet(walletAddress: string): Promise<User | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('wallet_address', walletAddress)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
+export async function updateUser(id: string, updates: Partial<User>) {
+  const { data, error } = await supabase
+    .from('users')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateUserByWallet(walletAddress: string, updates: Partial<User>) {
+  const { data, error } = await supabase
+    .from('users')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('wallet_address', walletAddress)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function getUsers() {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getUsersByRole(role: string) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('role', role)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return data || [];
+}
+
+// Get or create user - ensures user exists in database
+export async function getOrCreateUser(walletAddress: string, role: 'farmer' | 'buyer' | 'officer' | 'admin', name?: string): Promise<User> {
+  // Try to get existing user
+  const existingUser = await getUserByWallet(walletAddress);
+  
+  if (existingUser) {
+    // Update role if different (for admin promotions)
+    if (existingUser.role !== role) {
+      const updatedUser = await updateUserByWallet(walletAddress, { role });
+      return updatedUser as User;
+    }
+    return existingUser;
+  }
+  
+  // Create new user
+  const newUser = await createUser({
+    wallet_address: walletAddress,
+    role,
+    name: name || `User ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
+  });
+  
+  return newUser as User;
+}
+
 // ==================== FARMERS ====================
 
 export async function createFarmer(farmer: Omit<Farmer, 'id' | 'created_at' | 'updated_at'>) {

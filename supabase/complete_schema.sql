@@ -224,6 +224,37 @@ CREATE TABLE IF NOT EXISTS extension_officers (
 );
 
 -- ============================================
+-- VERIFICATION REQUESTS (for GPS-based officer dispatch)
+-- ============================================
+
+-- Verification requests table (Yango-style for officers)
+CREATE TABLE IF NOT EXISTS verification_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    milestone_id UUID REFERENCES milestones(id) ON DELETE CASCADE,
+    contract_id UUID REFERENCES contracts(id) ON DELETE CASCADE,
+    farmer_id UUID REFERENCES farmers(id) ON DELETE CASCADE,
+    officer_id UUID REFERENCES extension_officers(id),
+    location_lat DECIMAL(10, 8) NOT NULL,
+    location_lng DECIMAL(11, 8) NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'in_progress', 'completed', 'cancelled')),
+    priority TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+    activities JSONB DEFAULT '[]',
+    officer_notes TEXT,
+    verification_photos TEXT[],
+    verified_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add metadata column to milestones if not exists
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'milestones' AND column_name = 'metadata') THEN
+        ALTER TABLE milestones ADD COLUMN metadata JSONB DEFAULT '{}';
+    END IF;
+END $$;
+
+-- ============================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================
 
@@ -244,6 +275,7 @@ ALTER TABLE extension_officers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public read access" ON marketplace_listings FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON bulk_orders FOR SELECT USING (true);
 CREATE POLICY "Public read access" ON farmers FOR SELECT USING (true);
+CREATE POLICY "Public read users" ON users FOR SELECT USING (true);
 
 -- Allow authenticated users to insert
 CREATE POLICY "Authenticated insert" ON users FOR INSERT WITH CHECK (true);
@@ -253,6 +285,17 @@ CREATE POLICY "Authenticated insert" ON marketplace_orders FOR INSERT WITH CHECK
 CREATE POLICY "Authenticated insert" ON bulk_orders FOR INSERT WITH CHECK (true);
 CREATE POLICY "Authenticated insert" ON bulk_order_bids FOR INSERT WITH CHECK (true);
 CREATE POLICY "Authenticated insert" ON jobs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Authenticated insert" ON verification_requests FOR INSERT WITH CHECK (true);
+
+-- Allow updates on farmers (for profile updates)
+CREATE POLICY "Farmers can update own profile" ON farmers FOR UPDATE USING (true);
+CREATE POLICY "Update milestones" ON milestones FOR UPDATE USING (true);
+CREATE POLICY "Update contracts" ON contracts FOR UPDATE USING (true);
+CREATE POLICY "Update verification requests" ON verification_requests FOR UPDATE USING (true);
+CREATE POLICY "Update users" ON users FOR UPDATE USING (true);
+
+-- Read access for verification requests
+CREATE POLICY "Public read verification_requests" ON verification_requests FOR SELECT USING (true);
 
 -- ============================================
 -- INDEXES FOR PERFORMANCE

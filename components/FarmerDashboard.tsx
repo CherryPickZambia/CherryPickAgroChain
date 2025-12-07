@@ -4,9 +4,8 @@ import { useState, useEffect } from "react";
 import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import MilestoneCard from "./MilestoneCard";
-import NetworkStatus from "./NetworkStatus";
 import { type SmartContract } from "@/lib/types";
-import { getContractsByFarmer, getFarmerByWallet, createFarmer } from "@/lib/supabaseService";
+import { getContractsByFarmer, getFarmerByWallet, createFarmer, updateFarmer } from "@/lib/supabaseService";
 import { getFarmerListings, type MarketplaceListing } from "@/lib/database";
 import toast from "react-hot-toast";
 
@@ -289,14 +288,19 @@ export default function FarmerDashboard() {
     if (!farmerId) return;
     
     try {
-      const { updateFarmer } = await import('@/lib/supabaseService');
-      await updateFarmer(farmerId, profileForm);
-      setFarmerData({ ...farmerData, ...profileForm });
+      // Ensure farm_size is a number
+      const updateData = {
+        ...profileForm,
+        farm_size: Number(profileForm.farm_size) || 0,
+      };
+      
+      await updateFarmer(farmerId, updateData);
+      setFarmerData({ ...farmerData, ...updateData });
       setIsEditingProfile(false);
       toast.success("Profile updated successfully!");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error);
-      toast.error("Failed to update profile");
+      toast.error(error.message || "Failed to update profile");
     }
   };
 
@@ -478,38 +482,6 @@ export default function FarmerDashboard() {
         </div>
       </div>
 
-      {/* Network Status & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Base Network Status - Full Panel */}
-        <NetworkStatus showComparison={true} />
-        
-        {/* Quick Stats Summary */}
-        <div className="lg:col-span-2 card-premium">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-gradient-to-br from-green-100 to-emerald-50 rounded-xl">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-            <h3 className="text-lg font-bold text-[#1a1a1a]">Why Base Network?</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-green-50 rounded-xl p-4 border border-green-200">
-              <p className="text-2xl font-bold text-green-700">~$0.001</p>
-              <p className="text-sm text-green-600">Per Transaction</p>
-            </div>
-            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-              <p className="text-2xl font-bold text-blue-700">2 sec</p>
-              <p className="text-sm text-blue-600">Block Time</p>
-            </div>
-            <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
-              <p className="text-2xl font-bold text-purple-700">99%+</p>
-              <p className="text-sm text-purple-600">Cheaper than Ethereum</p>
-            </div>
-          </div>
-          <p className="text-sm text-gray-500 mt-4">
-            Base is a secure, low-cost L2 built on Ethereum. Perfect for agricultural contracts with frequent milestone payments.
-          </p>
-        </div>
-      </div>
 
       {/* Farmer Profile & Farm Details */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
