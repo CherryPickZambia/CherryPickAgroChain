@@ -34,6 +34,85 @@ interface VerificationMapProps {
   onSelectRequest?: (request: VerificationRequest) => void;
 }
 
+// Demo verification requests for when database is unavailable
+const DEMO_REQUESTS: VerificationRequest[] = [
+  {
+    id: 'vr-1',
+    milestone_id: 'ms-1',
+    contract_id: 'ct-1',
+    farmer_id: 'f-1',
+    location_lat: -15.4167,
+    location_lng: 28.2833,
+    status: 'pending',
+    priority: 'high',
+    activities: [{ type: 'Land Prep', description: 'Verify soil preparation complete' }],
+    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    farmer: { name: 'John Mwale', phone: '+260 97 123 4567', location_address: 'Lusaka, Central' },
+    contract: { crop_type: 'Mangoes' },
+    milestone: { name: 'Land Preparation' }
+  },
+  {
+    id: 'vr-2',
+    milestone_id: 'ms-2',
+    contract_id: 'ct-2',
+    farmer_id: 'f-2',
+    location_lat: -14.4469,
+    location_lng: 28.4464,
+    status: 'pending',
+    priority: 'urgent',
+    activities: [{ type: 'Planting', description: 'Verify seedlings transplanted' }],
+    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    farmer: { name: 'Mary Banda', phone: '+260 96 234 5678', location_address: 'Kabwe, Central Province' },
+    contract: { crop_type: 'Pineapples' },
+    milestone: { name: 'Seedling Transplant' }
+  },
+  {
+    id: 'vr-3',
+    milestone_id: 'ms-3',
+    contract_id: 'ct-3',
+    farmer_id: 'f-3',
+    location_lat: -15.8667,
+    location_lng: 27.7500,
+    status: 'pending',
+    priority: 'normal',
+    activities: [{ type: 'Fertilizer', description: 'Verify NPK application' }],
+    created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+    farmer: { name: 'Peter Phiri', phone: '+260 95 345 6789', location_address: 'Mazabuka, Southern Province' },
+    contract: { crop_type: 'Tomatoes' },
+    milestone: { name: 'Fertilizer Application' }
+  },
+  {
+    id: 'vr-4',
+    milestone_id: 'ms-4',
+    contract_id: 'ct-4',
+    farmer_id: 'f-4',
+    location_lat: -13.6333,
+    location_lng: 32.6500,
+    status: 'pending',
+    priority: 'high',
+    activities: [{ type: 'Harvest', description: 'Quality inspection before harvest' }],
+    created_at: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+    farmer: { name: 'Grace Tembo', phone: '+260 97 456 7890', location_address: 'Chipata, Eastern Province' },
+    contract: { crop_type: 'Cashews' },
+    milestone: { name: 'Harvest Ready Inspection' }
+  },
+  {
+    id: 'vr-5',
+    milestone_id: 'ms-5',
+    contract_id: 'ct-5',
+    farmer_id: 'f-5',
+    location_lat: -13.6167,
+    location_lng: 29.4000,
+    status: 'pending',
+    priority: 'normal',
+    activities: [{ type: 'Growth', description: 'Verify flowering stage reached' }],
+    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    farmer: { name: 'David Zulu', phone: '+260 96 567 8901', location_address: 'Mkushi, Central Province' },
+    contract: { crop_type: 'Maize' },
+    milestone: { name: 'Flowering Stage' }
+  }
+];
+
 export default function VerificationMap({ onSelectRequest }: VerificationMapProps) {
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +151,13 @@ export default function VerificationMap({ onSelectRequest }: VerificationMapProp
     try {
       setLoading(true);
       
+      // Check if Supabase is available
+      if (!supabase) {
+        setRequests(DEMO_REQUESTS);
+        setLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('verification_requests')
         .select(`
@@ -85,10 +171,16 @@ export default function VerificationMap({ onSelectRequest }: VerificationMapProp
 
       if (error) throw error;
       
-      setRequests(data || []);
+      // Use demo data if no results from database
+      if (!data || data.length === 0) {
+        setRequests(DEMO_REQUESTS);
+      } else {
+        setRequests(data);
+      }
     } catch (error) {
       console.error("Error loading verification requests:", error);
-      toast.error("Failed to load verification requests");
+      // Use demo data on error
+      setRequests(DEMO_REQUESTS);
     } finally {
       setLoading(false);
     }

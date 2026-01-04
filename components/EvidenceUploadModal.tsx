@@ -16,11 +16,11 @@ interface IoTReading {
 
 interface EvidenceUploadModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   milestoneId: string;
   milestoneName: string;
   contractId: string;
-  onSubmit: (evidence: {
+  onSubmitAction: (evidence: {
     images: string[];
     iotReadings: IoTReading[];
     notes: string;
@@ -29,11 +29,11 @@ interface EvidenceUploadModalProps {
 
 export default function EvidenceUploadModal({
   isOpen,
-  onClose,
+  onCloseAction,
   milestoneId,
   milestoneName,
   contractId,
-  onSubmit,
+  onSubmitAction,
 }: EvidenceUploadModalProps) {
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -111,23 +111,24 @@ export default function EvidenceUploadModal({
     setUploading(true);
 
     try {
-      // Upload images to IPFS
+      // Upload images to Pinata IPFS
       const imageUrls: string[] = [];
       
       for (const image of images) {
-        const ipfsHash = await uploadToIPFS(image);
-        imageUrls.push(`ipfs://${ipfsHash}`);
+        const result = await uploadToIPFS(image);
+        // Use the Pinata gateway URL directly
+        imageUrls.push(result.url);
       }
 
       // Submit evidence
-      await onSubmit({
+      await onSubmitAction({
         images: imageUrls,
         iotReadings,
         notes,
       });
 
-      toast.success("Evidence submitted successfully!");
-      onClose();
+      toast.success("Evidence uploaded to Pinata successfully!");
+      onCloseAction();
       
       // Reset form
       setImages([]);
@@ -136,7 +137,7 @@ export default function EvidenceUploadModal({
       setNotes("");
     } catch (error) {
       console.error("Error submitting evidence:", error);
-      toast.error("Failed to submit evidence");
+      toast.error("Failed to upload evidence to Pinata");
     } finally {
       setUploading(false);
     }
@@ -187,7 +188,7 @@ export default function EvidenceUploadModal({
                 <p className="text-green-100 mt-1">{milestoneName}</p>
               </div>
               <button
-                onClick={onClose}
+                onClick={onCloseAction}
                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
               >
                 <X className="h-6 w-6" />
@@ -357,7 +358,7 @@ export default function EvidenceUploadModal({
             </div>
             <div className="flex gap-3">
               <button
-                onClick={onClose}
+                onClick={onCloseAction}
                 disabled={uploading}
                 className="btn-secondary"
               >
@@ -371,7 +372,7 @@ export default function EvidenceUploadModal({
                 {uploading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Uploading to IPFS...
+                    Uploading to Pinata...
                   </>
                 ) : (
                   <>

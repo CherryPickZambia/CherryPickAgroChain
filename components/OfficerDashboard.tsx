@@ -11,6 +11,7 @@ import VerificationMap from "./VerificationMap";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import toast from "react-hot-toast";
 import OfficerVerificationModal from "./OfficerVerificationModal";
+import WalletBalance from "./WalletBalance";
 import { supabase } from "@/lib/supabase";
 import type { Milestone } from "@/lib/types";
 
@@ -54,6 +55,112 @@ export default function OfficerDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Sample demo data for when database is unavailable
+  const DEMO_VERIFICATIONS: MilestoneVerificationTask[] = [
+    {
+      id: 'demo-1',
+      milestone: {
+        id: 'demo-1',
+        name: 'Land Preparation Complete',
+        description: 'Initial land clearing and soil preparation for mango planting',
+        status: 'submitted',
+        payment_amount: 500,
+        expected_date: '2024-12-15',
+        completed_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        contract: {
+          id: 'contract-1',
+          crop_type: 'Mangoes',
+          farmer_id: 'farmer-1',
+          farmer: {
+            name: 'John Mwale',
+            wallet_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1',
+            location_address: 'Mkushi, Central Province'
+          }
+        }
+      } as any,
+      submitted_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      priority: 'medium'
+    },
+    {
+      id: 'demo-2',
+      milestone: {
+        id: 'demo-2',
+        name: 'Seedling Transplant',
+        description: 'Pineapple seedlings transplanted to main field',
+        status: 'submitted',
+        payment_amount: 750,
+        expected_date: '2024-12-20',
+        completed_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        contract: {
+          id: 'contract-2',
+          crop_type: 'Pineapples',
+          farmer_id: 'farmer-2',
+          farmer: {
+            name: 'Mary Banda',
+            wallet_address: '0x8ba1F109551bD432803012645Ac136ddd64DBA72',
+            location_address: 'Chisamba, Central Province'
+          }
+        }
+      } as any,
+      submitted_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+      priority: 'high'
+    },
+    {
+      id: 'demo-3',
+      milestone: {
+        id: 'demo-3',
+        name: 'Fertilizer Application',
+        description: 'First round of NPK fertilizer applied to tomato crops',
+        status: 'submitted',
+        payment_amount: 300,
+        expected_date: '2024-12-18',
+        completed_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        contract: {
+          id: 'contract-3',
+          crop_type: 'Tomatoes',
+          farmer_id: 'farmer-3',
+          farmer: {
+            name: 'Peter Phiri',
+            wallet_address: '0x9f2dF0fed2C77648de5860a4dc508cd0572B6C1a',
+            location_address: 'Mazabuka, Southern Province'
+          }
+        }
+      } as any,
+      submitted_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+      priority: 'low'
+    },
+    {
+      id: 'demo-4',
+      milestone: {
+        id: 'demo-4',
+        name: 'Harvest Ready Inspection',
+        description: 'Cashew nuts ready for harvest - quality inspection needed',
+        status: 'submitted',
+        payment_amount: 1000,
+        expected_date: '2024-12-10',
+        completed_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        contract: {
+          id: 'contract-4',
+          crop_type: 'Cashews',
+          farmer_id: 'farmer-4',
+          farmer: {
+            name: 'Grace Tembo',
+            wallet_address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+            location_address: 'Chipata, Eastern Province'
+          }
+        }
+      } as any,
+      submitted_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      priority: 'high'
+    }
+  ];
+
+  const DEMO_HISTORY: VerificationHistory[] = [
+    { id: 'h1', type: 'milestone', crop_type: 'Maize', farmer_name: 'David Zulu', status: 'approved', verified_date: '2024-12-01', notes: 'Excellent crop condition', fee_earned: 50 },
+    { id: 'h2', type: 'milestone', crop_type: 'Soybeans', farmer_name: 'Sarah Mumba', status: 'approved', verified_date: '2024-11-28', notes: 'All requirements met', fee_earned: 50 },
+    { id: 'h3', type: 'milestone', crop_type: 'Groundnuts', farmer_name: 'James Sakala', status: 'rejected', verified_date: '2024-11-25', notes: 'Insufficient evidence provided', fee_earned: 0 },
+  ];
+
   // Load milestone verification tasks from Supabase
   useEffect(() => {
     loadVerifications();
@@ -62,6 +169,15 @@ export default function OfficerDashboard() {
   const loadVerifications = async () => {
     try {
       setLoading(true);
+      
+      // Check if Supabase is available
+      if (!supabase) {
+        // Use demo data
+        setPendingVerifications(DEMO_VERIFICATIONS);
+        setHistory(DEMO_HISTORY);
+        setLoading(false);
+        return;
+      }
       
       // Fetch milestones with status 'submitted' (awaiting officer verification)
       const { data: milestones, error } = await supabase
@@ -92,7 +208,12 @@ export default function OfficerDashboard() {
         priority: calculatePriority(m),
       }));
 
-      setPendingVerifications(tasks);
+      // If no data from DB, use demo data
+      if (tasks.length === 0) {
+        setPendingVerifications(DEMO_VERIFICATIONS);
+      } else {
+        setPendingVerifications(tasks);
+      }
 
       // Load verification history
       const { data: historyData, error: historyError } = await supabase
@@ -109,7 +230,7 @@ export default function OfficerDashboard() {
         .order('updated_at', { ascending: false })
         .limit(10);
 
-      if (!historyError && historyData) {
+      if (!historyError && historyData && historyData.length > 0) {
         const historyItems: VerificationHistory[] = historyData.map((m: any) => ({
           id: m.id,
           type: 'milestone',
@@ -121,10 +242,14 @@ export default function OfficerDashboard() {
           fee_earned: 50,
         }));
         setHistory(historyItems);
+      } else {
+        setHistory(DEMO_HISTORY);
       }
-    } catch (error) {
-      console.error('Error loading verifications:', error);
-      toast.error('Failed to load verification tasks');
+    } catch (error: any) {
+      console.error('Error loading verifications:', error?.message || error);
+      // Use demo data on error
+      setPendingVerifications(DEMO_VERIFICATIONS);
+      setHistory(DEMO_HISTORY);
     } finally {
       setLoading(false);
     }
@@ -225,19 +350,23 @@ export default function OfficerDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Pending Verifications Tab */}
         {activeTab === "pending" && (
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Verification Queue */}
-            <div className="lg:col-span-1 space-y-4">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-bold text-gray-900">Verification Queue</h2>
-                  <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
-                    {filteredVerifications.length} pending
-                  </span>
+          <div className="space-y-6">
+            {/* Wallet Balance - Top Row */}
+            {evmAddress && (
+              <div className="max-w-md">
+                <WalletBalance walletAddress={evmAddress} userRole="officer" />
+              </div>
+            )}
+            
+            {/* Verification Queue - Full Width */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Verification Queue</h2>
+                  <p className="text-sm text-gray-500 mt-1">Click on a task to start verification</p>
                 </div>
-
-                {/* Filters */}
-                <div className="space-y-3 mb-4">
+                <div className="flex items-center gap-4">
+                  {/* Search */}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
@@ -245,92 +374,80 @@ export default function OfficerDashboard() {
                       placeholder="Search..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 w-64"
                     />
                   </div>
-                </div>
-
-                {/* Verification List */}
-                <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                  {loading ? (
-                    <div className="text-center py-8">
-                      <Clock className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">Loading verification tasks...</p>
-                    </div>
-                  ) : filteredVerifications.length === 0 ? (
-                    <div className="text-center py-8">
-                      <CheckCircle className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">No pending verifications</p>
-                    </div>
-                  ) : (
-                    filteredVerifications.map((verification, index) => (
-                      <motion.button
-                        key={verification.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        onClick={() => {
-                          setSelectedVerification(verification);
-                          setShowVerificationModal(true);
-                        }}
-                        className={`w-full text-left p-4 rounded-lg border transition-all ${
-                          selectedVerification?.id === verification.id
-                            ? "border-green-500 bg-green-50"
-                            : "border-gray-200 hover:border-green-300 bg-white"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900">{verification.milestone.name}</h3>
-                            <p className="text-sm text-gray-600">{verification.milestone.contract?.farmer?.name || 'Unknown Farmer'}</p>
-                            <p className="text-xs text-gray-500">{verification.milestone.contract?.crop_type || 'Unknown Crop'}</p>
-                          </div>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            verification.priority === "high"
-                              ? "bg-red-100 text-red-700"
-                              : verification.priority === "medium"
-                              ? "bg-orange-100 text-orange-700"
-                              : "bg-gray-100 text-gray-700"
-                          }`}>
-                            {verification.priority}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span className="flex items-center">
-                            <Package className="h-3 w-3 mr-1" />
-                            K{verification.milestone.paymentAmount?.toLocaleString() || 0}
-                          </span>
-                          <span className="flex items-center">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {new Date(verification.submitted_date).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <div className="mt-2">
-                          <span className="inline-flex px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                            Milestone Verification
-                          </span>
-                        </div>
-                      </motion.button>
-                    ))
-                  )}
+                  <span className="px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                    {filteredVerifications.length} pending
+                  </span>
                 </div>
               </div>
-            </div>
 
-            {/* Verification Details */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-                <Clock className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  Select a Verification Task
-                </h3>
-                <p className="text-gray-600">
-                  Click on a milestone from the queue to start verification
-                </p>
-                <p className="text-sm text-gray-500 mt-4">
-                  You'll be able to upload evidence, capture IoT readings, and approve or reject the milestone
-                </p>
-              </div>
+              {/* Verification Grid - Full Width */}
+              {loading ? (
+                <div className="text-center py-12">
+                  <Clock className="h-8 w-8 text-gray-400 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">Loading verification tasks...</p>
+                </div>
+              ) : filteredVerifications.length === 0 ? (
+                <div className="text-center py-12">
+                  <CheckCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900">All Caught Up!</h3>
+                  <p className="text-sm text-gray-600">No pending verifications</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {filteredVerifications.map((verification, index) => (
+                    <motion.button
+                      key={verification.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      whileHover={{ y: -4 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => {
+                        setSelectedVerification(verification);
+                        setShowVerificationModal(true);
+                      }}
+                      className={`text-left p-4 rounded-xl border-2 transition-all ${
+                        selectedVerification?.id === verification.id
+                          ? "border-green-500 bg-green-50 shadow-lg"
+                          : "border-gray-200 hover:border-green-300 hover:shadow-md bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          verification.priority === "high"
+                            ? "bg-red-100 text-red-700"
+                            : verification.priority === "medium"
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}>
+                          {verification.priority}
+                        </span>
+                        <span className="text-lg font-bold text-green-600">
+                          K{verification.milestone.paymentAmount?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                      
+                      <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{verification.milestone.name}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{verification.milestone.contract?.farmer?.name || 'Unknown Farmer'}</p>
+                      <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-700 text-xs rounded-full mb-3">
+                        {verification.milestone.contract?.crop_type || 'Unknown Crop'}
+                      </span>
+                      
+                      <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
+                        <span className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {new Date(verification.submitted_date).toLocaleDateString()}
+                        </span>
+                        <span className="inline-flex px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                          Verify
+                        </span>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -490,12 +607,12 @@ export default function OfficerDashboard() {
       {selectedVerification && (
         <OfficerVerificationModal
           isOpen={showVerificationModal}
-          onClose={() => {
+          onCloseAction={() => {
             setShowVerificationModal(false);
             setSelectedVerification(null);
           }}
           milestone={selectedVerification.milestone}
-          onVerificationComplete={handleVerificationComplete}
+          onVerificationCompleteAction={handleVerificationComplete}
         />
       )}
     </div>

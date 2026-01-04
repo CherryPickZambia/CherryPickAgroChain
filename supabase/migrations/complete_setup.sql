@@ -1,8 +1,3 @@
--- Complete Supabase Setup for Cherry Pick AgroChain
--- Run this ONCE in Supabase SQL Editor to set up all tables and policies
--- ============================================
-
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================

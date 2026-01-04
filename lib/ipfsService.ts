@@ -1,9 +1,7 @@
 import axios from 'axios';
 
-// Pinata configuration
-const PINATA_API_KEY = process.env.PINATA_API_KEY || '';
-const PINATA_API_SECRET = process.env.PINATA_API_SECRET || '';
-const PINATA_JWT = process.env.PINATA_JWT || '';
+// Pinata configuration - use NEXT_PUBLIC_ prefix for client-side access
+const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT || process.env.PINATA_JWT || '';
 const PINATA_API_URL = 'https://api.pinata.cloud';
 
 export interface UploadResult {
@@ -146,4 +144,103 @@ export function getIPFSUrl(cid: string): string {
 export async function pinFile(cid: string): Promise<void> {
   // Files are automatically pinned by Pinata
   console.log(`File ${cid} is pinned on Pinata`);
+}
+
+/**
+ * List all pinned files from Pinata (verification evidence)
+ */
+export interface PinataFile {
+  id: string;
+  ipfs_pin_hash: string;
+  size: number;
+  user_id: string;
+  date_pinned: string;
+  date_unpinned: string | null;
+  metadata: {
+    name?: string;
+    keyvalues?: {
+      type?: string;
+      milestone_id?: string;
+      farmer_name?: string;
+      crop_type?: string;
+      officer_name?: string;
+      notes?: string;
+      [key: string]: string | undefined;
+    };
+  };
+}
+
+export interface PinataListResponse {
+  count: number;
+  rows: PinataFile[];
+}
+
+/**
+ * Get all pinned files from Pinata account
+ * These are the verification evidence files uploaded by verifiers
+ */
+export async function listPinnedFiles(options?: {
+  status?: 'pinned' | 'unpinned' | 'all';
+  pageLimit?: number;
+  pageOffset?: number;
+  metadata?: Record<string, string>;
+}): Promise<PinataListResponse> {
+  try {
+    const params = new URLSearchParams();
+    params.append('status', options?.status || 'pinned');
+    params.append('pageLimit', String(options?.pageLimit || 100));
+    params.append('pageOffset', String(options?.pageOffset || 0));
+    
+    // Add metadata filters if provided
+    if (options?.metadata) {
+      Object.entries(options.metadata).forEach(([key, value]) => {
+        params.append(`metadata[keyvalues][${key}]`, JSON.stringify({ value, op: 'eq' }));
+      });
+    }
+
+    const response = await axios.get(
+      `${PINATA_API_URL}/data/pinList?${params.toString()}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${PINATA_JWT}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error: any) {
+    console.error('Failed to list Pinata files:', error);
+    throw new Error(`Failed to list pinned files: ${error.message}`);
+  }
+}
+
+/**
+ * Get verification evidence files from Pinata
+ * Returns files that were uploaded as verification evidence
+ */
+export async function getVerificationEvidence(): Promise<{
+  id: string;
+  cid: string;
+  url: string;
+  name: string;
+  date_pinned: string;
+  size: number;
+  metadata: PinataFile['metadata']['keyvalues'];
+}[]> {
+  try {
+    const result = await listPinnedFiles({ pageLimit: 100 });
+    
+    return result.rows.map(file => ({
+      id: file.id,
+      cid: file.ipfs_pin_hash,
+      url: `https://gateway.pinata.cloud/ipfs/${file.ipfs_pin_hash}`,
+      name: file.metadata?.name || file.ipfs_pin_hash,
+      date_pinned: file.date_pinned,
+      size: file.size,
+      metadata: file.metadata?.keyvalues || {},
+    }));
+  } catch (error: any) {
+    console.error('Failed to get verification evidence:', error);
+    return [];
+  }
 }

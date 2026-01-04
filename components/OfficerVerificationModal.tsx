@@ -9,18 +9,16 @@ import EvidenceUploadModal from "./EvidenceUploadModal";
 
 interface OfficerVerificationModalProps {
   isOpen: boolean;
-  // @ts-ignore - Next.js client component props warning
-  onClose: () => void;
+  onCloseAction: () => void;
   milestone: any;
-  // @ts-ignore - Next.js client component props warning
-  onVerificationComplete: () => void;
+  onVerificationCompleteAction: () => void;
 }
 
 export default function OfficerVerificationModal({
   isOpen,
-  onClose,
+  onCloseAction,
   milestone,
-  onVerificationComplete,
+  onVerificationCompleteAction,
 }: OfficerVerificationModalProps) {
   const [showEvidenceUpload, setShowEvidenceUpload] = useState(false);
   const [evidence, setEvidence] = useState<{
@@ -58,8 +56,8 @@ export default function OfficerVerificationModal({
       });
 
       toast.success("Evidence uploaded! Milestone ready for admin approval.");
-      onVerificationComplete();
-      onClose();
+      onVerificationCompleteAction();
+      onCloseAction();
     } catch (error) {
       console.error("Verification error:", error);
       toast.error("Failed to submit evidence");
@@ -92,8 +90,8 @@ export default function OfficerVerificationModal({
         .eq('id', milestone.id);
 
       toast.success("Milestone rejected");
-      onVerificationComplete();
-      onClose();
+      onVerificationCompleteAction();
+      onCloseAction();
     } catch (error) {
       console.error("Rejection error:", error);
       toast.error("Failed to reject milestone");
@@ -129,7 +127,7 @@ export default function OfficerVerificationModal({
                   </div>
                 </div>
                 <button
-                  onClick={onClose}
+                  onClick={onCloseAction}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="h-6 w-6 text-gray-600" />
@@ -223,7 +221,7 @@ export default function OfficerVerificationModal({
             {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
               <button
-                onClick={onClose}
+                onClick={onCloseAction}
                 disabled={verifying}
                 className="btn-secondary"
               >
@@ -273,11 +271,11 @@ export default function OfficerVerificationModal({
       {/* Evidence Upload Modal */}
       <EvidenceUploadModal
         isOpen={showEvidenceUpload}
-        onClose={() => setShowEvidenceUpload(false)}
+        onCloseAction={() => setShowEvidenceUpload(false)}
         milestoneId={milestone.id}
         milestoneName={milestone.name}
         contractId={milestone.contract?.id || ''}
-        onSubmit={handleEvidenceSubmit}
+        onSubmitAction={handleEvidenceSubmit}
       />
     </>
   );

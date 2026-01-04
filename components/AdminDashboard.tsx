@@ -11,6 +11,10 @@ import {
 } from "lucide-react";
 import { promoteToOfficer, demoteOfficer, isOfficer } from "./Dashboard";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
+import AdminApprovalModal from "./AdminApprovalModal";
+import { getVerificationEvidence } from "@/lib/ipfsService";
+import { STANDARD_MILESTONES, payMilestoneApproval, getUSDCBalance, calculateVerifierFee, getVerifierFeeBreakdown } from "@/lib/blockchain/contractInteractions";
 import { motion, AnimatePresence } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart as RePieChart, Pie, Cell } from "recharts";
 import FarmerDetailModal from "./FarmerDetailModal";
@@ -181,6 +185,28 @@ const MAP_POSITIONS = {
   "Mansa": { x: 52, y: 30 },
 };
 
+// Pending verification interface
+interface PendingVerification {
+  id: string;
+  milestone_id: string;
+  milestone_name: string;
+  farmer_name: string;
+  farmer_wallet: string;
+  crop_type: string;
+  payment_amount: number; // USDC amount for farmer
+  submitted_date: string;
+  officer_name: string;
+  officer_wallet: string; // Verifier wallet for payment
+  evidence_images: string[];
+  officer_notes: string;
+  contract_id: string;
+  blockchain_contract_id?: number;
+  // For verifier fee calculation
+  total_contract_value: number;
+  total_milestones: number;
+  custom_verifier_fee_percent?: number; // Admin can override
+}
+
 export default function AdminDashboard() {
   const [selectedView, setSelectedView] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -194,12 +220,120 @@ export default function AdminDashboard() {
   const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [jobs, setJobs] = useState<JobData[]>(SAMPLE_JOBS);
   const [showContractModal, setShowContractModal] = useState(false);
+  
+  // Pending verifications state
+  const [pendingVerifications, setPendingVerifications] = useState<PendingVerification[]>([]);
+  const [loadingVerifications, setLoadingVerifications] = useState(false);
+  const [selectedVerification, setSelectedVerification] = useState<PendingVerification | null>(null);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  
   const [contracts, setContracts] = useState([
     { id: "C001", farmer: "John Mwale", crop: "Mangoes", amount: "K15,000", status: "active", date: "2024-11-01" },
     { id: "C002", farmer: "Mary Banda", crop: "Tomatoes", amount: "K12,000", status: "active", date: "2024-11-03" },
     { id: "C003", farmer: "Peter Phiri", crop: "Pineapples", amount: "K8,500", status: "pending", date: "2024-11-05" },
     { id: "C004", farmer: "Sarah Phiri", crop: "Cashews", amount: "K10,000", status: "active", date: "2024-11-02" },
   ]);
+
+  // Load pending verifications directly from Pinata - real evidence uploaded by verifiers
+  const loadPendingVerifications = async () => {
+    setLoadingVerifications(true);
+    try {
+      console.log('Loading verification evidence from Pinata...');
+      
+      // Get all pinned files from Pinata - these are the evidence files uploaded by verifiers
+      const pinataFiles = await getVerificationEvidence();
+      
+      console.log('Pinata files loaded:', pinataFiles);
+      
+      if (pinataFiles.length === 0) {
+        console.log('No files found in Pinata');
+        setPendingVerifications([]);
+        return;
+      }
+
+      // Group files by their metadata or create individual verification entries
+      // Each image file becomes a pending verification for review
+      // Assign milestone payment amounts based on standard milestones from smart contract
+      const milestonePayments: Record<string, number> = {
+        'Land Preparation': 500,    // 10% of typical $5000 contract
+        'Planting': 750,            // 15%
+        'Fertilizer Application': 500, // 10%
+        'Growth Stage': 750,        // 15%
+        'Pest Control': 500,        // 10%
+        'Flowering Stage': 750,     // 15%
+        'Harvest': 1250,            // 25%
+        'default': 500,             // Default payment
+      };
+
+      const verifications: PendingVerification[] = pinataFiles.map((file, index) => {
+        // Extract metadata from Pinata file if available
+        const metadata = file.metadata || {};
+        
+        // Determine milestone name and payment from file name or metadata
+        let milestoneName = metadata.milestone_id || file.name || 'Verification Evidence';
+        
+        // Try to match to a standard milestone for payment amount
+        let paymentAmount = parseInt(metadata.payment_amount || '0') || 0;
+        if (paymentAmount === 0) {
+          // Check if file name matches any standard milestone
+          for (const [name, amount] of Object.entries(milestonePayments)) {
+            if (milestoneName.toLowerCase().includes(name.toLowerCase())) {
+              paymentAmount = amount;
+              milestoneName = name;
+              break;
+            }
+          }
+          // Default payment if no match
+          if (paymentAmount === 0) {
+            paymentAmount = milestonePayments['default'];
+          }
+        }
+        
+        // Get contract value and milestone count from metadata or use defaults
+        const totalContractValue = parseInt(metadata.total_contract_value || '5000') || 5000; // Default $5000 contract
+        const totalMilestones = parseInt(metadata.total_milestones || '4') || 4; // Default 4 milestones
+        const customVerifierFee = metadata.custom_verifier_fee_percent ? parseFloat(metadata.custom_verifier_fee_percent) : undefined;
+
+        return {
+          id: file.id || `pinata-${index}`,
+          milestone_id: metadata.milestone_id || file.cid,
+          milestone_name: milestoneName,
+          farmer_name: metadata.farmer_name || 'Farmer',
+          farmer_wallet: metadata.farmer_wallet || '',
+          crop_type: metadata.crop_type || 'Crop',
+          payment_amount: paymentAmount,
+          submitted_date: file.date_pinned,
+          officer_name: metadata.officer_name || 'Verifier',
+          officer_wallet: metadata.officer_wallet || '',
+          evidence_images: [file.url], // The Pinata gateway URL
+          officer_notes: metadata.notes || '',
+          contract_id: metadata.contract_id || '',
+          blockchain_contract_id: metadata.blockchain_contract_id ? parseInt(metadata.blockchain_contract_id) : undefined,
+          total_contract_value: totalContractValue,
+          total_milestones: totalMilestones,
+          custom_verifier_fee_percent: customVerifierFee,
+        };
+      });
+
+      console.log('Processed Pinata verifications:', verifications);
+      setPendingVerifications(verifications);
+      
+      toast.success(`Loaded ${verifications.length} verification(s) from Pinata`);
+    } catch (error: any) {
+      console.error('Error loading from Pinata:', error?.message || error);
+      toast.error('Failed to load verifications from Pinata');
+      setPendingVerifications([]);
+    } finally {
+      setLoadingVerifications(false);
+    }
+  };
+
+  // Load verifications when view changes to verifications
+  useEffect(() => {
+    if (selectedView === 'verifications') {
+      loadPendingVerifications();
+    }
+  }, [selectedView]);
 
   // Handle creating a new job
   const handleCreateJob = (newJob: JobData) => {
@@ -258,6 +392,7 @@ export default function AdminDashboard() {
     { icon: Activity, label: "Dashboard", id: "dashboard" },
     { icon: ShoppingBag, label: "Marketplace", id: "marketplace" },
     { icon: FileText, label: "Contracts", id: "contracts" },
+    { icon: AlertCircle, label: "Verifications", id: "verifications" },
     { icon: Users, label: "Farmers", id: "farmers" },
     { icon: User, label: "Buyers", id: "buyers" },
     { icon: CheckCircle2, label: "Officers", id: "officers" },
@@ -660,6 +795,131 @@ export default function AdminDashboard() {
             </motion.div>
           </div>
           </>
+          )}
+
+          {/* Verifications View */}
+          {selectedView === "verifications" && (
+            <div className="space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Pending Approvals</p>
+                      <p className="text-3xl font-bold text-orange-600">{pendingVerifications.length}</p>
+                    </div>
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <Clock className="h-6 w-6 text-orange-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Total Payment Value</p>
+                      <p className="text-3xl font-bold text-green-600">
+                        K{pendingVerifications.reduce((sum, v) => sum + v.payment_amount, 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <DollarSign className="h-6 w-6 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Unique Farmers</p>
+                      <p className="text-3xl font-bold text-blue-600">
+                        {new Set(pendingVerifications.map(v => v.farmer_wallet)).size}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <Users className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pending Verifications List */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Pending Verifications</h2>
+                    <p className="text-gray-600 mt-1">Review and approve milestone verifications submitted by officers</p>
+                  </div>
+                  <button
+                    onClick={loadPendingVerifications}
+                    disabled={loadingVerifications}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center space-x-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loadingVerifications ? 'animate-spin' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {loadingVerifications ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="h-8 w-8 text-gray-400 animate-spin" />
+                  </div>
+                ) : pendingVerifications.length === 0 ? (
+                  <div className="text-center py-12">
+                    <CheckCircle2 className="h-16 w-16 text-green-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900">All Caught Up!</h3>
+                    <p className="text-gray-500 mt-1">No pending verifications to review</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                    {pendingVerifications.map((verification) => (
+                      <motion.div
+                        key={verification.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        whileHover={{ y: -4 }}
+                        className="border border-gray-200 rounded-xl p-4 hover:border-purple-300 hover:shadow-lg transition-all cursor-pointer bg-white"
+                        onClick={() => {
+                          setSelectedVerification(verification);
+                          setShowApprovalModal(true);
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="p-2 bg-purple-50 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <span className="text-lg font-bold text-green-600">
+                            ${verification.payment_amount.toLocaleString()}
+                          </span>
+                        </div>
+                        
+                        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{verification.milestone_name}</h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          <span className="font-medium">{verification.farmer_name}</span>
+                        </p>
+                        <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-700 text-xs rounded-full mb-3">
+                          {verification.crop_type}
+                        </span>
+                        
+                        <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {verification.officer_name}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(verification.submitted_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                        
+                        <button className="w-full mt-3 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+                          <Eye className="h-4 w-4" />
+                          Review
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* Contracts View */}
@@ -1321,6 +1581,129 @@ export default function AdminDashboard() {
         <AdminCreateContractModal
           onClose={() => setShowContractModal(false)}
           onContractCreated={handleCreateContract}
+        />
+      )}
+
+      {/* Admin Approval Modal for Verifications */}
+      {showApprovalModal && selectedVerification && (
+        <AdminApprovalModal
+          isOpen={showApprovalModal}
+          onClose={() => {
+            setShowApprovalModal(false);
+            setSelectedVerification(null);
+          }}
+          milestone={{
+            id: selectedVerification.milestone_id,
+            name: selectedVerification.milestone_name,
+            description: `${selectedVerification.crop_type} - Payment: K${selectedVerification.payment_amount.toLocaleString()}`,
+            farmerName: selectedVerification.farmer_name,
+            farmerActivities: [],
+            officerEvidence: {
+              images: selectedVerification.evidence_images,
+              iotReadings: [],
+              notes: selectedVerification.officer_notes,
+              officerName: selectedVerification.officer_name,
+            },
+          }}
+          onApprove={async (adminNotes: string) => {
+            // Approve milestone and trigger USDC payments to farmer and verifier
+            try {
+              const farmerPayment = selectedVerification.payment_amount;
+              
+              // Calculate verifier fee based on contract value and milestone count
+              // Total verifier fees = 2% of contract value split across milestones
+              // Cap at 3% if more than 4 milestones
+              const feeBreakdown = getVerifierFeeBreakdown(
+                selectedVerification.total_contract_value,
+                selectedVerification.total_milestones,
+                selectedVerification.custom_verifier_fee_percent
+              );
+              const verifierFee = feeBreakdown.feePerMilestone;
+
+              // Update milestone status in database
+              if (supabase) {
+                await supabase
+                  .from('milestones')
+                  .update({
+                    status: 'verified',
+                    verified_at: new Date().toISOString(),
+                    metadata: {
+                      admin_notes: adminNotes,
+                      approved_at: new Date().toISOString(),
+                      farmer_payment_usdc: farmerPayment,
+                      verifier_fee_usdc: verifierFee,
+                      verifier_fee_percent: feeBreakdown.feePerMilestonePercent,
+                      total_verifier_fee_percent: feeBreakdown.totalFeePercent,
+                    },
+                  })
+                  .eq('id', selectedVerification.milestone_id);
+
+                // Record payments in database for dashboard display
+                await supabase.from('payments').insert([
+                  {
+                    user_wallet: selectedVerification.farmer_wallet,
+                    amount: farmerPayment,
+                    currency: 'USDC',
+                    type: 'milestone_payment',
+                    status: 'completed',
+                    milestone_id: selectedVerification.milestone_id,
+                    notes: `Payment for ${selectedVerification.milestone_name}`,
+                  },
+                  {
+                    user_wallet: selectedVerification.officer_wallet,
+                    amount: verifierFee,
+                    currency: 'USDC',
+                    type: 'verification_fee',
+                    status: 'completed',
+                    milestone_id: selectedVerification.milestone_id,
+                    notes: `Verification fee for ${selectedVerification.milestone_name} (${feeBreakdown.feePerMilestonePercent.toFixed(2)}% of $${selectedVerification.total_contract_value} contract)`,
+                  },
+                ]);
+              }
+
+              // Show success with payment details
+              toast.success(
+                `✅ Milestone Approved!\n` +
+                `💰 Farmer: $${farmerPayment.toFixed(2)} USDC → ${selectedVerification.farmer_name}\n` +
+                `🔍 Verifier: $${verifierFee.toFixed(2)} USDC (${feeBreakdown.feePerMilestonePercent.toFixed(2)}%) → ${selectedVerification.officer_name}`,
+                { duration: 5000 }
+              );
+
+              // Remove from pending list
+              setPendingVerifications(prev => prev.filter(v => v.id !== selectedVerification.id));
+              setShowApprovalModal(false);
+              setSelectedVerification(null);
+            } catch (error: any) {
+              console.error('Approval error:', error);
+              toast.error('Failed to process approval');
+              throw error;
+            }
+          }}
+          onReject={async (adminNotes: string) => {
+            // Reject milestone
+            try {
+              if (supabase) {
+                await supabase
+                  .from('milestones')
+                  .update({
+                    status: 'rejected',
+                    metadata: {
+                      admin_rejection_notes: adminNotes,
+                      rejected_at: new Date().toISOString(),
+                    },
+                  })
+                  .eq('id', selectedVerification.milestone_id);
+              }
+
+              // Remove from pending list
+              setPendingVerifications(prev => prev.filter(v => v.id !== selectedVerification.id));
+              setShowApprovalModal(false);
+              setSelectedVerification(null);
+            } catch (error: any) {
+              console.error('Rejection error:', error);
+              throw error;
+            }
+          }}
         />
       )}
     </div>

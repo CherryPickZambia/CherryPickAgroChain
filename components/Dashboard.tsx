@@ -11,6 +11,7 @@ import BuyerDashboard from "./BuyerDashboard";
 import OfficerDashboard from "./OfficerDashboard";
 import AdminDashboard from "./AdminDashboard";
 import { getOrCreateUser, getUserByWallet } from "@/lib/supabaseService";
+import VerifierOnboarding, { VerifierData } from "./VerifierOnboarding";
 import toast from "react-hot-toast";
 
 // Admin wallet addresses - these users automatically get admin access
@@ -51,6 +52,7 @@ export default function Dashboard() {
   const [userRole, setUserRole] = useState<"farmer" | "buyer" | "officer" | "admin" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showVerifierOnboarding, setShowVerifierOnboarding] = useState(false);
 
   // Check if user is an admin
   const checkIsAdmin = (address: string) => {
@@ -76,8 +78,8 @@ export default function Dashboard() {
         // Save admin to database
         try {
           await getOrCreateUser(evmAddress, "admin");
-        } catch (error) {
-          console.error("Error saving admin to database:", error);
+        } catch (error: any) {
+          console.error("Error saving admin to database:", error?.message || error?.code || JSON.stringify(error));
         }
         setIsLoading(false);
         return;
@@ -90,8 +92,8 @@ export default function Dashboard() {
         // Save officer to database
         try {
           await getOrCreateUser(evmAddress, "officer");
-        } catch (error) {
-          console.error("Error saving officer to database:", error);
+        } catch (error: any) {
+          console.error("Error saving officer to database:", error?.message || error?.code || JSON.stringify(error));
         }
         setIsLoading(false);
         return;
@@ -106,8 +108,8 @@ export default function Dashboard() {
           setIsLoading(false);
           return;
         }
-      } catch (error) {
-        console.error("Error checking user in database:", error);
+      } catch (error: any) {
+        console.error("Error checking user in database:", error?.message || error?.code || JSON.stringify(error));
       }
 
       // Check URL parameter (for non-admin users) - only farmer or buyer allowed
@@ -119,8 +121,8 @@ export default function Dashboard() {
         // Save to database
         try {
           await getOrCreateUser(evmAddress, roleParam);
-        } catch (error) {
-          console.error("Error saving user to database:", error);
+        } catch (error: any) {
+          console.error("Error saving user to database:", error?.message || error?.code || JSON.stringify(error));
         }
       } else {
         // Fallback to localStorage - role is permanent once chosen
@@ -130,8 +132,8 @@ export default function Dashboard() {
           // Sync to database if not already there
           try {
             await getOrCreateUser(evmAddress, savedRole as any);
-          } catch (error) {
-            console.error("Error syncing user to database:", error);
+          } catch (error: any) {
+            console.error("Error syncing user to database:", error?.message || error?.code || JSON.stringify(error));
           }
         }
       }
@@ -142,21 +144,43 @@ export default function Dashboard() {
   }, [evmAddress, searchParams]);
 
   // Save role to localStorage and database when it changes - PERMANENT, no role change allowed
-  // Users can only choose farmer or buyer - officers are promoted by admin
+  // Users can only choose farmer, buyer, or verifier (officer)
   const handleRoleSelection = async (role: "farmer" | "buyer") => {
     if (evmAddress && !isAdmin) {
       localStorage.setItem(`cherrypick_role_${evmAddress}`, role);
       setUserRole(role);
       
-      // Save to database
+      // Try to save to database, but don't block on failure
       try {
         await getOrCreateUser(evmAddress, role);
-        toast.success(`Account created as ${role === 'farmer' ? 'Farmer' : 'Buyer'}!`);
       } catch (error) {
-        console.error("Error saving user to database:", error);
-        toast.error("Failed to save account. Please try again.");
+        console.warn("Database not available, using localStorage only");
       }
+      toast.success(`Account created as ${role === 'farmer' ? 'Farmer' : 'Buyer'}!`);
     }
+  };
+
+  // Handle verifier onboarding completion
+  const handleVerifierOnboardingComplete = async (data: VerifierData) => {
+    if (!evmAddress) return;
+    
+    // Save as officer role to localStorage (works without database)
+    localStorage.setItem(`cherrypick_role_${evmAddress}`, 'officer');
+    
+    // Store verifier type and details in localStorage
+    localStorage.setItem(`cherrypick_verifier_${evmAddress}`, JSON.stringify(data));
+    localStorage.setItem(`cherrypick_name_${evmAddress}`, data.name);
+    
+    // Try to save to database, but don't block on failure
+    try {
+      await getOrCreateUser(evmAddress, 'officer', data.name);
+    } catch (error: any) {
+      console.warn("Database not available, using localStorage only:", error?.message || 'Unknown error');
+    }
+    
+    setUserRole('officer');
+    setShowVerifierOnboarding(false);
+    toast.success(`Registered as ${data.verifierType === 'professional' ? 'Professional' : 'Freelance'} Verifier!`);
   };
 
   if (isLoading) {
@@ -172,6 +196,17 @@ export default function Dashboard() {
 
   if (!evmAddress) {
     return <LandingPage />;
+  }
+
+  // Show verifier onboarding if selected
+  if (showVerifierOnboarding && evmAddress) {
+    return (
+      <VerifierOnboarding
+        walletAddress={evmAddress}
+        onCompleteAction={handleVerifierOnboardingComplete}
+        onBackAction={() => setShowVerifierOnboarding(false)}
+      />
+    );
   }
 
   // Role selection if not set
@@ -194,7 +229,7 @@ export default function Dashboard() {
             </div>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             <button
               onClick={() => handleRoleSelection("farmer")}
               className="card-premium group text-left relative overflow-hidden"
@@ -260,13 +295,40 @@ export default function Dashboard() {
                 </div>
               </div>
             </button>
-          </div>
-          
-          {/* Officer info note */}
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-500">
-              Want to become an Extension Officer? Contact the platform admin to apply.
-            </p>
+
+            {/* Verifier Option */}
+            <button
+              onClick={() => setShowVerifierOnboarding(true)}
+              className="card-premium group text-left relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7fb069]/10 to-transparent rounded-full -mr-16 -mt-16"></div>
+              <div className="relative">
+                <div className="bg-gradient-to-br from-[#7fb069] to-[#2d5f3f] w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                  <span className="text-4xl">🔍</span>
+                </div>
+                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-3">Verifier</h3>
+                <p className="text-gray-600 leading-relaxed mb-6">
+                  Verify farmer milestones, conduct field inspections, and earn rewards
+                </p>
+                <ul className="text-sm text-gray-500 space-y-2 mb-6">
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-500">✓</span> Professional or Freelance
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-500">✓</span> Verify crop milestones
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-500">✓</span> Earn verification fees
+                  </li>
+                </ul>
+                <div className="flex items-center text-[#2d5f3f] font-semibold group-hover:translate-x-2 transition-transform">
+                  <span>Become a Verifier</span>
+                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       </div>

@@ -182,7 +182,7 @@ export default function FarmMap({ farms = SAMPLE_FARMS, onFarmClick, selectedFar
       </div>
 
       {/* Farm Legend */}
-      <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur rounded-xl shadow-lg p-3 z-[1000]">
+      <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur rounded-xl shadow-lg p-3 z-[400]">
         <h4 className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
           <MapPin className="h-3 w-3" />
           Farm Locations
@@ -209,7 +209,7 @@ export default function FarmMap({ farms = SAMPLE_FARMS, onFarmClick, selectedFar
       </div>
 
       {/* Stats Badge */}
-      <div className="absolute top-4 right-4 bg-white/95 backdrop-blur rounded-xl shadow-lg p-3 z-[1000]">
+      <div className="absolute top-4 right-4 bg-white/95 backdrop-blur rounded-xl shadow-lg p-3 z-[400]">
         <div className="text-center">
           <div className="text-2xl font-bold text-emerald-600">{farms.length}</div>
           <div className="text-xs text-gray-500">Active Farms</div>

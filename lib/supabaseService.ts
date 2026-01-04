@@ -9,6 +9,14 @@ import type {
   Payment 
 } from './supabase';
 
+// Helper to check if Supabase is configured
+function checkSupabase() {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.');
+  }
+  return supabase;
+}
+
 // ==================== USERS ====================
 
 export interface User {
@@ -25,7 +33,8 @@ export interface User {
 }
 
 export async function createUser(user: Omit<User, 'id' | 'created_at' | 'updated_at' | 'verified'>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('users')
     .insert({
       ...user,
@@ -39,7 +48,8 @@ export async function createUser(user: Omit<User, 'id' | 'created_at' | 'updated
 }
 
 export async function getUserByWallet(walletAddress: string): Promise<User | null> {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('users')
     .select('*')
     .eq('wallet_address', walletAddress)
@@ -50,7 +60,8 @@ export async function getUserByWallet(walletAddress: string): Promise<User | nul
 }
 
 export async function updateUser(id: string, updates: Partial<User>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('users')
     .update({
       ...updates,
@@ -65,7 +76,8 @@ export async function updateUser(id: string, updates: Partial<User>) {
 }
 
 export async function updateUserByWallet(walletAddress: string, updates: Partial<User>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('users')
     .update({
       ...updates,
@@ -80,7 +92,8 @@ export async function updateUserByWallet(walletAddress: string, updates: Partial
 }
 
 export async function getUsers() {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('users')
     .select('*')
     .order('created_at', { ascending: false });
@@ -90,7 +103,8 @@ export async function getUsers() {
 }
 
 export async function getUsersByRole(role: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('users')
     .select('*')
     .eq('role', role)
@@ -127,7 +141,8 @@ export async function getOrCreateUser(walletAddress: string, role: 'farmer' | 'b
 // ==================== FARMERS ====================
 
 export async function createFarmer(farmer: Omit<Farmer, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('farmers')
     .insert(farmer)
     .select()
@@ -138,7 +153,8 @@ export async function createFarmer(farmer: Omit<Farmer, 'id' | 'created_at' | 'u
 }
 
 export async function getFarmerByWallet(walletAddress: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('farmers')
     .select('*')
     .eq('wallet_address', walletAddress)
@@ -149,7 +165,8 @@ export async function getFarmerByWallet(walletAddress: string) {
 }
 
 export async function updateFarmer(id: string, updates: Partial<Farmer>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('farmers')
     .update(updates)
     .eq('id', id)
@@ -161,7 +178,8 @@ export async function updateFarmer(id: string, updates: Partial<Farmer>) {
 }
 
 export async function getFarmers() {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('farmers')
     .select('*')
     .order('created_at', { ascending: false });
@@ -184,7 +202,8 @@ export async function rejectFarmer(id: string, reason?: string) {
 // ==================== CONTRACTS ====================
 
 export async function createContract(contract: Omit<Contract, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('contracts')
     .insert(contract)
     .select()
@@ -195,7 +214,8 @@ export async function createContract(contract: Omit<Contract, 'id' | 'created_at
 }
 
 export async function getContractsByFarmer(farmerId: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('contracts')
     .select('*, milestones(*)')
     .eq('farmer_id', farmerId)
@@ -206,7 +226,8 @@ export async function getContractsByFarmer(farmerId: string) {
 }
 
 export async function getContractById(id: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('contracts')
     .select('*, milestones(*), farmer:farmers(*)')
     .eq('id', id)
@@ -217,7 +238,8 @@ export async function getContractById(id: string) {
 }
 
 export async function updateContract(id: string, updates: Partial<Contract>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('contracts')
     .update(updates)
     .eq('id', id)
@@ -231,7 +253,8 @@ export async function updateContract(id: string, updates: Partial<Contract>) {
 // ==================== MILESTONES ====================
 
 export async function createMilestone(milestone: Omit<Milestone, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('milestones')
     .insert(milestone)
     .select()
@@ -242,7 +265,8 @@ export async function createMilestone(milestone: Omit<Milestone, 'id' | 'created
 }
 
 export async function getMilestonesByContract(contractId: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('milestones')
     .select('*')
     .eq('contract_id', contractId)
@@ -253,7 +277,8 @@ export async function getMilestonesByContract(contractId: string) {
 }
 
 export async function updateMilestone(id: string, updates: Partial<Milestone>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('milestones')
     .update(updates)
     .eq('id', id)
@@ -272,8 +297,9 @@ export async function submitMilestoneEvidence(
     notes: string;
   }
 ) {
+  const client = checkSupabase();
   // Create evidence record
-  const { data: evidenceData, error: evidenceError } = await supabase
+  const { data: evidenceData, error: evidenceError } = await client
     .from('evidence')
     .insert({
       milestone_id: milestoneId,
@@ -292,7 +318,7 @@ export async function submitMilestoneEvidence(
   if (evidenceError) throw evidenceError;
 
   // Update milestone status to submitted
-  const { data: milestoneData, error: milestoneError } = await supabase
+  const { data: milestoneData, error: milestoneError } = await client
     .from('milestones')
     .update({
       status: 'submitted',
@@ -310,7 +336,8 @@ export async function submitMilestoneEvidence(
 // ==================== EXTENSION OFFICERS ====================
 
 export async function createOfficer(officer: Omit<ExtensionOfficer, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('extension_officers')
     .insert(officer)
     .select()
@@ -321,7 +348,8 @@ export async function createOfficer(officer: Omit<ExtensionOfficer, 'id' | 'crea
 }
 
 export async function getOfficerByWallet(walletAddress: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('extension_officers')
     .select('*')
     .eq('wallet_address', walletAddress)
@@ -332,7 +360,8 @@ export async function getOfficerByWallet(walletAddress: string) {
 }
 
 export async function updateOfficer(id: string, updates: Partial<ExtensionOfficer>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('extension_officers')
     .update(updates)
     .eq('id', id)
@@ -344,7 +373,8 @@ export async function updateOfficer(id: string, updates: Partial<ExtensionOffice
 }
 
 export async function getAvailableOfficers(location?: { lat: number; lng: number }) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('extension_officers')
     .select('*')
     .eq('is_available', true)
@@ -357,7 +387,8 @@ export async function getAvailableOfficers(location?: { lat: number; lng: number
 // ==================== VERIFICATION TASKS ====================
 
 export async function createVerificationTask(task: Omit<VerificationTask, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('verification_tasks')
     .insert(task)
     .select()
@@ -368,7 +399,8 @@ export async function createVerificationTask(task: Omit<VerificationTask, 'id' |
 }
 
 export async function getAvailableTasks() {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('verification_tasks')
     .select('*, milestone:milestones(*, contract:contracts(*))')
     .eq('status', 'pending')
@@ -379,7 +411,8 @@ export async function getAvailableTasks() {
 }
 
 export async function getTasksByOfficer(officerId: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('verification_tasks')
     .select('*, milestone:milestones(*, contract:contracts(*))')
     .eq('officer_id', officerId)
@@ -390,7 +423,8 @@ export async function getTasksByOfficer(officerId: string) {
 }
 
 export async function updateVerificationTask(id: string, updates: Partial<VerificationTask>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('verification_tasks')
     .update(updates)
     .eq('id', id)
@@ -404,7 +438,8 @@ export async function updateVerificationTask(id: string, updates: Partial<Verifi
 // ==================== EVIDENCE ====================
 
 export async function createEvidence(evidence: Omit<Evidence, 'id' | 'created_at'>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('evidence')
     .insert(evidence)
     .select()
@@ -415,7 +450,8 @@ export async function createEvidence(evidence: Omit<Evidence, 'id' | 'created_at
 }
 
 export async function getEvidenceByMilestone(milestoneId: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('evidence')
     .select('*')
     .eq('milestone_id', milestoneId)
@@ -428,7 +464,8 @@ export async function getEvidenceByMilestone(milestoneId: string) {
 // ==================== PAYMENTS ====================
 
 export async function createPayment(payment: Omit<Payment, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('payments')
     .insert(payment)
     .select()
@@ -439,7 +476,8 @@ export async function createPayment(payment: Omit<Payment, 'id' | 'created_at' |
 }
 
 export async function getPaymentsByContract(contractId: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('payments')
     .select('*, milestone:milestones(*)')
     .eq('contract_id', contractId)
@@ -450,7 +488,8 @@ export async function getPaymentsByContract(contractId: string) {
 }
 
 export async function getPaymentsByFarmer(farmerId: string) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('payments')
     .select('*, milestone:milestones(*), contract:contracts(*)')
     .eq('recipient_id', farmerId)
@@ -461,7 +500,8 @@ export async function getPaymentsByFarmer(farmerId: string) {
 }
 
 export async function updatePayment(id: string, updates: Partial<Payment>) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('payments')
     .update(updates)
     .eq('id', id)
@@ -479,8 +519,9 @@ export async function approveMilestone(
   adminNotes: string,
   releasePayment: boolean = false
 ) {
+  const client = checkSupabase();
   // Update milestone status to verified
-  const { data: milestoneData, error: milestoneError } = await supabase
+  const { data: milestoneData, error: milestoneError } = await client
     .from('milestones')
     .update({
       status: 'verified',
@@ -498,7 +539,7 @@ export async function approveMilestone(
 
   // If payment should be released, update payment status
   if (releasePayment) {
-    await supabase
+    await client
       .from('milestones')
       .update({
         payment_status: 'completed',
@@ -513,7 +554,8 @@ export async function rejectMilestone(
   milestoneId: string,
   adminNotes: string
 ) {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('milestones')
     .update({
       status: 'rejected',
@@ -531,7 +573,8 @@ export async function rejectMilestone(
 }
 
 export async function getMilestonesForAdminReview() {
-  const { data, error } = await supabase
+  const client = checkSupabase();
+  const { data, error } = await client
     .from('milestones')
     .select(`
       *,
@@ -557,11 +600,12 @@ export async function getMilestonesForAdminReview() {
 // ==================== ANALYTICS ====================
 
 export async function getPlatformStats() {
+  const client = checkSupabase();
   const [farmers, contracts, officers, payments] = await Promise.all([
-    supabase.from('farmers').select('id', { count: 'exact', head: true }),
-    supabase.from('contracts').select('id', { count: 'exact', head: true }),
-    supabase.from('extension_officers').select('id', { count: 'exact', head: true }),
-    supabase.from('payments').select('amount').eq('status', 'completed'),
+    client.from('farmers').select('id', { count: 'exact', head: true }),
+    client.from('contracts').select('id', { count: 'exact', head: true }),
+    client.from('extension_officers').select('id', { count: 'exact', head: true }),
+    client.from('payments').select('amount').eq('status', 'completed'),
   ]);
 
   const totalRevenue = payments.data?.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0) || 0;

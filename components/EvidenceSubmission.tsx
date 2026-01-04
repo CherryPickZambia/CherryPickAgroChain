@@ -7,8 +7,8 @@ import { createEvidence } from "@/lib/supabaseService";
 
 interface EvidenceSubmissionProps {
   milestoneId: string;
-  onSuccess: () => void;
-  onCancel: () => void;
+  onSuccessAction: () => void;
+  onCancelAction: () => void;
 }
 
 interface Location {
@@ -19,8 +19,8 @@ interface Location {
 
 export default function EvidenceSubmission({
   milestoneId,
-  onSuccess,
-  onCancel,
+  onSuccessAction,
+  onCancelAction,
 }: EvidenceSubmissionProps) {
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
@@ -155,7 +155,7 @@ export default function EvidenceSubmission({
       });
 
       stopCamera();
-      onSuccess();
+      onSuccessAction();
     } catch (error: any) {
       console.error("Submission error:", error);
       setError(error.message || "Failed to submit evidence");
@@ -173,7 +173,7 @@ export default function EvidenceSubmission({
           <button
             onClick={() => {
               stopCamera();
-              onCancel();
+              onCancelAction();
             }}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
@@ -309,7 +309,7 @@ export default function EvidenceSubmission({
             {isUploading ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Uploading Evidence...
+                Uploading to Pinata...
               </>
             ) : (
               <>

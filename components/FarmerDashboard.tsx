@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import MilestoneCard from "./MilestoneCard";
+import WalletBalance from "./WalletBalance";
 import { type SmartContract } from "@/lib/types";
 import { getContractsByFarmer, getFarmerByWallet, createFarmer, updateFarmer } from "@/lib/supabaseService";
 import { getFarmerListings, type MarketplaceListing } from "@/lib/database";
@@ -483,10 +484,15 @@ export default function FarmerDashboard() {
       </div>
 
 
-      {/* Farmer Profile & Farm Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* Wallet Balance & Profile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Wallet Balance */}
+        <div className="lg:col-span-1">
+          <WalletBalance walletAddress={evmAddress} userRole="farmer" />
+        </div>
+
         {/* Farmer Profile Card */}
-        <div className="card-premium">
+        <div className="card-premium lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl">

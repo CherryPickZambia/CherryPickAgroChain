@@ -501,6 +501,18 @@ h6 { font-size: 1rem; }
   position: relative;
 }
 
+/* Ensure Leaflet map elements don't overlap modals */
+.leaflet-pane,
+.leaflet-control,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 400 !important;
+}
+
+.leaflet-popup {
+  z-index: 450 !important;
+}
+
 .map-marker {
   width: 32px;
   height: 32px;
