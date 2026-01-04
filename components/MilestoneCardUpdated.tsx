@@ -154,11 +154,11 @@ export default function MilestoneCardUpdated({
       {/* Evidence Upload Modal */}
       <EvidenceUploadModal
         isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
+        onCloseAction={() => setShowUploadModal(false)}
         milestoneId={milestone.id}
         milestoneName={milestone.name}
         contractId={contractId}
-        onSubmit={handleEvidenceSubmit}
+        onSubmitAction={handleEvidenceSubmit}
       />
     </>
   );

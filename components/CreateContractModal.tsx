@@ -10,11 +10,11 @@ import { createContract, createMilestone } from "@/lib/supabaseService";
 
 interface CreateContractModalProps {
   farmerId: string;
-  onClose: () => void;
-  onContractCreated: (contract: SmartContract) => void;
+  onCloseAction: () => void;
+  onContractCreatedAction: (contract: SmartContract) => void;
 }
 
-export default function CreateContractModal({ farmerId, onClose, onContractCreated }: CreateContractModalProps) {
+export default function CreateContractModal({ farmerId, onCloseAction, onContractCreatedAction }: CreateContractModalProps) {
   const { evmAddress } = useEvmAddress();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -43,14 +43,14 @@ export default function CreateContractModal({ farmerId, onClose, onContractCreat
       
       // Save contract to Supabase
       const savedContract = await createContract({
+        contract_code: contractId,
         farmer_id: farmerId,
         crop_type: formData.cropType,
         variety: formData.variety,
         required_quantity: parseFloat(formData.requiredQuantity),
-        discounted_price: parseFloat(formData.discountedPrice),
-        standard_price: parseFloat(formData.standardPrice),
+        price_per_kg: parseFloat(formData.discountedPrice),
+        total_value: totalAmount,
         status: "active",
-        qr_code: qrCode,
         harvest_date: null,
       });
 
@@ -61,8 +61,10 @@ export default function CreateContractModal({ farmerId, onClose, onContractCreat
         
         return await createMilestone({
           contract_id: savedContract.id,
+          milestone_number: index + 1,
           name,
           description: name,
+          payment_percentage: Math.round(100 / milestoneNames.length),
           expected_date: expectedDate.toISOString(),
           completed_date: null,
           status: "pending",
@@ -78,10 +80,10 @@ export default function CreateContractModal({ farmerId, onClose, onContractCreat
         id: savedContract.id,
         farmerId: savedContract.farmer_id,
         cropType: savedContract.crop_type,
-        variety: savedContract.variety,
+        variety: savedContract.variety || '',
         requiredQuantity: savedContract.required_quantity,
-        discountedPrice: savedContract.discounted_price,
-        standardPrice: savedContract.standard_price,
+        discountedPrice: savedContract.price_per_kg,
+        standardPrice: savedContract.price_per_kg,
         milestones: savedMilestones.map((m: any) => ({
           id: m.id,
           contractId: m.contract_id,
@@ -92,12 +94,12 @@ export default function CreateContractModal({ farmerId, onClose, onContractCreat
           paymentAmount: m.payment_amount,
           paymentStatus: m.payment_status,
         })),
-        status: savedContract.status,
-        qrCode: savedContract.qr_code,
+        status: savedContract.status as "active" | "completed" | "cancelled",
+        qrCode: savedContract.contract_code,
         createdAt: new Date(savedContract.created_at),
       };
 
-      onContractCreated(contract);
+      onContractCreatedAction(contract);
     } catch (err: any) {
       console.error("Error creating contract:", err);
       setError(err.message || "Failed to create contract. Please try again.");
@@ -111,7 +113,7 @@ export default function CreateContractModal({ farmerId, onClose, onContractCreat
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900">Create Smart Contract</h2>
           <button
-            onClick={onClose}
+            onClick={onCloseAction}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="h-6 w-6 text-gray-600" />
