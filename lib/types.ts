@@ -28,6 +28,26 @@ export interface SmartContract {
   harvestDate?: Date;
 }
 
+// Database Contract type (matches Supabase schema)
+export interface Contract {
+  id: string;
+  contract_code: string;
+  farmer_id: string;
+  buyer_id?: string;
+  crop_type: string;
+  variety?: string;
+  required_quantity: number;
+  price_per_kg: number;
+  total_value: number;
+  escrow_balance?: number;
+  status: "pending" | "active" | "completed" | "cancelled" | "disputed";
+  created_at: string;
+  harvest_date?: string | null;
+  completed_at?: string;
+  blockchain_tx?: string;
+  ipfs_metadata?: string;
+}
+
 export interface Milestone {
   id: string;
   contractId: string;

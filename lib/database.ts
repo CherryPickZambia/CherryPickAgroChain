@@ -460,12 +460,12 @@ export async function createOrUpdateFarmerProfile(profile: Omit<Farmer, 'id' | '
   }
 }
 
-export async function getFarmerListings(farmerAddress: string) {
+export async function getFarmerListings(farmerId: string) {
   try {
     const { data, error } = await supabase
       .from('marketplace_listings')
       .select('*')
-      .eq('farmer_address', farmerAddress)
+      .eq('farmer_id', farmerId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;

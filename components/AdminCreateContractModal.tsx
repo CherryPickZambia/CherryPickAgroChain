@@ -16,15 +16,24 @@ interface Milestone {
 }
 
 interface AdminCreateContractModalProps {
-  onClose: () => void;
-  onContractCreated: (contract: SmartContract) => void;
+  onCloseAction: () => void;
+  onContractCreatedAction: (contract: SmartContract) => void;
 }
 
-export default function AdminCreateContractModal({ onClose, onContractCreated }: AdminCreateContractModalProps) {
+// Sample farmers for fallback when database is empty
+const SAMPLE_FARMERS = [
+  { id: "sample-1", name: "John Mwale", wallet_address: "0x1234...5678", location_address: "Lusaka, Zambia", status: "approved", farm_size: 5 },
+  { id: "sample-2", name: "Mary Banda", wallet_address: "0x2345...6789", location_address: "Chipata, Zambia", status: "approved", farm_size: 3 },
+  { id: "sample-3", name: "Peter Phiri", wallet_address: "0x3456...7890", location_address: "Kabwe, Zambia", status: "approved", farm_size: 8 },
+  { id: "sample-4", name: "Grace Zulu", wallet_address: "0x4567...8901", location_address: "Ndola, Zambia", status: "approved", farm_size: 4 },
+  { id: "sample-5", name: "David Tembo", wallet_address: "0x5678...9012", location_address: "Kitwe, Zambia", status: "approved", farm_size: 6 },
+];
+
+export default function AdminCreateContractModal({ onCloseAction, onContractCreatedAction }: AdminCreateContractModalProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingAI, setLoadingAI] = useState(false);
-  const [farmers, setFarmers] = useState<any[]>([]);
+  const [farmers, setFarmers] = useState<any[]>(SAMPLE_FARMERS);
   const [error, setError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
@@ -32,6 +41,7 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
     cropType: "",
     variety: "",
     requiredQuantity: "",
+    quantityUnit: "kg",
     discountedPrice: "",
     standardPrice: "",
     expectedHarvestDate: "",
@@ -48,10 +58,27 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
   const loadFarmers = async () => {
     try {
       const data = await getFarmers();
-      setFarmers(data.filter((f: any) => f.status === 'approved'));
+      console.log('Raw farmers from DB:', data);
+      
+      // Show all farmers from database (approved or pending - admin can assign to any)
+      const dbFarmers = data || [];
+      
+      // Combine database farmers with sample farmers (database first)
+      if (dbFarmers.length > 0) {
+        // Database farmers first, then sample farmers
+        const combinedFarmers = [...dbFarmers, ...SAMPLE_FARMERS];
+        setFarmers(combinedFarmers);
+        console.log('Loaded', dbFarmers.length, 'farmers from DB +', SAMPLE_FARMERS.length, 'samples');
+      } else {
+        // No database farmers, use sample farmers only
+        setFarmers(SAMPLE_FARMERS);
+        console.log('No DB farmers, using', SAMPLE_FARMERS.length, 'samples');
+      }
     } catch (error) {
       console.error("Error loading farmers:", error);
-      toast.error("Failed to load farmers");
+      // On error, keep sample farmers
+      setFarmers(SAMPLE_FARMERS);
+      toast.error("Failed to load farmers from database, using sample data");
     }
   };
 
@@ -153,16 +180,26 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
       const totalAmount = parseFloat(formData.requiredQuantity) * parseFloat(formData.discountedPrice);
       
       // Save contract to Supabase
-      const savedContract = await createContract({
+      console.log('Creating contract with data:', {
+        contract_code: contractId,
         farmer_id: formData.farmerId,
         crop_type: formData.cropType,
         variety: formData.variety,
         required_quantity: parseFloat(formData.requiredQuantity),
-        discounted_price: parseFloat(formData.discountedPrice),
-        standard_price: parseFloat(formData.standardPrice),
+        price_per_kg: parseFloat(formData.discountedPrice),
+        total_value: totalAmount,
+      });
+      
+      const savedContract = await createContract({
+        contract_code: contractId,
+        farmer_id: formData.farmerId,
+        crop_type: formData.cropType,
+        variety: formData.variety,
+        required_quantity: parseFloat(formData.requiredQuantity),
+        price_per_kg: parseFloat(formData.discountedPrice),
+        total_value: totalAmount,
         status: "active",
-        qr_code: qrCode,
-        harvest_date: null,
+        harvest_date: formData.expectedHarvestDate || null,
       });
 
       // Create milestones in Supabase
@@ -172,8 +209,10 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
         
         return await createMilestone({
           contract_id: savedContract.id,
+          milestone_number: index + 1,
           name: milestone.name,
           description: milestone.description,
+          payment_percentage: milestone.paymentPercentage,
           expected_date: expectedDate.toISOString(),
           completed_date: null,
           status: "pending",
@@ -189,10 +228,10 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
         id: savedContract.id,
         farmerId: savedContract.farmer_id,
         cropType: savedContract.crop_type,
-        variety: savedContract.variety,
+        variety: savedContract.variety || '',
         requiredQuantity: savedContract.required_quantity,
-        discountedPrice: savedContract.discounted_price,
-        standardPrice: savedContract.standard_price,
+        discountedPrice: savedContract.price_per_kg,
+        standardPrice: parseFloat(formData.standardPrice) || savedContract.price_per_kg,
         milestones: savedMilestones.map((m: any) => ({
           id: m.id,
           contractId: m.contract_id,
@@ -203,16 +242,16 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
           paymentAmount: m.payment_amount,
           paymentStatus: m.payment_status,
         })),
-        status: savedContract.status,
-        qrCode: savedContract.qr_code,
+        status: savedContract.status as "active" | "completed" | "cancelled",
+        qrCode: savedContract.contract_code,
         createdAt: new Date(savedContract.created_at),
       };
 
       toast.success("Contract created successfully!");
-      onContractCreated(contract);
+      onContractCreatedAction(contract);
     } catch (err: any) {
-      console.error("Error creating contract:", err);
-      setError(err.message || "Failed to create contract. Please try again.");
+      console.error("Error creating contract:", err?.message || err?.code || JSON.stringify(err));
+      setError(err?.message || err?.code || "Failed to create contract. Please try again.");
       setLoading(false);
     }
   };
@@ -226,7 +265,7 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
             <p className="text-sm text-gray-600 mt-1">Admin-managed contract creation with AI-powered milestones</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={onCloseAction}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="h-6 w-6 text-gray-600" />
@@ -259,11 +298,11 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
                   <option value="">Choose a farmer</option>
                   {farmers.map((farmer) => (
                     <option key={farmer.id} value={farmer.id}>
-                      {farmer.name} - {farmer.location || 'Location not set'}
+                      {farmer.name || 'Unnamed'} - {farmer.location_address || farmer.location || 'Location not set'}
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Only approved farmers are shown</p>
+                <p className="text-xs text-gray-500 mt-1">Database farmers shown first, then sample farmers</p>
               </div>
 
               <div>
@@ -316,16 +355,30 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Required Quantity (kg) *
+                    Required Quantity *
                   </label>
-                  <input
-                    type="number"
-                    required
-                    value={formData.requiredQuantity}
-                    onChange={(e) => setFormData({ ...formData, requiredQuantity: e.target.value })}
-                    placeholder="e.g., 1000"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      required
+                      value={formData.requiredQuantity}
+                      onChange={(e) => setFormData({ ...formData, requiredQuantity: e.target.value })}
+                      placeholder="e.g., 1000"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                    <select
+                      value={formData.quantityUnit}
+                      onChange={(e) => setFormData({ ...formData, quantityUnit: e.target.value })}
+                      className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                    >
+                      <option value="kg">kg</option>
+                      <option value="pieces">pieces</option>
+                      <option value="units">units</option>
+                      <option value="tonnes">tonnes</option>
+                      <option value="bags">bags</option>
+                      <option value="crates">crates</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div>
@@ -345,7 +398,7 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contract Price per kg (ZMW) *
+                    Contract Price per {formData.quantityUnit} (ZMW) *
                   </label>
                   <input
                     type="number"
@@ -360,7 +413,7 @@ export default function AdminCreateContractModal({ onClose, onContractCreated }:
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Market Price per kg (ZMW) *
+                    Market Price per {formData.quantityUnit} (ZMW) *
                   </label>
                   <input
                     type="number"

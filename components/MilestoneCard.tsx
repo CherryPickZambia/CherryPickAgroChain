@@ -13,9 +13,12 @@ interface MilestoneCardProps {
   canSubmit?: boolean;
   isNextActive?: boolean;
   onEvidenceSubmitted?: () => void;
+  milestoneIndex?: number;
+  totalMilestones?: number;
+  verifiedCount?: number;
 }
 
-export default function MilestoneCard({ milestone, contractId, canSubmit, isNextActive, onEvidenceSubmitted }: MilestoneCardProps) {
+export default function MilestoneCard({ milestone, contractId, canSubmit, isNextActive, onEvidenceSubmitted, milestoneIndex, totalMilestones, verifiedCount }: MilestoneCardProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
 
   const getStatusIcon = () => {
@@ -125,7 +128,7 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
         <div className="flex justify-between items-center text-sm">
           <span className="text-gray-600">Payment:</span>
           <span className="font-semibold text-gray-900">
-            K{milestone.paymentAmount.toLocaleString()}
+            K{milestone.paymentAmount.toLocaleString()} ZMW
           </span>
         </div>
 
@@ -164,10 +167,23 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
           </div>
         )}
 
-        {milestone.status === "verified" && milestone.paymentStatus === "completed" && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-2 mt-3">
-            <p className="text-xs text-green-700 font-medium text-center">
-              ✓ Payment Completed
+        {milestone.status === "verified" && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <p className="text-xs text-green-700 font-medium">
+                  ✓ Verified {verifiedCount !== undefined && totalMilestones ? `${verifiedCount} of ${totalMilestones}` : ''}
+                </p>
+              </div>
+              {milestone.paymentStatus === "completed" && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                  Paid
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-green-600 mt-1">
+              Payment: K{milestone.paymentAmount.toLocaleString()} ZMW
             </p>
           </div>
         )}

@@ -50,72 +50,26 @@ Provide practical, actionable recommendations suitable for smallholder farmers i
 export async function analyzeCropHealth(
   request: DiagnosticRequest
 ): Promise<CropDiagnosisResult> {
-  const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('OpenAI API key not configured. Please set NEXT_PUBLIC_OPENAI_API_KEY.');
-  }
-
-  const contextMessage = request.cropType 
-    ? `This is a ${request.cropType} crop. ${request.additionalContext || ''}`
-    : request.additionalContext || '';
-
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Call server-side API route to avoid CORS issues
+    const response = await fetch('/api/ai/diagnose', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: CROP_ANALYSIS_PROMPT,
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: contextMessage || 'Please analyze this crop image for health issues and provide recommendations.',
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: request.imageBase64.startsWith('data:') 
-                    ? request.imageBase64 
-                    : `data:image/jpeg;base64,${request.imageBase64}`,
-                },
-              },
-            ],
-          },
-        ],
-        max_tokens: 1000,
-        temperature: 0.3,
+        imageBase64: request.imageBase64,
+        cropType: request.cropType,
+        additionalContext: request.additionalContext,
       }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to analyze image');
+      throw new Error(error.error || 'Failed to analyze image');
     }
 
-    const data = await response.json();
-    const content = data.choices[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No response from AI');
-    }
-
-    // Parse JSON response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Invalid response format from AI');
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
+    const result = await response.json();
 
     return {
       healthScore: result.healthScore || 50,
@@ -125,7 +79,7 @@ export async function analyzeCropHealth(
       confidenceScore: result.confidenceScore || 0,
       cropType: result.cropType,
       growthStage: result.growthStage,
-      rawResponse: data,
+      rawResponse: result,
     };
   } catch (error: any) {
     console.error('AI Diagnosis Error:', error);

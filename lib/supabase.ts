@@ -46,34 +46,48 @@ export interface Database {
       contracts: {
         Row: {
           id: string;
+          contract_code: string;
           farmer_id: string;
+          buyer_id?: string;
           crop_type: string;
-          variety: string;
+          variety?: string;
           required_quantity: number;
-          discounted_price: number;
-          standard_price: number;
-          status: 'active' | 'completed' | 'cancelled';
-          qr_code: string;
+          price_per_kg: number;
+          total_value: number;
+          escrow_balance?: number;
+          status: 'pending' | 'active' | 'completed' | 'cancelled' | 'disputed';
           created_at: string;
           harvest_date: string | null;
+          completed_at?: string;
+          blockchain_tx?: string;
+          ipfs_metadata?: string;
         };
-        Insert: Omit<Database['public']['Tables']['contracts']['Row'], 'created_at'>;
+        Insert: Omit<Database['public']['Tables']['contracts']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['contracts']['Insert']>;
       };
       milestones: {
         Row: {
           id: string;
           contract_id: string;
+          milestone_number: number;
           name: string;
           description: string;
+          payment_percentage: number;
+          payment_amount: number;
           expected_date: string;
           completed_date: string | null;
-          status: 'pending' | 'submitted' | 'verified' | 'rejected';
-          payment_amount: number;
-          payment_status: 'pending' | 'processing' | 'completed';
+          status: 'pending' | 'submitted' | 'verified' | 'rejected' | 'paid';
+          payment_status: 'pending' | 'processing' | 'completed' | 'failed';
+          farmer_evidence_ipfs?: string;
+          verifier_evidence_ipfs?: string;
+          verifier_id?: string;
+          verified_at?: string;
+          payment_tx?: string;
+          metadata?: Record<string, any>;
           created_at: string;
+          updated_at?: string;
         };
-        Insert: Omit<Database['public']['Tables']['milestones']['Row'], 'created_at'>;
+        Insert: Omit<Database['public']['Tables']['milestones']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['milestones']['Insert']>;
       };
       extension_officers: {

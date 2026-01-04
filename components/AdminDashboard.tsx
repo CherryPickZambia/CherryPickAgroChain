@@ -12,6 +12,7 @@ import {
 import { promoteToOfficer, demoteOfficer, isOfficer } from "./Dashboard";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
+import { getUsersByRole } from "@/lib/supabaseService";
 import AdminApprovalModal from "./AdminApprovalModal";
 import { getVerificationEvidence } from "@/lib/ipfsService";
 import { STANDARD_MILESTONES, payMilestoneApproval, getUSDCBalance, calculateVerifierFee, getVerifierFeeBreakdown } from "@/lib/blockchain/contractInteractions";
@@ -227,6 +228,10 @@ export default function AdminDashboard() {
   const [selectedVerification, setSelectedVerification] = useState<PendingVerification | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   
+  // Database officers state
+  const [dbOfficers, setDbOfficers] = useState<any[]>([]);
+  const [loadingOfficers, setLoadingOfficers] = useState(false);
+  
   const [contracts, setContracts] = useState([
     { id: "C001", farmer: "John Mwale", crop: "Mangoes", amount: "K15,000", status: "active", date: "2024-11-01" },
     { id: "C002", farmer: "Mary Banda", crop: "Tomatoes", amount: "K12,000", status: "active", date: "2024-11-03" },
@@ -234,97 +239,128 @@ export default function AdminDashboard() {
     { id: "C004", farmer: "Sarah Phiri", crop: "Cashews", amount: "K10,000", status: "active", date: "2024-11-02" },
   ]);
 
-  // Load pending verifications directly from Pinata - real evidence uploaded by verifiers
+  // Load pending verifications from database - milestones with status 'submitted'
   const loadPendingVerifications = async () => {
     setLoadingVerifications(true);
     try {
-      console.log('Loading verification evidence from Pinata...');
+      console.log('Loading pending verifications from database...');
       
-      // Get all pinned files from Pinata - these are the evidence files uploaded by verifiers
-      const pinataFiles = await getVerificationEvidence();
-      
-      console.log('Pinata files loaded:', pinataFiles);
-      
-      if (pinataFiles.length === 0) {
-        console.log('No files found in Pinata');
+      if (!supabase) {
+        console.log('Supabase not configured');
         setPendingVerifications([]);
         return;
       }
 
-      // Group files by their metadata or create individual verification entries
-      // Each image file becomes a pending verification for review
-      // Assign milestone payment amounts based on standard milestones from smart contract
-      const milestonePayments: Record<string, number> = {
-        'Land Preparation': 500,    // 10% of typical $5000 contract
-        'Planting': 750,            // 15%
-        'Fertilizer Application': 500, // 10%
-        'Growth Stage': 750,        // 15%
-        'Pest Control': 500,        // 10%
-        'Flowering Stage': 750,     // 15%
-        'Harvest': 1250,            // 25%
-        'default': 500,             // Default payment
-      };
+      // Get all milestones with status 'submitted' - these need admin approval
+      const { data: submittedMilestones, error } = await supabase
+        .from('milestones')
+        .select(`
+          id,
+          name,
+          description,
+          payment_amount,
+          status,
+          completed_date,
+          metadata,
+          contract_id,
+          contract:contracts(
+            id,
+            contract_code,
+            crop_type,
+            total_value,
+            farmer_id,
+            farmer:farmers(
+              id,
+              name,
+              wallet_address
+            )
+          )
+        `)
+        .eq('status', 'submitted')
+        .order('completed_date', { ascending: false });
 
-      const verifications: PendingVerification[] = pinataFiles.map((file, index) => {
-        // Extract metadata from Pinata file if available
-        const metadata = file.metadata || {};
-        
-        // Determine milestone name and payment from file name or metadata
-        let milestoneName = metadata.milestone_id || file.name || 'Verification Evidence';
-        
-        // Try to match to a standard milestone for payment amount
-        let paymentAmount = parseInt(metadata.payment_amount || '0') || 0;
-        if (paymentAmount === 0) {
-          // Check if file name matches any standard milestone
-          for (const [name, amount] of Object.entries(milestonePayments)) {
-            if (milestoneName.toLowerCase().includes(name.toLowerCase())) {
-              paymentAmount = amount;
-              milestoneName = name;
-              break;
-            }
-          }
-          // Default payment if no match
-          if (paymentAmount === 0) {
-            paymentAmount = milestonePayments['default'];
-          }
-        }
-        
-        // Get contract value and milestone count from metadata or use defaults
-        const totalContractValue = parseInt(metadata.total_contract_value || '5000') || 5000; // Default $5000 contract
-        const totalMilestones = parseInt(metadata.total_milestones || '4') || 4; // Default 4 milestones
-        const customVerifierFee = metadata.custom_verifier_fee_percent ? parseFloat(metadata.custom_verifier_fee_percent) : undefined;
+      if (error) {
+        console.error('Error loading submitted milestones:', error);
+        throw error;
+      }
 
+      console.log('Submitted milestones from DB:', submittedMilestones);
+
+      if (!submittedMilestones || submittedMilestones.length === 0) {
+        console.log('No pending verifications found');
+        setPendingVerifications([]);
+        return;
+      }
+
+      // Get total milestone count for each contract
+      const contractIds = [...new Set(submittedMilestones.map((m: any) => m.contract_id))];
+      const { data: milestoneCounts } = await supabase
+        .from('milestones')
+        .select('contract_id')
+        .in('contract_id', contractIds);
+
+      const countByContract: Record<string, number> = {};
+      milestoneCounts?.forEach((m: any) => {
+        countByContract[m.contract_id] = (countByContract[m.contract_id] || 0) + 1;
+      });
+
+      // Transform to PendingVerification format
+      const verifications: PendingVerification[] = submittedMilestones.map((milestone: any) => {
+        const contract = milestone.contract;
+        const farmer = contract?.farmer;
+        const metadata = milestone.metadata || {};
+        
         return {
-          id: file.id || `pinata-${index}`,
-          milestone_id: metadata.milestone_id || file.cid,
-          milestone_name: milestoneName,
-          farmer_name: metadata.farmer_name || 'Farmer',
-          farmer_wallet: metadata.farmer_wallet || '',
-          crop_type: metadata.crop_type || 'Crop',
-          payment_amount: paymentAmount,
-          submitted_date: file.date_pinned,
+          id: milestone.id,
+          milestone_id: milestone.id,
+          milestone_name: milestone.name,
+          farmer_name: farmer?.name || 'Unknown Farmer',
+          farmer_wallet: farmer?.wallet_address || '',
+          crop_type: contract?.crop_type || 'Unknown',
+          payment_amount: milestone.payment_amount || 0,
+          submitted_date: milestone.completed_date || new Date().toISOString(),
           officer_name: metadata.officer_name || 'Verifier',
           officer_wallet: metadata.officer_wallet || '',
-          evidence_images: [file.url], // The Pinata gateway URL
+          evidence_images: metadata.images || [],
           officer_notes: metadata.notes || '',
-          contract_id: metadata.contract_id || '',
-          blockchain_contract_id: metadata.blockchain_contract_id ? parseInt(metadata.blockchain_contract_id) : undefined,
-          total_contract_value: totalContractValue,
-          total_milestones: totalMilestones,
-          custom_verifier_fee_percent: customVerifierFee,
+          contract_id: milestone.contract_id,
+          blockchain_contract_id: undefined,
+          total_contract_value: contract?.total_value || 5000,
+          total_milestones: countByContract[milestone.contract_id] || 4,
+          custom_verifier_fee_percent: undefined,
         };
       });
 
-      console.log('Processed Pinata verifications:', verifications);
+      console.log('Processed verifications:', verifications);
       setPendingVerifications(verifications);
       
-      toast.success(`Loaded ${verifications.length} verification(s) from Pinata`);
+      toast.success(`Found ${verifications.length} milestone(s) awaiting approval`);
+      
+      // Log for debugging
+      verifications.forEach(v => {
+        console.log(`Pending: ${v.milestone_name} for ${v.farmer_name} - K${v.payment_amount} ZMW`);
+      });
     } catch (error: any) {
-      console.error('Error loading from Pinata:', error?.message || error);
-      toast.error('Failed to load verifications from Pinata');
+      console.error('Error loading verifications:', error?.message || error);
+      toast.error('Failed to load verifications');
       setPendingVerifications([]);
     } finally {
       setLoadingVerifications(false);
+    }
+  };
+
+  // Load officers from database
+  const loadOfficersFromDB = async () => {
+    setLoadingOfficers(true);
+    try {
+      const officers = await getUsersByRole('officer');
+      setDbOfficers(officers);
+      console.log('Loaded officers from database:', officers);
+    } catch (error) {
+      console.error('Error loading officers:', error);
+      toast.error('Failed to load officers from database');
+    } finally {
+      setLoadingOfficers(false);
     }
   };
 
@@ -332,6 +368,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (selectedView === 'verifications') {
       loadPendingVerifications();
+    }
+    if (selectedView === 'officers') {
+      loadOfficersFromDB();
     }
   }, [selectedView]);
 
@@ -1280,12 +1319,63 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Current Officers */}
+              {/* Database Officers */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Current Extension Officers</h2>
-                    <p className="text-gray-600 mt-1">Manage verification officers and their performance</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Registered Verifiers</h2>
+                    <p className="text-gray-600 mt-1">Officers registered in the database</p>
+                  </div>
+                  <button
+                    onClick={loadOfficersFromDB}
+                    disabled={loadingOfficers}
+                    className="px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loadingOfficers ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                </div>
+                {loadingOfficers ? (
+                  <div className="text-center py-8">
+                    <RefreshCw className="h-8 w-8 text-blue-500 animate-spin mx-auto mb-2" />
+                    <p className="text-gray-500">Loading officers...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {dbOfficers.map((officer) => (
+                      <div key={officer.id} className="p-4 border border-green-200 rounded-lg bg-green-50 hover:border-green-500 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-lg font-bold text-green-700">{(officer.name || 'V').charAt(0)}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Shield className="h-4 w-4 text-green-600" />
+                            <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-0.5 rounded">Database</span>
+                          </div>
+                        </div>
+                        <h3 className="font-semibold text-gray-900">{officer.name || 'Unnamed Officer'}</h3>
+                        <p className="text-xs text-gray-500 mt-2">{officer.email || 'No email'}</p>
+                        <p className="text-xs text-gray-500">{officer.phone || 'No phone'}</p>
+                        <p className="text-xs font-mono text-gray-400 mt-1">{officer.wallet_address?.slice(0, 10)}...{officer.wallet_address?.slice(-6)}</p>
+                        <p className="text-xs text-gray-400 mt-1">Joined: {officer.created_at ? new Date(officer.created_at).toLocaleDateString() : 'Unknown'}</p>
+                      </div>
+                    ))}
+                    {dbOfficers.length === 0 && (
+                      <div className="col-span-full text-center py-8">
+                        <Shield className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No officers registered in database yet.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Local/Sample Officers */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Session Officers</h2>
+                    <p className="text-gray-600 mt-1">Officers promoted during this session (local state)</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1321,7 +1411,7 @@ export default function AdminDashboard() {
                   {users.filter(u => u.role === 'officer').length === 0 && (
                     <div className="col-span-full text-center py-8">
                       <Shield className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500">No officers yet. Promote verified users to get started.</p>
+                      <p className="text-gray-500">No session officers. Promote verified users above.</p>
                     </div>
                   )}
                 </div>
@@ -1579,8 +1669,8 @@ export default function AdminDashboard() {
       {/* Create Contract Modal */}
       {showContractModal && (
         <AdminCreateContractModal
-          onClose={() => setShowContractModal(false)}
-          onContractCreated={handleCreateContract}
+          onCloseAction={() => setShowContractModal(false)}
+          onContractCreatedAction={handleCreateContract}
         />
       )}
 
@@ -1622,21 +1712,64 @@ export default function AdminDashboard() {
 
               // Update milestone status in database
               if (supabase) {
-                await supabase
+                // First get existing metadata
+                const { data: existingMilestone } = await supabase
+                  .from('milestones')
+                  .select('metadata')
+                  .eq('id', selectedVerification.milestone_id)
+                  .single();
+
+                const existingMetadata = existingMilestone?.metadata || {};
+
+                const { error: updateError } = await supabase
                   .from('milestones')
                   .update({
                     status: 'verified',
+                    payment_status: 'completed',
                     verified_at: new Date().toISOString(),
                     metadata: {
+                      ...existingMetadata,
                       admin_notes: adminNotes,
                       approved_at: new Date().toISOString(),
-                      farmer_payment_usdc: farmerPayment,
-                      verifier_fee_usdc: verifierFee,
+                      farmer_payment_zmw: farmerPayment,
+                      verifier_fee_zmw: verifierFee,
                       verifier_fee_percent: feeBreakdown.feePerMilestonePercent,
                       total_verifier_fee_percent: feeBreakdown.totalFeePercent,
                     },
                   })
                   .eq('id', selectedVerification.milestone_id);
+
+                if (updateError) {
+                  console.error('Error updating milestone:', updateError);
+                  throw new Error(`Failed to update milestone: ${updateError.message}`);
+                }
+
+                console.log('Milestone updated successfully:', selectedVerification.milestone_id);
+
+                // Check if this was the last milestone - if so, mark contract as completed
+                const { data: contractMilestones } = await supabase
+                  .from('milestones')
+                  .select('id, status')
+                  .eq('contract_id', selectedVerification.contract_id);
+
+                if (contractMilestones) {
+                  const allVerified = contractMilestones.every((m: { id: string; status: string }) => 
+                    m.id === selectedVerification.milestone_id || m.status === 'verified'
+                  );
+                  
+                  if (allVerified) {
+                    // All milestones verified - mark contract as completed
+                    await supabase
+                      .from('contracts')
+                      .update({
+                        status: 'completed',
+                        completed_at: new Date().toISOString(),
+                      })
+                      .eq('id', selectedVerification.contract_id);
+                    
+                    toast.success('🎉 All milestones completed! Contract marked as completed.', { duration: 5000 });
+                  }
+                }
 
                 // Record payments in database for dashboard display
                 await supabase.from('payments').insert([

@@ -5,6 +5,7 @@ import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp,
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import MilestoneCard from "./MilestoneCard";
 import WalletBalance from "./WalletBalance";
+import CropDiagnostics from "./CropDiagnostics";
 import { type SmartContract } from "@/lib/types";
 import { getContractsByFarmer, getFarmerByWallet, createFarmer, updateFarmer } from "@/lib/supabaseService";
 import { getFarmerListings, type MarketplaceListing } from "@/lib/database";
@@ -90,10 +91,10 @@ export default function FarmerDashboard() {
   };
 
   const loadMarketplaceListings = async () => {
-    if (!evmAddress) return;
+    if (!farmerId) return;
     
     try {
-      const listings = await getFarmerListings(evmAddress);
+      const listings = await getFarmerListings(farmerId);
       setMarketplaceListings(listings);
     } catch (error) {
       console.error("Error loading marketplace listings:", error);
@@ -108,15 +109,15 @@ export default function FarmerDashboard() {
         id: contract.id,
         farmerId: contract.farmer_id,
         cropType: contract.crop_type,
-        variety: contract.variety,
+        variety: contract.variety || '',
         requiredQuantity: contract.required_quantity,
-        discountedPrice: contract.discounted_price,
-        standardPrice: contract.standard_price,
-        milestones: contract.milestones.map((m: any) => ({
+        discountedPrice: contract.price_per_kg || contract.discounted_price || 0,
+        standardPrice: contract.price_per_kg || contract.standard_price || 0,
+        milestones: (contract.milestones || []).map((m: any) => ({
           id: m.id,
           contractId: m.contract_id,
           name: m.name,
-          description: m.description,
+          description: m.description || '',
           expectedDate: new Date(m.expected_date),
           completedDate: m.completed_date ? new Date(m.completed_date) : undefined,
           status: m.status,
@@ -124,7 +125,7 @@ export default function FarmerDashboard() {
           paymentStatus: m.payment_status,
         })),
         status: contract.status,
-        qrCode: contract.qr_code,
+        qrCode: contract.contract_code || contract.qr_code || '',
         createdAt: new Date(contract.created_at),
       }));
       
@@ -338,13 +339,11 @@ export default function FarmerDashboard() {
         .from('marketplace_listings')
         .insert({
           farmer_id: farmerId,
-          farmer_address: evmAddress,
           crop_type: listingForm.crop_type,
-          quantity: listingForm.quantity,
+          available_quantity: listingForm.quantity,
           unit: 'kg',
           price_per_unit: listingForm.price_per_unit,
           total_price: totalPrice,
-          available_quantity: listingForm.quantity,
           description: listingForm.description,
           quality_grade: listingForm.quality_grade,
           organic: listingForm.organic,
@@ -353,7 +352,10 @@ export default function FarmerDashboard() {
           status: 'active',
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error.message, error.code, error.details);
+        throw new Error(error.message || 'Database error');
+      }
 
       toast.success("Marketplace listing created successfully!");
       setShowCreateListing(false);
@@ -367,9 +369,9 @@ export default function FarmerDashboard() {
         organic: false,
       });
       await loadMarketplaceListings();
-    } catch (error) {
-      console.error("Error creating listing:", error);
-      toast.error("Failed to create listing");
+    } catch (error: any) {
+      console.error("Error creating listing:", error?.message || error);
+      toast.error(error?.message || "Failed to create listing");
     }
   };
 
@@ -484,12 +486,27 @@ export default function FarmerDashboard() {
       </div>
 
 
-      {/* Wallet Balance & Profile */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      {/* Wallet Balance & AI Diagnostics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Wallet Balance */}
-        <div className="lg:col-span-1">
+        <div>
           <WalletBalance walletAddress={evmAddress} userRole="farmer" />
         </div>
+        
+        {/* AI Crop Diagnostics */}
+        <div>
+          <CropDiagnostics 
+            farmerId={farmerId || undefined}
+            onDiagnosisComplete={(result, imageUrl) => {
+              console.log('Diagnosis complete:', result);
+              toast.success(`AI Analysis: ${result.diagnosis} - ${result.healthScore}% health score`);
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Farmer Profile */}
+      <div className="grid grid-cols-1 gap-6 mb-8">
 
         {/* Farmer Profile Card */}
         <div className="card-premium lg:col-span-2">
@@ -927,10 +944,19 @@ export default function FarmerDashboard() {
               <h2 className="text-2xl font-bold text-[#1a1a1a]">Your Assigned Contracts</h2>
               <p className="text-sm text-gray-600 mt-1">Log activities for each milestone to request verification</p>
             </div>
-            <button className="text-sm font-medium text-[#2d5f3f] hover:text-[#1d4029] flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Export Report
-            </button>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => farmerId && loadContracts(farmerId)}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <Loader2 className="h-4 w-4" />
+                Refresh Status
+              </button>
+              <button className="text-sm font-medium text-[#2d5f3f] hover:text-[#1d4029] flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Export Report
+              </button>
+            </div>
           </div>
           {contracts.map((contract) => {
             const isExpanded = expandedContracts.has(contract.id);
@@ -1046,6 +1072,9 @@ export default function FarmerDashboard() {
                               contractId={contract.id}
                               canSubmit={canSubmit}
                               isNextActive={isNextActive}
+                              milestoneIndex={index}
+                              totalMilestones={totalMilestones}
+                              verifiedCount={completedCount}
                               onEvidenceSubmitted={() => {
                                 if (farmerId) loadContracts(farmerId);
                               }}

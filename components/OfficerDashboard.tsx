@@ -12,6 +12,7 @@ import { useEvmAddress } from "@coinbase/cdp-hooks";
 import toast from "react-hot-toast";
 import OfficerVerificationModal from "./OfficerVerificationModal";
 import WalletBalance from "./WalletBalance";
+import CropDiagnostics from "./CropDiagnostics";
 import { supabase } from "@/lib/supabase";
 import type { Milestone } from "@/lib/types";
 
@@ -351,10 +352,16 @@ export default function OfficerDashboard() {
         {/* Pending Verifications Tab */}
         {activeTab === "pending" && (
           <div className="space-y-6">
-            {/* Wallet Balance - Top Row */}
+            {/* Wallet Balance & AI Diagnostics - Top Row */}
             {evmAddress && (
-              <div className="max-w-md">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <WalletBalance walletAddress={evmAddress} userRole="officer" />
+                <CropDiagnostics 
+                  onDiagnosisComplete={(result, imageUrl) => {
+                    console.log('Officer AI Diagnosis:', result);
+                    toast.success(`AI Analysis: ${result.diagnosis} - ${result.healthScore}% health`);
+                  }}
+                />
               </div>
             )}
             
