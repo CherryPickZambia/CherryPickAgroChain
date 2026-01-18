@@ -51,11 +51,14 @@ export interface TraceabilityEvent {
   created_at?: string;
 }
 
-export type TraceabilityEventType = 
+export type TraceabilityEventType =
   | 'planting'
+  | 'germination'
   | 'growth_update'
   | 'input_application'
+  | 'fertilization'
   | 'irrigation'
+  | 'flowering'
   | 'pest_control'
   | 'harvest'
   | 'post_harvest_handling'
@@ -92,9 +95,11 @@ export interface Batch {
   public_url?: string;
   blockchain_tx?: string;
   ipfs_metadata?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export type BatchStatus = 
+export type BatchStatus =
   | 'growing'
   | 'harvested'
   | 'stored'
@@ -115,7 +120,7 @@ export function generateBatchCode(cropType: string, farmerId: string): string {
   const cropCode = cropType.slice(0, 3).toUpperCase();
   const farmerCode = farmerId.slice(-4).toUpperCase();
   const random = Math.random().toString(36).slice(-4).toUpperCase();
-  
+
   return `CP-${cropCode}-${year}${month}${day}-${farmerCode}-${random}`;
 }
 
@@ -123,7 +128,7 @@ export function generateBatchCode(cropType: string, farmerId: string): string {
 export async function createBatch(batch: Omit<Batch, 'id' | 'batch_code'>): Promise<Batch> {
   const client = checkSupabase();
   const batchCode = generateBatchCode(batch.crop_type, batch.farmer_id || 'UNKNOWN');
-  
+
   const { data, error } = await client
     .from('batches')
     .insert({
@@ -193,10 +198,10 @@ export async function updateBatchStatus(
 // Add traceability event
 export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' | 'created_at'>): Promise<TraceabilityEvent> {
   const client = checkSupabase();
-  
+
   // Generate event hash for verification
   const eventHash = await generateEventHash(event);
-  
+
   const { data, error } = await client
     .from('traceability_events')
     .insert({
@@ -231,7 +236,7 @@ export async function getTraceabilityByBatchCode(batchCode: string): Promise<{
   contract?: any;
 } | null> {
   const client = checkSupabase();
-  
+
   // Get batch
   const batch = await getBatchByCode(batchCode);
   if (!batch) return null;
@@ -273,7 +278,7 @@ async function generateEventHash(event: any): Promise<string> {
     timestamp: new Date().toISOString(),
     location: `${event.location_lat},${event.location_lng}`,
   });
-  
+
   // Use Web Crypto API for hashing
   if (typeof window !== 'undefined' && window.crypto) {
     const encoder = new TextEncoder();
@@ -282,7 +287,7 @@ async function generateEventHash(event: any): Promise<string> {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
-  
+
   // Fallback for server-side
   return Buffer.from(eventString).toString('base64');
 }
@@ -298,7 +303,7 @@ export async function logFarmerUpdate(
   location?: { lat: number; lng: number; address?: string }
 ): Promise<TraceabilityEvent> {
   const eventType = updateType === 'input_application' ? 'input_application' : 'growth_update';
-  
+
   return addTraceabilityEvent({
     batch_id: batchId,
     farmer_id: farmerId,

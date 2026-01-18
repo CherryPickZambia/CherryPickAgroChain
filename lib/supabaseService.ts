@@ -1,12 +1,12 @@
 import { supabase } from './supabase';
-import type { 
-  Farmer, 
-  Contract, 
-  Milestone, 
-  ExtensionOfficer, 
-  VerificationTask, 
-  Evidence, 
-  Payment 
+import type {
+  Farmer,
+  Contract,
+  Milestone,
+  ExtensionOfficer,
+  VerificationTask,
+  Evidence,
+  Payment
 } from './supabase';
 
 // Helper to check if Supabase is configured
@@ -42,7 +42,7 @@ export async function createUser(user: Omit<User, 'id' | 'created_at' | 'updated
     })
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -54,7 +54,7 @@ export async function getUserByWallet(walletAddress: string): Promise<User | nul
     .select('*')
     .eq('wallet_address', walletAddress)
     .single();
-  
+
   if (error && error.code !== 'PGRST116') throw error;
   return data;
 }
@@ -70,7 +70,7 @@ export async function updateUser(id: string, updates: Partial<User>) {
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -86,7 +86,7 @@ export async function updateUserByWallet(walletAddress: string, updates: Partial
     .eq('wallet_address', walletAddress)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -97,7 +97,7 @@ export async function getUsers() {
     .from('users')
     .select('*')
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data || [];
 }
@@ -109,7 +109,7 @@ export async function getUsersByRole(role: string) {
     .select('*')
     .eq('role', role)
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data || [];
 }
@@ -118,7 +118,7 @@ export async function getUsersByRole(role: string) {
 export async function getOrCreateUser(walletAddress: string, role: 'farmer' | 'buyer' | 'officer' | 'admin', name?: string): Promise<User> {
   // Try to get existing user
   const existingUser = await getUserByWallet(walletAddress);
-  
+
   if (existingUser) {
     // Update role if different (for admin promotions)
     if (existingUser.role !== role) {
@@ -127,14 +127,14 @@ export async function getOrCreateUser(walletAddress: string, role: 'farmer' | 'b
     }
     return existingUser;
   }
-  
+
   // Create new user
   const newUser = await createUser({
     wallet_address: walletAddress,
     role,
     name: name || `User ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
   });
-  
+
   return newUser as User;
 }
 
@@ -147,7 +147,7 @@ export async function createFarmer(farmer: Omit<Farmer, 'id' | 'created_at' | 'u
     .insert(farmer)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -159,7 +159,7 @@ export async function getFarmerByWallet(walletAddress: string) {
     .select('*')
     .eq('wallet_address', walletAddress)
     .single();
-  
+
   if (error && error.code !== 'PGRST116') throw error;
   return data;
 }
@@ -172,7 +172,7 @@ export async function updateFarmer(id: string, updates: Partial<Farmer>) {
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -183,7 +183,7 @@ export async function getFarmers() {
     .from('farmers')
     .select('*')
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data || [];
 }
@@ -193,9 +193,9 @@ export async function approveFarmer(id: string) {
 }
 
 export async function rejectFarmer(id: string, reason?: string) {
-  return updateFarmer(id, { 
+  return updateFarmer(id, {
     status: 'rejected',
-    rejection_reason: reason 
+    rejection_reason: reason
   });
 }
 
@@ -208,7 +208,7 @@ export async function createContract(contract: Omit<Contract, 'id' | 'created_at
     .insert(contract)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -220,7 +220,7 @@ export async function getContractsByFarmer(farmerId: string) {
     .select('*, milestones(*)')
     .eq('farmer_id', farmerId)
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data;
 }
@@ -232,7 +232,7 @@ export async function getContractById(id: string) {
     .select('*, milestones(*), farmer:farmers(*)')
     .eq('id', id)
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -245,7 +245,7 @@ export async function updateContract(id: string, updates: Partial<Contract>) {
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -259,7 +259,7 @@ export async function createMilestone(milestone: Omit<Milestone, 'id' | 'created
     .insert(milestone)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -271,7 +271,7 @@ export async function getMilestonesByContract(contractId: string) {
     .select('*')
     .eq('contract_id', contractId)
     .order('milestone_number', { ascending: true });
-  
+
   if (error) throw error;
   return data;
 }
@@ -284,7 +284,7 @@ export async function updateMilestone(id: string, updates: Partial<Milestone>) {
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -342,7 +342,7 @@ export async function createOfficer(officer: Omit<ExtensionOfficer, 'id' | 'crea
     .insert(officer)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -354,7 +354,7 @@ export async function getOfficerByWallet(walletAddress: string) {
     .select('*')
     .eq('wallet_address', walletAddress)
     .single();
-  
+
   if (error && error.code !== 'PGRST116') throw error;
   return data;
 }
@@ -367,7 +367,7 @@ export async function updateOfficer(id: string, updates: Partial<ExtensionOffice
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -379,7 +379,7 @@ export async function getAvailableOfficers(location?: { lat: number; lng: number
     .select('*')
     .eq('is_available', true)
     .gte('rating', 4.0);
-  
+
   if (error) throw error;
   return data;
 }
@@ -393,7 +393,7 @@ export async function createVerificationTask(task: Omit<VerificationTask, 'id' |
     .insert(task)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -405,7 +405,7 @@ export async function getAvailableTasks() {
     .select('*, milestone:milestones(*, contract:contracts(*))')
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data;
 }
@@ -417,7 +417,7 @@ export async function getTasksByOfficer(officerId: string) {
     .select('*, milestone:milestones(*, contract:contracts(*))')
     .eq('officer_id', officerId)
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data;
 }
@@ -430,7 +430,7 @@ export async function updateVerificationTask(id: string, updates: Partial<Verifi
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -444,7 +444,7 @@ export async function createEvidence(evidence: Omit<Evidence, 'id' | 'created_at
     .insert(evidence)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -456,7 +456,7 @@ export async function getEvidenceByMilestone(milestoneId: string) {
     .select('*')
     .eq('milestone_id', milestoneId)
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data;
 }
@@ -470,7 +470,7 @@ export async function createPayment(payment: Omit<Payment, 'id' | 'created_at' |
     .insert(payment)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }
@@ -482,7 +482,7 @@ export async function getPaymentsByContract(contractId: string) {
     .select('*, milestone:milestones(*)')
     .eq('contract_id', contractId)
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data;
 }
@@ -494,7 +494,7 @@ export async function getPaymentsByFarmer(farmerId: string) {
     .select('*, milestone:milestones(*), contract:contracts(*)')
     .eq('recipient_id', farmerId)
     .order('created_at', { ascending: false });
-  
+
   if (error) throw error;
   return data;
 }
@@ -507,7 +507,7 @@ export async function updatePayment(id: string, updates: Partial<Payment>) {
     .eq('id', id)
     .select()
     .single();
-  
+
   if (error) throw error;
   return data;
 }

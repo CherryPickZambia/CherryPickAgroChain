@@ -144,6 +144,7 @@ export interface MarketplaceListing {
   status: 'active' | 'sold' | 'cancelled' | 'pending';
   quality_grade?: 'A' | 'B' | 'C' | 'Premium';
   organic: boolean;
+  batch_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -271,7 +272,7 @@ function filterSampleListings(
   }
 ): MarketplaceListing[] {
   let filtered = [...listings];
-  
+
   if (filters?.crop_type) {
     filtered = filtered.filter(l => l.crop_type === filters.crop_type);
   }
@@ -284,7 +285,7 @@ function filterSampleListings(
   if (filters?.max_price) {
     filtered = filtered.filter(l => l.price_per_unit <= filters.max_price!);
   }
-  
+
   return filtered;
 }
 
@@ -348,14 +349,14 @@ export async function getMarketplaceOrders(buyerAddress?: string) {
 
 export async function createMarketplaceOrder(order: Omit<MarketplaceOrder, 'id' | 'created_at' | 'updated_at'>) {
   try {
-    const { data, error} = await supabase
+    const { data, error } = await supabase
       .from('marketplace_orders')
       .insert([order])
       .select()
       .single();
 
     if (error) throw error;
-    
+
     // Update listing available quantity
     if (data) {
       await supabase.rpc('update_listing_quantity', {
