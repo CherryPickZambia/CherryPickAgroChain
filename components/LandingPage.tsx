@@ -6,9 +6,9 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import Link from "next/link";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
-import { 
-  Sprout, Shield, TrendingUp, Users, CheckCircle, ArrowRight, 
-  Leaf, DollarSign, BarChart3, Globe, Smartphone, Lock, 
+import {
+  Sprout, Shield, TrendingUp, Users, CheckCircle, ArrowRight,
+  Leaf, DollarSign, BarChart3, Globe, Smartphone, Lock,
   Award, Target, Zap, Heart
 } from "lucide-react";
 
@@ -44,9 +44,9 @@ export default function LandingPage() {
           ></div>
           <div className="absolute inset-0 bg-gradient-to-br from-green-900/95 via-emerald-800/90 to-green-700/95"></div>
           {/* Animated gradient overlay */}
-          <motion.div 
+          <motion.div
             className="absolute inset-0 bg-gradient-to-tr from-green-600/20 to-emerald-500/20"
-            animate={{ 
+            animate={{
               background: [
                 "linear-gradient(to top right, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2))",
                 "linear-gradient(to top right, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))",
@@ -69,11 +69,11 @@ export default function LandingPage() {
               <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ 
-                  delay: 0.2, 
-                  type: "spring", 
-                  stiffness: 200, 
-                  damping: 20 
+                transition={{
+                  delay: 0.2,
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 20
                 }}
                 whileHover={{ scale: 1.05 }}
                 className="inline-flex items-center space-x-3 bg-white/10 backdrop-blur-lg px-7 py-3.5 rounded-full mb-8 border border-white/30 shadow-2xl"
@@ -90,7 +90,7 @@ export default function LandingPage() {
               <motion.h1
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ 
+                transition={{
                   delay: 0.4,
                   duration: 0.8,
                   ease: [0.22, 1, 0.36, 1]
@@ -99,10 +99,10 @@ export default function LandingPage() {
               >
                 <span className="inline-block">Grow Your Farm,</span>
                 <br />
-                <motion.span 
+                <motion.span
                   className="inline-block bg-gradient-to-r from-green-300 via-emerald-300 to-green-400 bg-clip-text text-transparent"
-                  animate={{ 
-                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] 
+                  animate={{
+                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
                   }}
                   transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
                   style={{ backgroundSize: "200% 200%" }}
@@ -140,7 +140,7 @@ export default function LandingPage() {
                     <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </motion.button>
                 </Link>
-                <motion.button 
+                <motion.button
                   whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.15)" }}
                   whileTap={{ scale: 0.95 }}
                   className="group px-10 py-5 bg-white/5 text-white rounded-full font-bold text-lg border-2 border-white/80 hover:border-white transition-all backdrop-blur-md shadow-2xl relative overflow-hidden"
@@ -172,19 +172,19 @@ export default function LandingPage() {
                 ].map((stat, index) => {
                   const Icon = stat.icon;
                   return (
-                    <motion.div 
-                      key={index} 
+                    <motion.div
+                      key={index}
                       className="relative group"
                       initial={{ opacity: 0, scale: 0.5 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ 
-                        delay: 1.2 + index * 0.1, 
+                      transition={{
+                        delay: 1.2 + index * 0.1,
                         type: "spring",
                         stiffness: 150,
                         damping: 15
                       }}
                     >
-                      <motion.div 
+                      <motion.div
                         className="absolute inset-0 bg-white/5 backdrop-blur-md rounded-2xl"
                         whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
                         transition={{ duration: 0.3 }}
@@ -197,7 +197,7 @@ export default function LandingPage() {
                         >
                           <Icon className="h-7 w-7 text-green-300" />
                         </motion.div>
-                        <motion.p 
+                        <motion.p
                           className="text-5xl md:text-6xl font-extrabold text-white mb-3"
                           whileHover={{ scale: 1.1 }}
                           transition={{ type: "spring", stiffness: 300 }}
@@ -220,11 +220,11 @@ export default function LandingPage() {
           transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
           className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-30 cursor-pointer group"
         >
-          <motion.div 
+          <motion.div
             className="w-7 h-12 border-2 border-white/40 rounded-full flex items-start justify-center p-2 backdrop-blur-sm bg-white/5"
             whileHover={{ borderColor: "rgba(255, 255, 255, 0.8)", scale: 1.1 }}
           >
-            <motion.div 
+            <motion.div
               className="w-1.5 h-4 bg-white/80 rounded-full"
               animate={{ y: [0, 12, 0], opacity: [1, 0.5, 1] }}
               transition={{ repeat: Infinity, duration: 2 }}
@@ -269,18 +269,18 @@ export default function LandingPage() {
       <section className="py-40 bg-gradient-to-br from-green-50 via-emerald-50 to-green-50 relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-full h-full">
-          <motion.div 
+          <motion.div
             className="absolute top-20 left-20 w-64 h-64 bg-green-200 rounded-full blur-3xl opacity-30"
             animate={{ scale: [1, 1.3, 1], rotate: [0, 90, 0] }}
             transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
           />
-          <motion.div 
+          <motion.div
             className="absolute bottom-20 right-20 w-80 h-80 bg-emerald-200 rounded-full blur-3xl opacity-30"
             animate={{ scale: [1, 1.2, 1], rotate: [0, -90, 0] }}
             transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
           />
         </div>
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <ScrollReveal>
             <div className="text-center mb-32">
@@ -300,7 +300,7 @@ export default function LandingPage() {
               <p className="text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
                 From seed to sale, we're with you every step of the way
               </p>
-              <motion.div 
+              <motion.div
                 initial={{ scaleX: 0 }}
                 whileInView={{ scaleX: 1 }}
                 viewport={{ once: true }}
@@ -407,7 +407,7 @@ export default function LandingPage() {
       <section className="relative py-32 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-green-600 to-emerald-700"></div>
         <div className="absolute inset-0 opacity-10">
-          <div 
+          <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage: "url('https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1920&q=80')",
@@ -447,8 +447,11 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div>
               <div className="flex items-center space-x-2 mb-4">
-                <Sprout className="h-8 w-8 text-green-500" />
-                <span className="text-2xl font-bold text-white">Cherry Pick</span>
+                <img
+                  src="/cherrypick-logo.png"
+                  alt="Cherry Pick"
+                  className="h-10 w-auto object-contain"
+                />
               </div>
               <p className="text-gray-400">
                 Empowering farmers with blockchain technology
@@ -495,17 +498,17 @@ function ScrollSection({ title, subtitle, children, className = "bg-gray-50" }: 
   return (
     <section ref={ref} className={`py-32 ${className} relative overflow-hidden`}>
       {/* Decorative background elements */}
-      <motion.div 
+      <motion.div
         className="absolute top-20 right-10 w-72 h-72 bg-green-100 rounded-full blur-3xl opacity-20"
         animate={{ scale: [1, 1.2, 1], x: [0, 50, 0] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
       />
-      <motion.div 
+      <motion.div
         className="absolute bottom-20 left-10 w-96 h-96 bg-emerald-100 rounded-full blur-3xl opacity-20"
         animate={{ scale: [1, 1.1, 1], x: [0, -30, 0] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
       />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -522,7 +525,7 @@ function ScrollSection({ title, subtitle, children, className = "bg-gray-50" }: 
               {title}
             </h2>
           </motion.div>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0 }}
             animate={inView ? { opacity: 1 } : {}}
             transition={{ delay: 0.4 }}
@@ -530,7 +533,7 @@ function ScrollSection({ title, subtitle, children, className = "bg-gray-50" }: 
           >
             {subtitle}
           </motion.p>
-          <motion.div 
+          <motion.div
             initial={{ scaleX: 0 }}
             animate={inView ? { scaleX: 1 } : {}}
             transition={{ delay: 0.6, duration: 0.8 }}
@@ -551,8 +554,8 @@ function FeatureCard({ icon: Icon, title, description, color, delay }: any) {
       ref={ref}
       initial={{ opacity: 0, y: 50, scale: 0.95 }}
       animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-      transition={{ 
-        duration: 0.7, 
+      transition={{
+        duration: 0.7,
         delay,
         ease: [0.25, 0.46, 0.45, 0.94]
       }}
@@ -560,24 +563,24 @@ function FeatureCard({ icon: Icon, title, description, color, delay }: any) {
       className="group bg-white rounded-3xl p-10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] transition-all relative overflow-hidden"
     >
       {/* Animated gradient background on hover */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
       />
-      
+
       <div className="relative z-10">
-        <motion.div 
+        <motion.div
           className={`w-20 h-20 bg-gradient-to-br ${color} rounded-2xl flex items-center justify-center mb-7 shadow-xl`}
           whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.1 }}
           transition={{ duration: 0.5 }}
         >
           <Icon className="h-9 w-9 text-white" />
         </motion.div>
-        
+
         <h3 className="text-2xl font-extrabold text-gray-900 mb-4 tracking-tight">{title}</h3>
         <p className="text-gray-600 leading-relaxed text-lg">{description}</p>
-        
+
         {/* Decorative element */}
-        <motion.div 
+        <motion.div
           className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-emerald-500 transform scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500"
         />
       </div>
@@ -593,14 +596,14 @@ function HowItWorksStep({ step, title, description, image, features, reverse }: 
       ref={ref}
       initial={{ opacity: 0, x: reverse ? 60 : -60 }}
       animate={inView ? { opacity: 1, x: 0 } : {}}
-      transition={{ 
+      transition={{
         duration: 0.9,
         ease: [0.25, 0.46, 0.45, 0.94]
       }}
       className={`flex flex-col ${reverse ? "md:flex-row-reverse" : "md:flex-row"} gap-16 items-center`}
     >
       <div className="flex-1 space-y-8">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0 }}
           animate={inView ? { opacity: 1, scale: 1 } : {}}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
@@ -610,8 +613,8 @@ function HowItWorksStep({ step, title, description, image, features, reverse }: 
             {step}
           </div>
         </motion.div>
-        
-        <motion.h3 
+
+        <motion.h3
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.3 }}
@@ -619,8 +622,8 @@ function HowItWorksStep({ step, title, description, image, features, reverse }: 
         >
           {title}
         </motion.h3>
-        
-        <motion.p 
+
+        <motion.p
           initial={{ opacity: 0 }}
           animate={inView ? { opacity: 1 } : {}}
           transition={{ delay: 0.4 }}
@@ -628,8 +631,8 @@ function HowItWorksStep({ step, title, description, image, features, reverse }: 
         >
           {description}
         </motion.p>
-        
-        <motion.ul 
+
+        <motion.ul
           className="space-y-5"
           initial="hidden"
           animate={inView ? "visible" : "hidden"}
@@ -643,8 +646,8 @@ function HowItWorksStep({ step, title, description, image, features, reverse }: 
           }}
         >
           {features.map((feature: string, index: number) => (
-            <motion.li 
-              key={index} 
+            <motion.li
+              key={index}
               variants={{
                 hidden: { opacity: 0, x: -20 },
                 visible: { opacity: 1, x: 0 }
@@ -665,7 +668,7 @@ function HowItWorksStep({ step, title, description, image, features, reverse }: 
           ))}
         </motion.ul>
       </div>
-      
+
       <div className="flex-1">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -690,8 +693,8 @@ function BenefitCard({ icon: Icon, title, description, delay }: any) {
       ref={ref}
       initial={{ opacity: 0, scale: 0.8, y: 30 }}
       animate={inView ? { opacity: 1, scale: 1, y: 0 } : {}}
-      transition={{ 
-        duration: 0.6, 
+      transition={{
+        duration: 0.6,
         delay,
         ease: [0.22, 1, 0.36, 1]
       }}
@@ -700,7 +703,7 @@ function BenefitCard({ icon: Icon, title, description, delay }: any) {
     >
       {/* Hover gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
+
       <div className="relative z-10">
         <motion.div
           whileHover={{ rotate: 360, scale: 1.2 }}
@@ -726,8 +729,8 @@ function TestimonialCard({ name, role, quote, avatar, delay }: any) {
       ref={ref}
       initial={{ opacity: 0, y: 40, rotateX: -15 }}
       animate={inView ? { opacity: 1, y: 0, rotateX: 0 } : {}}
-      transition={{ 
-        duration: 0.7, 
+      transition={{
+        duration: 0.7,
         delay,
         ease: [0.22, 1, 0.36, 1]
       }}
@@ -736,10 +739,10 @@ function TestimonialCard({ name, role, quote, avatar, delay }: any) {
     >
       {/* Decorative gradient on hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 to-emerald-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
+
       <div className="relative z-10">
         <div className="flex items-center space-x-5 mb-8">
-          <motion.div 
+          <motion.div
             className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl"
             whileHover={{ scale: 1.1, rotate: 5 }}
             transition={{ type: "spring", stiffness: 300 }}
@@ -751,13 +754,13 @@ function TestimonialCard({ name, role, quote, avatar, delay }: any) {
             <p className="text-green-300 text-base font-medium">{role}</p>
           </div>
         </div>
-        
+
         {/* Quote marks */}
         <div className="text-6xl text-green-300/20 font-serif mb-4 leading-none">"</div>
         <p className="text-gray-100 text-lg leading-relaxed italic font-light -mt-6 mb-4">
           {quote}
         </p>
-        
+
         {/* Star rating */}
         <div className="flex space-x-1">
           {[...Array(5)].map((_, i) => (

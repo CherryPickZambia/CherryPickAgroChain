@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
+import {
   Users, FileText, TrendingUp, DollarSign, Activity, ArrowUp, ArrowDown,
-  MapPin, Clock, CheckCircle2, Settings, Package, Search, Plus, Sun, Menu, 
-  ShoppingBag, User, UserPlus, Shield, XCircle, AlertCircle, Eye, 
+  MapPin, Clock, CheckCircle2, Settings, Package, Search, Plus, Sun, Menu,
+  ShoppingBag, User, UserPlus, Shield, XCircle, AlertCircle, Eye,
   MoreVertical, Filter, Download, Calendar, Leaf, Globe, Phone, Mail,
   ChevronRight, ExternalLink, Landmark, Award, BarChart3, PieChart,
-  Wallet, Zap, Target, RefreshCw
+  Wallet, Zap, Target, RefreshCw, QrCode, Truck
 } from "lucide-react";
 import { promoteToOfficer, demoteOfficer, isOfficer } from "./Dashboard";
 import toast from "react-hot-toast";
@@ -22,6 +22,9 @@ import FarmerDetailModal from "./FarmerDetailModal";
 import NewJobModal, { JobData } from "./NewJobModal";
 import FarmMap from "./FarmMap";
 import AdminCreateContractModal from "./AdminCreateContractModal";
+import WarehouseProcessingModal from "./WarehouseProcessingModal";
+import UniversalQRCode from "./UniversalQRCode";
+import { logProcessingEvent } from "@/lib/traceabilityService";
 
 // Sample jobs data
 const SAMPLE_JOBS: JobData[] = [
@@ -31,139 +34,151 @@ const SAMPLE_JOBS: JobData[] = [
 
 // Comprehensive sample data for demo
 const SAMPLE_FARMERS = [
-  { 
-    id: "1", 
-    wallet: "0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1", 
-    name: "John Mwale", 
+  {
+    id: "1",
+    wallet: "0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1",
+    name: "John Mwale",
     email: "john@farm.zm",
     phone: "+260 97 123 4567",
-    role: "farmer", 
-    location: "Lusaka", 
+    role: "farmer",
+    location: "Lusaka",
     locationLat: -15.4167,
     locationLng: 28.2833,
     farmSize: 12.5,
     crops: ["Mangoes", "Tomatoes"],
-    joined: "Oct 15, 2024", 
+    joined: "Oct 15, 2024",
     verified: true,
     totalEarnings: 45000,
     completedMilestones: 8,
     pendingMilestones: 2,
     contracts: [
-      { id: "c1", cropType: "Mangoes", status: "active" as const, value: 25000, createdAt: "Oct 20, 2024", harvestDate: "Jan 15, 2025", milestones: [
-        { id: "m1", name: "Land Preparation", status: "verified" as const, payment: 5000, dueDate: "Oct 25" },
-        { id: "m2", name: "Planting Complete", status: "verified" as const, payment: 7500, dueDate: "Nov 10" },
-        { id: "m3", name: "Flowering Stage", status: "submitted" as const, payment: 5000, dueDate: "Dec 15" },
-        { id: "m4", name: "Harvest Ready", status: "pending" as const, payment: 7500, dueDate: "Jan 15" },
-      ]},
-      { id: "c2", cropType: "Tomatoes", status: "completed" as const, value: 20000, createdAt: "Aug 10, 2024", harvestDate: "Oct 5, 2024", milestones: [
-        { id: "m5", name: "Land Preparation", status: "verified" as const, payment: 5000, dueDate: "Aug 15" },
-        { id: "m6", name: "Seedling Stage", status: "verified" as const, payment: 5000, dueDate: "Sep 1" },
-        { id: "m7", name: "Harvest Complete", status: "verified" as const, payment: 10000, dueDate: "Oct 5" },
-      ]},
+      {
+        id: "c1", cropType: "Mangoes", status: "active" as const, value: 25000, createdAt: "Oct 20, 2024", harvestDate: "Jan 15, 2025", milestones: [
+          { id: "m1", name: "Land Preparation", status: "verified" as const, payment: 5000, dueDate: "Oct 25" },
+          { id: "m2", name: "Planting Complete", status: "verified" as const, payment: 7500, dueDate: "Nov 10" },
+          { id: "m3", name: "Flowering Stage", status: "submitted" as const, payment: 5000, dueDate: "Dec 15" },
+          { id: "m4", name: "Harvest Ready", status: "pending" as const, payment: 7500, dueDate: "Jan 15" },
+        ]
+      },
+      {
+        id: "c2", cropType: "Tomatoes", status: "completed" as const, value: 20000, createdAt: "Aug 10, 2024", harvestDate: "Oct 5, 2024", milestones: [
+          { id: "m5", name: "Land Preparation", status: "verified" as const, payment: 5000, dueDate: "Aug 15" },
+          { id: "m6", name: "Seedling Stage", status: "verified" as const, payment: 5000, dueDate: "Sep 1" },
+          { id: "m7", name: "Harvest Complete", status: "verified" as const, payment: 10000, dueDate: "Oct 5" },
+        ]
+      },
     ]
   },
-  { 
-    id: "2", 
-    wallet: "0x8ba1F109551bD432803012645Ac136ddd64DBA72", 
-    name: "Mary Banda", 
+  {
+    id: "2",
+    wallet: "0x8ba1F109551bD432803012645Ac136ddd64DBA72",
+    name: "Mary Banda",
     email: "mary@farm.zm",
     phone: "+260 96 234 5678",
-    role: "farmer", 
-    location: "Kabwe", 
+    role: "farmer",
+    location: "Kabwe",
     locationLat: -14.4469,
     locationLng: 28.4464,
     farmSize: 8.2,
     crops: ["Pineapples", "Cashews"],
-    joined: "Oct 20, 2024", 
+    joined: "Oct 20, 2024",
     verified: true,
     totalEarnings: 32000,
     completedMilestones: 5,
     pendingMilestones: 3,
     contracts: [
-      { id: "c3", cropType: "Pineapples", status: "active" as const, value: 18000, createdAt: "Nov 1, 2024", harvestDate: "Feb 20, 2025", milestones: [
-        { id: "m8", name: "Land Preparation", status: "verified" as const, payment: 4000, dueDate: "Nov 5" },
-        { id: "m9", name: "Planting Complete", status: "submitted" as const, payment: 6000, dueDate: "Nov 20" },
-        { id: "m10", name: "Growth Stage", status: "pending" as const, payment: 4000, dueDate: "Jan 10" },
-        { id: "m11", name: "Harvest Ready", status: "pending" as const, payment: 4000, dueDate: "Feb 20" },
-      ]},
+      {
+        id: "c3", cropType: "Pineapples", status: "active" as const, value: 18000, createdAt: "Nov 1, 2024", harvestDate: "Feb 20, 2025", milestones: [
+          { id: "m8", name: "Land Preparation", status: "verified" as const, payment: 4000, dueDate: "Nov 5" },
+          { id: "m9", name: "Planting Complete", status: "submitted" as const, payment: 6000, dueDate: "Nov 20" },
+          { id: "m10", name: "Growth Stage", status: "pending" as const, payment: 4000, dueDate: "Jan 10" },
+          { id: "m11", name: "Harvest Ready", status: "pending" as const, payment: 4000, dueDate: "Feb 20" },
+        ]
+      },
     ]
   },
-  { 
-    id: "3", 
-    wallet: "0x9f2dF0fed2C77648de5860a4dc508cd0572B6C1a", 
-    name: "Peter Phiri", 
+  {
+    id: "3",
+    wallet: "0x9f2dF0fed2C77648de5860a4dc508cd0572B6C1a",
+    name: "Peter Phiri",
     email: "peter@farm.zm",
     phone: "+260 95 345 6789",
-    role: "farmer", 
-    location: "Kitwe", 
+    role: "farmer",
+    location: "Kitwe",
     locationLat: -12.8024,
     locationLng: 28.2132,
     farmSize: 15.0,
     crops: ["Bananas", "Beetroot"],
-    joined: "Oct 25, 2024", 
+    joined: "Oct 25, 2024",
     verified: false,
     totalEarnings: 0,
     completedMilestones: 0,
     pendingMilestones: 4,
     contracts: [
-      { id: "c4", cropType: "Bananas", status: "pending" as const, value: 22000, createdAt: "Nov 10, 2024", harvestDate: "Mar 15, 2025", milestones: [
-        { id: "m12", name: "Land Preparation", status: "pending" as const, payment: 5000, dueDate: "Nov 15" },
-        { id: "m13", name: "Planting Complete", status: "pending" as const, payment: 7000, dueDate: "Dec 1" },
-        { id: "m14", name: "Growth Stage", status: "pending" as const, payment: 5000, dueDate: "Feb 1" },
-        { id: "m15", name: "Harvest Ready", status: "pending" as const, payment: 5000, dueDate: "Mar 15" },
-      ]},
+      {
+        id: "c4", cropType: "Bananas", status: "pending" as const, value: 22000, createdAt: "Nov 10, 2024", harvestDate: "Mar 15, 2025", milestones: [
+          { id: "m12", name: "Land Preparation", status: "pending" as const, payment: 5000, dueDate: "Nov 15" },
+          { id: "m13", name: "Planting Complete", status: "pending" as const, payment: 7000, dueDate: "Dec 1" },
+          { id: "m14", name: "Growth Stage", status: "pending" as const, payment: 5000, dueDate: "Feb 1" },
+          { id: "m15", name: "Harvest Ready", status: "pending" as const, payment: 5000, dueDate: "Mar 15" },
+        ]
+      },
     ]
   },
-  { 
-    id: "7", 
-    wallet: "0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b", 
-    name: "David Tembo", 
+  {
+    id: "7",
+    wallet: "0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b",
+    name: "David Tembo",
     email: "david@farm.zm",
     phone: "+260 97 456 7890",
-    role: "farmer", 
-    location: "Chipata", 
+    role: "farmer",
+    location: "Chipata",
     locationLat: -13.6333,
     locationLng: 32.6500,
     farmSize: 20.0,
     crops: ["Cashews", "Mangoes"],
-    joined: "Sep 10, 2024", 
+    joined: "Sep 10, 2024",
     verified: true,
     totalEarnings: 68000,
     completedMilestones: 12,
     pendingMilestones: 2,
     contracts: [
-      { id: "c5", cropType: "Cashews", status: "active" as const, value: 35000, createdAt: "Sep 15, 2024", harvestDate: "Jan 30, 2025", milestones: [
-        { id: "m16", name: "Land Preparation", status: "verified" as const, payment: 8000, dueDate: "Sep 20" },
-        { id: "m17", name: "Planting Complete", status: "verified" as const, payment: 10000, dueDate: "Oct 5" },
-        { id: "m18", name: "Growth Stage", status: "verified" as const, payment: 7000, dueDate: "Nov 30" },
-        { id: "m19", name: "Harvest Ready", status: "pending" as const, payment: 10000, dueDate: "Jan 30" },
-      ]},
+      {
+        id: "c5", cropType: "Cashews", status: "active" as const, value: 35000, createdAt: "Sep 15, 2024", harvestDate: "Jan 30, 2025", milestones: [
+          { id: "m16", name: "Land Preparation", status: "verified" as const, payment: 8000, dueDate: "Sep 20" },
+          { id: "m17", name: "Planting Complete", status: "verified" as const, payment: 10000, dueDate: "Oct 5" },
+          { id: "m18", name: "Growth Stage", status: "verified" as const, payment: 7000, dueDate: "Nov 30" },
+          { id: "m19", name: "Harvest Ready", status: "pending" as const, payment: 10000, dueDate: "Jan 30" },
+        ]
+      },
     ]
   },
-  { 
-    id: "8", 
-    wallet: "0x8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c", 
-    name: "Agnes Mulenga", 
+  {
+    id: "8",
+    wallet: "0x8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c",
+    name: "Agnes Mulenga",
     email: "agnes@farm.zm",
     phone: "+260 96 567 8901",
-    role: "farmer", 
-    location: "Livingstone", 
+    role: "farmer",
+    location: "Livingstone",
     locationLat: -17.8419,
     locationLng: 25.8544,
     farmSize: 6.5,
     crops: ["Tomatoes", "Beetroot"],
-    joined: "Nov 1, 2024", 
+    joined: "Nov 1, 2024",
     verified: true,
     totalEarnings: 18000,
     completedMilestones: 3,
     pendingMilestones: 1,
     contracts: [
-      { id: "c6", cropType: "Tomatoes", status: "active" as const, value: 12000, createdAt: "Nov 5, 2024", harvestDate: "Feb 10, 2025", milestones: [
-        { id: "m20", name: "Land Preparation", status: "verified" as const, payment: 3000, dueDate: "Nov 10" },
-        { id: "m21", name: "Planting Complete", status: "verified" as const, payment: 4000, dueDate: "Nov 25" },
-        { id: "m22", name: "Growth Stage", status: "submitted" as const, payment: 2500, dueDate: "Jan 10" },
-        { id: "m23", name: "Harvest Ready", status: "pending" as const, payment: 2500, dueDate: "Feb 10" },
-      ]},
+      {
+        id: "c6", cropType: "Tomatoes", status: "active" as const, value: 12000, createdAt: "Nov 5, 2024", harvestDate: "Feb 10, 2025", milestones: [
+          { id: "m20", name: "Land Preparation", status: "verified" as const, payment: 3000, dueDate: "Nov 10" },
+          { id: "m21", name: "Planting Complete", status: "verified" as const, payment: 4000, dueDate: "Nov 25" },
+          { id: "m22", name: "Growth Stage", status: "submitted" as const, payment: 2500, dueDate: "Jan 10" },
+          { id: "m23", name: "Harvest Ready", status: "pending" as const, payment: 2500, dueDate: "Feb 10" },
+        ]
+      },
     ]
   },
 ];
@@ -221,17 +236,73 @@ export default function AdminDashboard() {
   const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [jobs, setJobs] = useState<JobData[]>(SAMPLE_JOBS);
   const [showContractModal, setShowContractModal] = useState(false);
-  
+
   // Pending verifications state
   const [pendingVerifications, setPendingVerifications] = useState<PendingVerification[]>([]);
   const [loadingVerifications, setLoadingVerifications] = useState(false);
   const [selectedVerification, setSelectedVerification] = useState<PendingVerification | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  
+
   // Database officers state
   const [dbOfficers, setDbOfficers] = useState<any[]>([]);
   const [loadingOfficers, setLoadingOfficers] = useState(false);
-  
+
+  // Warehouse processing state
+  const [showProcessingModal, setShowProcessingModal] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState<{ batchCode: string; cropType: string; farmerName: string; quantity: string } | null>(null);
+  const [savedProcessingData, setSavedProcessingData] = useState<Record<string, any>>({});
+  const [verifiedProducts, setVerifiedProducts] = useState<{
+    batchCode: string;
+    cropType: string;
+    farmerName: string;
+    quantity: string;
+    grade: string;
+    nftTxHash?: string;
+    verifiedAt: string;
+  }[]>([
+    // Sample verified products
+    { batchCode: "CP-MAN-241115-A2B3", cropType: "Mangoes", farmerName: "Grace Zulu", quantity: "450 kg", grade: "Premium", nftTxHash: "0x1a2b3c4d5e6f7890", verifiedAt: "2024-11-28" },
+    { batchCode: "CP-CAS-241120-D2T6", cropType: "Cashews", farmerName: "David Tembo", quantity: "320 kg", grade: "Grade A", nftTxHash: "0xabcdef1234567890", verifiedAt: "2024-11-25" },
+  ]);
+
+  // Load verified products (batches with NFTs)
+  const loadVerifiedProducts = async () => {
+    try {
+      if (!supabase) return;
+
+      const { data, error } = await supabase
+        .from('batches')
+        .select(`
+          batch_code,
+          crop_type,
+          total_quantity,
+          quality_grade,
+          blockchain_tx,
+          updated_at,
+          farmer:farmers(name)
+        `)
+        .not('blockchain_tx', 'is', null)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const transformed = data.map((item: any) => ({
+          batchCode: item.batch_code,
+          cropType: item.crop_type,
+          farmerName: item.farmer?.name || 'Unknown',
+          quantity: `${item.total_quantity} kg`,
+          grade: item.quality_grade || 'Standard',
+          nftTxHash: item.blockchain_tx,
+          verifiedAt: new Date(item.updated_at).toLocaleDateString()
+        }));
+        setVerifiedProducts(transformed);
+      }
+    } catch (error) {
+      console.error('Error loading verified products:', error);
+    }
+  };
+
   const [contracts, setContracts] = useState([
     { id: "C001", farmer: "John Mwale", crop: "Mangoes", amount: "K15,000", status: "active", date: "2024-11-01" },
     { id: "C002", farmer: "Mary Banda", crop: "Tomatoes", amount: "K12,000", status: "active", date: "2024-11-03" },
@@ -244,7 +315,7 @@ export default function AdminDashboard() {
     setLoadingVerifications(true);
     try {
       console.log('Loading pending verifications from database...');
-      
+
       if (!supabase) {
         console.log('Supabase not configured');
         setPendingVerifications([]);
@@ -309,7 +380,7 @@ export default function AdminDashboard() {
         const contract = milestone.contract;
         const farmer = contract?.farmer;
         const metadata = milestone.metadata || {};
-        
+
         return {
           id: milestone.id,
           milestone_id: milestone.id,
@@ -333,9 +404,9 @@ export default function AdminDashboard() {
 
       console.log('Processed verifications:', verifications);
       setPendingVerifications(verifications);
-      
+
       toast.success(`Found ${verifications.length} milestone(s) awaiting approval`);
-      
+
       // Log for debugging
       verifications.forEach(v => {
         console.log(`Pending: ${v.milestone_name} for ${v.farmer_name} - K${v.payment_amount} ZMW`);
@@ -371,6 +442,9 @@ export default function AdminDashboard() {
     }
     if (selectedView === 'officers') {
       loadOfficersFromDB();
+    }
+    if (selectedView === 'traceability') {
+      loadVerifiedProducts();
     }
   }, [selectedView]);
 
@@ -435,6 +509,7 @@ export default function AdminDashboard() {
     { icon: Users, label: "Farmers", id: "farmers" },
     { icon: User, label: "Buyers", id: "buyers" },
     { icon: CheckCircle2, label: "Officers", id: "officers" },
+    { icon: QrCode, label: "Traceability", id: "traceability" },
     { icon: TrendingUp, label: "Analytics", id: "analytics" },
     { icon: DollarSign, label: "Payments", id: "payments" },
     { icon: Settings, label: "Settings", id: "settings" },
@@ -444,7 +519,7 @@ export default function AdminDashboard() {
   const handlePromoteToOfficer = (user: typeof SAMPLE_USERS[0]) => {
     try {
       promoteToOfficer(user.wallet);
-      setUsers(prev => prev.map(u => 
+      setUsers(prev => prev.map(u =>
         u.id === user.id ? { ...u, role: "officer" } : u
       ));
       toast.success(`${user.name} has been promoted to Extension Officer!`);
@@ -459,7 +534,7 @@ export default function AdminDashboard() {
   const handleDemoteOfficer = (user: typeof SAMPLE_USERS[0]) => {
     try {
       demoteOfficer(user.wallet);
-      setUsers(prev => prev.map(u => 
+      setUsers(prev => prev.map(u =>
         u.id === user.id ? { ...u, role: "farmer" } : u
       ));
       toast.success(`${user.name} has been demoted from Officer role.`);
@@ -501,11 +576,10 @@ export default function AdminDashboard() {
                     setSelectedView(item.id);
                   }
                 }}
-                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all ${
-                  isActive
-                    ? "bg-green-50 text-green-700 font-medium"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
+                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all ${isActive
+                  ? "bg-green-50 text-green-700 font-medium"
+                  : "text-gray-600 hover:bg-gray-50"
+                  }`}
               >
                 <Icon className={`h-5 w-5 ${isActive ? "text-green-600" : "text-gray-400"}`} />
                 <span className="text-sm">{item.label}</span>
@@ -551,289 +625,289 @@ export default function AdminDashboard() {
         <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
           {selectedView === "dashboard" && (
             <>
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {/* Fields */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Total Farmers</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.totalFarmers.value}</p>
-                  <p className="text-xs text-gray-400 mt-1">{stats.totalFarmers.subtitle}</p>
-                </div>
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <Users className="h-5 w-5 text-green-600" />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Jobs Active */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Active Contracts</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.activeContracts.value}</p>
-                  <p className="text-xs text-gray-400 mt-1">{stats.activeContracts.subtitle}</p>
-                </div>
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Jobs Due */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Marketplace Listings</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.marketplaceListings.value}</p>
-                  <p className="text-xs text-gray-400 mt-1">{stats.marketplaceListings.subtitle}</p>
-                </div>
-                <div className="p-2 bg-purple-50 rounded-lg">
-                  <ShoppingBag className="h-5 w-5 text-purple-600" />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Jobs Completed */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Platform Revenue</p>
-                  <p className="text-3xl font-bold text-gray-800">{stats.totalRevenue.value}</p>
-                  <p className="text-xs text-gray-400 mt-1">{stats.totalRevenue.subtitle}</p>
-                </div>
-                <div className="p-2 bg-emerald-50 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-emerald-600" />
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {/* Map View */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
-            >
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                <div className="relative flex-1 mr-4">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-                <button 
-                  onClick={() => setShowNewJobModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/25"
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                {/* Fields */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
                 >
-                  <Plus className="h-4 w-4" />
-                  <span className="text-sm font-semibold">New Job</span>
-                </button>
-                <div className="ml-2 flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg">
-                  <Sun className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm font-medium text-gray-700">18°C</span>
-                </div>
-              </div>
-              <div className="relative h-96 rounded-xl overflow-hidden">
-                {/* Real Interactive Map */}
-                <FarmMap />
-              </div>
-            </motion.div>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Total Farmers</p>
+                      <p className="text-3xl font-bold text-gray-800">{stats.totalFarmers.value}</p>
+                      <p className="text-xs text-gray-400 mt-1">{stats.totalFarmers.subtitle}</p>
+                    </div>
+                    <div className="p-2 bg-green-50 rounded-lg">
+                      <Users className="h-5 w-5 text-green-600" />
+                    </div>
+                  </div>
+                </motion.div>
 
-            {/* Crop Distribution */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Crop Distribution</h3>
-                <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option>2022</option>
-                  <option>2023</option>
-                  <option>2024</option>
-                </select>
-              </div>
-              <div className="flex items-center justify-center mb-6">
-                <div className="relative w-48 h-48">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="96"
-                      cy="96"
-                      r="80"
-                      fill="none"
-                      stroke="#10b981"
-                      strokeWidth="24"
-                      strokeDasharray="251 503"
-                    />
-                    <circle
-                      cx="96"
-                      cy="96"
-                      r="80"
-                      fill="none"
-                      stroke="#f59e0b"
-                      strokeWidth="24"
-                      strokeDasharray="78 503"
-                      strokeDashoffset="-251"
-                    />
-                    <circle
-                      cx="96"
-                      cy="96"
-                      r="80"
-                      fill="none"
-                      stroke="#ef4444"
-                      strokeWidth="24"
-                      strokeDasharray="52 503"
-                      strokeDashoffset="-329"
-                    />
-                    <circle
-                      cx="96"
-                      cy="96"
-                      r="80"
-                      fill="none"
-                      stroke="#8b5cf6"
-                      strokeWidth="24"
-                      strokeDasharray="34 503"
-                      strokeDashoffset="-381"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="text-3xl font-bold text-gray-800">54,862</p>
-                    <p className="text-sm text-gray-500">Hectares</p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {cropData.map((crop) => (
-                  <div key={crop.name} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: crop.color }}></div>
-                      <span className="text-sm font-medium text-gray-700">{crop.name}</span>
+                {/* Jobs Active */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Active Contracts</p>
+                      <p className="text-3xl font-bold text-gray-800">{stats.activeContracts.value}</p>
+                      <p className="text-xs text-gray-400 mt-1">{stats.activeContracts.subtitle}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-gray-800">({crop.percentage}%)</p>
-                      <p className="text-xs text-gray-500">{crop.value.toLocaleString()} Ha</p>
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <FileText className="h-5 w-5 text-blue-600" />
                     </div>
                   </div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
+                </motion.div>
 
-          {/* Bottom Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Cost Analysis */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-800">Cost Analysis</h3>
-                <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500">
-                  <option>Monthly</option>
-                  <option>Weekly</option>
-                  <option>Yearly</option>
-                </select>
-              </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={costData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" stroke="#9ca3af" style={{ fontSize: "12px" }} />
-                  <YAxis stroke="#9ca3af" style={{ fontSize: "12px" }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "white",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cost"
-                    stroke="#10b981"
-                    strokeWidth={3}
-                    dot={{ fill: "#10b981", r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-              <div className="mt-4 flex items-center justify-center">
-                <div className="px-4 py-2 bg-green-50 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600">$386.50</p>
-                </div>
-              </div>
-            </motion.div>
+                {/* Jobs Due */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Marketplace Listings</p>
+                      <p className="text-3xl font-bold text-gray-800">{stats.marketplaceListings.value}</p>
+                      <p className="text-xs text-gray-400 mt-1">{stats.marketplaceListings.subtitle}</p>
+                    </div>
+                    <div className="p-2 bg-purple-50 rounded-lg">
+                      <ShoppingBag className="h-5 w-5 text-purple-600" />
+                    </div>
+                  </div>
+                </motion.div>
 
-            {/* Recent Due Jobs */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Recent Due Jobs</h3>
-                <button className="text-sm text-green-600 hover:text-green-700 font-medium">See All</button>
-              </div>
-              <div className="space-y-3">
-                {[
-                  { title: "Harrowing Season", location: "ABY Farm - Bay Land" },
-                  { title: "Harrowing Season", location: "YNS Farm - ARD Land" },
-                ].map((job, index) => (
-                  <div key={index} className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <Clock className="h-4 w-4 text-orange-600" />
+                {/* Jobs Completed */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-sm text-gray-500 mb-1">Platform Revenue</p>
+                      <p className="text-3xl font-bold text-gray-800">{stats.totalRevenue.value}</p>
+                      <p className="text-xs text-gray-400 mt-1">{stats.totalRevenue.subtitle}</p>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-800">{job.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{job.location}</p>
+                    <div className="p-2 bg-emerald-50 rounded-lg">
+                      <DollarSign className="h-5 w-5 text-emerald-600" />
                     </div>
                   </div>
-                ))}
+                </motion.div>
               </div>
-              {/* Upgrade Banner */}
-              <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800 mb-1">Platform Health</p>
-                    <p className="text-xs text-gray-600">All systems operational</p>
+
+              {/* Main Content Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                {/* Map View */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+                >
+                  <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                    <div className="relative flex-1 mr-4">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setShowNewJobModal(true)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/25"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span className="text-sm font-semibold">New Job</span>
+                    </button>
+                    <div className="ml-2 flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg">
+                      <Sun className="h-4 w-4 text-orange-500" />
+                      <span className="text-sm font-medium text-gray-700">18°C</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-green-700">Active</span>
+                  <div className="relative h-96 rounded-xl overflow-hidden">
+                    {/* Real Interactive Map */}
+                    <FarmMap />
                   </div>
-                </div>
+                </motion.div>
+
+                {/* Crop Distribution */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-800">Crop Distribution</h3>
+                    <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500">
+                      <option>2022</option>
+                      <option>2023</option>
+                      <option>2024</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-center mb-6">
+                    <div className="relative w-48 h-48">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle
+                          cx="96"
+                          cy="96"
+                          r="80"
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="24"
+                          strokeDasharray="251 503"
+                        />
+                        <circle
+                          cx="96"
+                          cy="96"
+                          r="80"
+                          fill="none"
+                          stroke="#f59e0b"
+                          strokeWidth="24"
+                          strokeDasharray="78 503"
+                          strokeDashoffset="-251"
+                        />
+                        <circle
+                          cx="96"
+                          cy="96"
+                          r="80"
+                          fill="none"
+                          stroke="#ef4444"
+                          strokeWidth="24"
+                          strokeDasharray="52 503"
+                          strokeDashoffset="-329"
+                        />
+                        <circle
+                          cx="96"
+                          cy="96"
+                          r="80"
+                          fill="none"
+                          stroke="#8b5cf6"
+                          strokeWidth="24"
+                          strokeDasharray="34 503"
+                          strokeDashoffset="-381"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <p className="text-3xl font-bold text-gray-800">54,862</p>
+                        <p className="text-sm text-gray-500">Hectares</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {cropData.map((crop) => (
+                      <div key={crop.name} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: crop.color }}></div>
+                          <span className="text-sm font-medium text-gray-700">{crop.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-gray-800">({crop.percentage}%)</p>
+                          <p className="text-xs text-gray-500">{crop.value.toLocaleString()} Ha</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
               </div>
-            </motion.div>
-          </div>
-          </>
+
+              {/* Bottom Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Cost Analysis */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-lg font-bold text-gray-800">Cost Analysis</h3>
+                    <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500">
+                      <option>Monthly</option>
+                      <option>Weekly</option>
+                      <option>Yearly</option>
+                    </select>
+                  </div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={costData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="month" stroke="#9ca3af" style={{ fontSize: "12px" }} />
+                      <YAxis stroke="#9ca3af" style={{ fontSize: "12px" }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "white",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          fontSize: "12px",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="cost"
+                        stroke="#10b981"
+                        strokeWidth={3}
+                        dot={{ fill: "#10b981", r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                  <div className="mt-4 flex items-center justify-center">
+                    <div className="px-4 py-2 bg-green-50 rounded-lg">
+                      <p className="text-2xl font-bold text-green-600">$386.50</p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Recent Due Jobs */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-800">Recent Due Jobs</h3>
+                    <button className="text-sm text-green-600 hover:text-green-700 font-medium">See All</button>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { title: "Harrowing Season", location: "ABY Farm - Bay Land" },
+                      { title: "Harrowing Season", location: "YNS Farm - ARD Land" },
+                    ].map((job, index) => (
+                      <div key={index} className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg">
+                        <div className="p-2 bg-orange-100 rounded-lg">
+                          <Clock className="h-4 w-4 text-orange-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-800">{job.title}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{job.location}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Upgrade Banner */}
+                  <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800 mb-1">Platform Health</p>
+                        <p className="text-xs text-gray-600">All systems operational</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm font-medium text-green-700">Active</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </>
           )}
 
           {/* Verifications View */}
@@ -929,7 +1003,7 @@ export default function AdminDashboard() {
                             ${verification.payment_amount.toLocaleString()}
                           </span>
                         </div>
-                        
+
                         <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{verification.milestone_name}</h3>
                         <p className="text-sm text-gray-600 mb-2">
                           <span className="font-medium">{verification.farmer_name}</span>
@@ -937,7 +1011,7 @@ export default function AdminDashboard() {
                         <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-700 text-xs rounded-full mb-3">
                           {verification.crop_type}
                         </span>
-                        
+
                         <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
@@ -948,7 +1022,7 @@ export default function AdminDashboard() {
                             {new Date(verification.submitted_date).toLocaleDateString()}
                           </span>
                         </div>
-                        
+
                         <button className="w-full mt-3 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
                           <Eye className="h-4 w-4" />
                           Review
@@ -969,7 +1043,7 @@ export default function AdminDashboard() {
                   <h2 className="text-2xl font-bold text-gray-900">All Contracts</h2>
                   <p className="text-gray-600 mt-1">Manage farming contracts and agreements</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowContractModal(true)}
                   className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/25 flex items-center space-x-2"
                 >
@@ -991,9 +1065,8 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="text-lg font-bold text-gray-900">{contract.amount}</span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        contract.status === "active" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${contract.status === "active" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                        }`}>
                         {contract.status}
                       </span>
                     </div>
@@ -1007,7 +1080,7 @@ export default function AdminDashboard() {
           {selectedView === "farmers" && (
             <div className="space-y-6">
               {/* Interactive Map Section */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
@@ -1045,10 +1118,10 @@ export default function AdminDashboard() {
                       </g>
                     ))}
                     {/* Zambia shape approximation */}
-                    <path d="M30,25 L70,20 L85,45 L80,70 L55,85 L35,80 L20,55 L30,25" 
+                    <path d="M30,25 L70,20 L85,45 L80,70 L55,85 L35,80 L20,55 L30,25"
                       fill="none" stroke="#059669" strokeWidth="0.5" strokeDasharray="2,2" />
                   </svg>
-                  
+
                   {/* Farmer Markers */}
                   {SAMPLE_FARMERS.map((farmer) => {
                     const pos = MAP_POSITIONS[farmer.location as keyof typeof MAP_POSITIONS] || { x: 50, y: 50 };
@@ -1064,16 +1137,14 @@ export default function AdminDashboard() {
                         className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
                         style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                       >
-                        <div className={`relative w-10 h-10 rounded-full flex items-center justify-center border-3 border-white shadow-lg transition-all ${
-                          farmer.verified ? 'bg-emerald-500' : 'bg-amber-500'
-                        }`}>
+                        <div className={`relative w-10 h-10 rounded-full flex items-center justify-center border-3 border-white shadow-lg transition-all ${farmer.verified ? 'bg-emerald-500' : 'bg-amber-500'
+                          }`}>
                           <span className="text-white font-bold text-sm">{farmer.name.charAt(0)}</span>
                           {/* Pulse effect */}
-                          <div className={`absolute inset-0 rounded-full animate-ping opacity-30 ${
-                            farmer.verified ? 'bg-emerald-500' : 'bg-amber-500'
-                          }`} style={{ animationDuration: '2s' }} />
+                          <div className={`absolute inset-0 rounded-full animate-ping opacity-30 ${farmer.verified ? 'bg-emerald-500' : 'bg-amber-500'
+                            }`} style={{ animationDuration: '2s' }} />
                         </div>
-                        
+
                         {/* Tooltip */}
                         <AnimatePresence>
                           {hoveredMarker === farmer.id && (
@@ -1104,7 +1175,7 @@ export default function AdminDashboard() {
                       </motion.div>
                     );
                   })}
-                  
+
                   {/* Map Legend */}
                   <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur rounded-xl p-3 shadow-lg">
                     <p className="text-xs font-semibold text-gray-700 mb-2">Zambia Regions</p>
@@ -1151,13 +1222,13 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {SAMPLE_FARMERS.filter(f => 
+                  {SAMPLE_FARMERS.filter(f =>
                     f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     f.location.toLowerCase().includes(searchQuery.toLowerCase())
                   ).map((farmer) => (
-                    <motion.div 
+                    <motion.div
                       key={farmer.id}
                       whileHover={{ y: -4 }}
                       onClick={() => handleFarmerClick(farmer)}
@@ -1165,9 +1236,8 @@ export default function AdminDashboard() {
                     >
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg ${
-                            farmer.verified ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-amber-400 to-orange-500'
-                          }`}>
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg ${farmer.verified ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-amber-400 to-orange-500'
+                            }`}>
                             {farmer.name.charAt(0)}
                           </div>
                           <div>
@@ -1189,7 +1259,7 @@ export default function AdminDashboard() {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="grid grid-cols-3 gap-3 mb-4">
                         <div className="text-center p-2 bg-white rounded-lg border border-gray-100">
                           <p className="text-lg font-bold text-gray-900">{farmer.farmSize}</p>
@@ -1204,7 +1274,7 @@ export default function AdminDashboard() {
                           <p className="text-xs text-gray-500">Earned</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {farmer.crops.map((crop, i) => (
                           <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">
@@ -1212,7 +1282,7 @@ export default function AdminDashboard() {
                           </span>
                         ))}
                       </div>
-                      
+
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <div className="flex items-center gap-3 text-xs text-gray-500">
                           <span className="flex items-center gap-1">
@@ -1309,7 +1379,7 @@ export default function AdminDashboard() {
                     <h3 className="text-lg font-bold text-gray-900">Promote Users to Officers</h3>
                     <p className="text-sm text-gray-600 mt-1">Select verified users to promote to Extension Officer role</p>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setShowPromoteModal(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
                   >
@@ -1419,6 +1489,377 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* Traceability View */}
+          {selectedView === "traceability" && (
+            <div className="space-y-6">
+              {/* Traceability Header */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                      <QrCode className="h-6 w-6 text-teal-600" />
+                      Traceability Dashboard
+                    </h2>
+                    <p className="text-gray-600 mt-1">Track batches and supply chain events across all farmers</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search batches..."
+                        className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 w-64"
+                      />
+                    </div>
+                    <button className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4" />
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Traceability Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Total Batches</p>
+                      <p className="text-3xl font-bold text-gray-900">47</p>
+                    </div>
+                    <div className="p-3 bg-teal-50 rounded-lg">
+                      <Package className="h-6 w-6 text-teal-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">In Transit</p>
+                      <p className="text-3xl font-bold text-gray-900">12</p>
+                    </div>
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <MapPin className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">At Warehouse</p>
+                      <p className="text-3xl font-bold text-gray-900">23</p>
+                    </div>
+                    <div className="p-3 bg-purple-50 rounded-lg">
+                      <Landmark className="h-6 w-6 text-purple-600" />
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">QR Scans Today</p>
+                      <p className="text-3xl font-bold text-gray-900">156</p>
+                    </div>
+                    <div className="p-3 bg-emerald-50 rounded-lg">
+                      <QrCode className="h-6 w-6 text-emerald-600" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sample Batches List */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Batches</h3>
+                <div className="space-y-4">
+                  {[
+                    { id: "CP-MAN-241201-J8K2", farmer: "John Mwale", crop: "Mangoes", quantity: "500 kg", status: "in_transit", location: "En route to Lusaka Warehouse", events: 8 },
+                    { id: "CP-TOM-241128-M4R9", farmer: "Mary Banda", crop: "Tomatoes", quantity: "800 kg", status: "at_warehouse", location: "Kabwe Cold Storage", events: 12 },
+                    { id: "CP-PIN-241125-P7Q3", farmer: "Peter Phiri", crop: "Pineapples", quantity: "350 kg", status: "growing", location: "Farm - Kitwe", events: 5 },
+                    { id: "CP-CAS-241120-D2T6", farmer: "David Tembo", crop: "Cashews", quantity: "200 kg", status: "harvested", location: "Chipata Farm", events: 7 },
+                    { id: "CP-TOM-241115-A9B4", farmer: "Agnes Mulenga", crop: "Tomatoes", quantity: "420 kg", status: "distributed", location: "Retail - Livingstone", events: 15 },
+                  ].map((batch, index) => (
+                    <motion.div
+                      key={batch.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl group-hover:from-teal-100 group-hover:to-emerald-100 transition-colors">
+                          <QrCode className="h-6 w-6 text-teal-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-gray-900 font-mono">{batch.id}</h4>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${batch.status === 'growing' ? 'bg-green-100 text-green-700' :
+                              batch.status === 'harvested' ? 'bg-yellow-100 text-yellow-700' :
+                                batch.status === 'in_transit' ? 'bg-blue-100 text-blue-700' :
+                                  batch.status === 'at_warehouse' ? 'bg-purple-100 text-purple-700' :
+                                    'bg-gray-100 text-gray-700'
+                              }`}>
+                              {batch.status.replace('_', ' ')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">{batch.farmer} • {batch.crop} • {batch.quantity}</p>
+                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                            <MapPin className="h-3 w-3" />
+                            {batch.location}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-900">{batch.events} events</p>
+                          <p className="text-xs text-gray-500">tracked</p>
+                        </div>
+                        <a
+                          href={`/trace/${batch.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View
+                        </a>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Events Timeline */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Supply Chain Events</h3>
+                <div className="space-y-4">
+                  {[
+                    { event: "Warehouse Arrival", batch: "CP-MAN-241201-J8K2", time: "2 hours ago", actor: "Transport Team", icon: Landmark, color: "purple" },
+                    { event: "Transport Started", batch: "CP-TOM-241128-M4R9", time: "5 hours ago", actor: "ABC Logistics", icon: MapPin, color: "blue" },
+                    { event: "Quality Verified", batch: "CP-PIN-241125-P7Q3", time: "1 day ago", actor: "Grace Zulu", icon: CheckCircle2, color: "green" },
+                    { event: "Harvest Complete", batch: "CP-CAS-241120-D2T6", time: "2 days ago", actor: "David Tembo", icon: Leaf, color: "emerald" },
+                    { event: "AI Diagnostic", batch: "CP-TOM-241115-A9B4", time: "3 days ago", actor: "System", icon: Activity, color: "orange" },
+                  ].map((event, index) => (
+                    <div key={index} className="flex items-start gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                      <div className={`p-2 bg-${event.color}-50 rounded-lg`}>
+                        <event.icon className={`h-5 w-5 text-${event.color}-600`} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-gray-900">{event.event}</h4>
+                          <span className="text-xs text-gray-500">{event.time}</span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          <span className="font-mono text-teal-600">{event.batch}</span> • {event.actor}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Universal QR Code Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl shadow-sm border border-teal-200 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Universal QR Code for Packaging</h3>
+                  <p className="text-sm text-gray-600 mb-6">
+                    This QR code points to the public lookup page. Print this on all product packaging -
+                    customers will scan it and enter the batch code to view traceability info.
+                  </p>
+                  <div className="flex justify-center">
+                    <UniversalQRCode size={180} showDownload={true} />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Processing Actions</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Select a batch that has arrived at the warehouse to begin processing (quality checks, sorting, processing, packaging).
+                  </p>
+                  <div className="space-y-3">
+                    {[
+                      { id: "CP-MAN-241201-J8K2", crop: "Mangoes", farmer: "John Mwale", quantity: "500 kg", status: "at_warehouse" },
+                      { id: "CP-TOM-241128-M4R9", crop: "Tomatoes", farmer: "Mary Banda", quantity: "800 kg", status: "at_warehouse" },
+                    ].map((batch) => {
+                      const hasSavedProgress = !!savedProcessingData[batch.id];
+                      return (
+                        <button
+                          key={batch.id}
+                          onClick={() => {
+                            setSelectedBatch({
+                              batchCode: batch.id,
+                              cropType: batch.crop,
+                              farmerName: batch.farmer,
+                              quantity: batch.quantity,
+                            });
+                            setShowProcessingModal(true);
+                          }}
+                          className={`w-full p-4 border rounded-lg transition-all text-left flex items-center justify-between group ${hasSavedProgress
+                            ? 'border-amber-300 bg-amber-50 hover:border-amber-500'
+                            : 'border-purple-200 hover:border-purple-400 hover:bg-purple-50'
+                            }`}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-mono font-semibold text-purple-700">{batch.id}</p>
+                              {hasSavedProgress && (
+                                <span className="px-2 py-0.5 text-xs bg-amber-200 text-amber-800 rounded-full">
+                                  In Progress
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">{batch.farmer} • {batch.crop} • {batch.quantity}</p>
+                          </div>
+                          <div className={`px-3 py-1.5 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity ${hasSavedProgress ? 'bg-amber-600' : 'bg-purple-600'
+                            }`}>
+                            {hasSavedProgress ? 'Continue Processing' : 'Start Processing'}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Products Ready for Distribution */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-green-600" />
+                  Products Ready for Distribution ({verifiedProducts.length})
+                </h3>
+                {verifiedProducts.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">
+                    No products verified for distribution yet. Complete warehouse processing to add batches here.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Batch Code</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Product</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Farmer</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Quantity</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Grade</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">NFT</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Verified</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {verifiedProducts.map((product) => (
+                          <tr key={product.batchCode} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 font-mono text-sm text-teal-600 font-semibold">{product.batchCode}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{product.cropType}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{product.farmerName}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{product.quantity}</td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${product.grade === 'Premium' ? 'bg-yellow-100 text-yellow-800' :
+                                product.grade === 'Grade A' ? 'bg-green-100 text-green-800' :
+                                  'bg-blue-100 text-blue-800'
+                                }`}>
+                                {product.grade}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              {product.nftTxHash ? (
+                                <a
+                                  href={`https://basescan.org/tx/${product.nftTxHash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs font-mono text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                                >
+                                  {product.nftTxHash.slice(0, 10)}...
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              ) : (
+                                <span className="text-xs text-gray-400">N/A</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500">{product.verifiedAt}</td>
+                            <td className="px-4 py-3">
+                              <a
+                                href={`/trace/${product.batchCode}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs px-3 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 inline-flex items-center gap-1"
+                              >
+                                View <Eye className="h-3 w-3" />
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Warehouse Processing Modal */}
+          {showProcessingModal && selectedBatch && (
+            <WarehouseProcessingModal
+              isOpen={showProcessingModal}
+              onCloseAction={() => {
+                setShowProcessingModal(false);
+                setSelectedBatch(null);
+              }}
+              batch={selectedBatch}
+              savedData={savedProcessingData[selectedBatch.batchCode]}
+              onSaveAction={(processingData) => {
+                // Store the saved processing data keyed by batch code
+                setSavedProcessingData(prev => ({
+                  ...prev,
+                  [selectedBatch.batchCode]: processingData
+                }));
+                toast.success(`Progress saved for batch ${selectedBatch.batchCode}`);
+                setShowProcessingModal(false);
+                setSelectedBatch(null);
+              }}
+              onCompleteAction={async (processingData) => {
+                // Save to Supabase
+                if (supabase) {
+                  try {
+                    const { error } = await supabase
+                      .from('batches')
+                      .update({
+                        blockchain_tx: processingData.nftTxHash,
+                        quality_grade: processingData.qualityCheck.grade,
+                        current_status: 'ready_for_distribution',
+                        updated_at: new Date().toISOString()
+                      })
+                      .eq('batch_code', processingData.batchCode);
+
+                    if (error) console.error('Error updating batch with NFT:', error);
+                    else toast.success('Batch updated in database with NFT details');
+                  } catch (err) {
+                    console.error('Failed to update batch:', err);
+                  }
+                }
+
+                // Add to local state (will be refreshed from DB anyway if view changes)
+                setVerifiedProducts(prev => [...prev, {
+                  batchCode: processingData.batchCode,
+                  cropType: selectedBatch.cropType,
+                  farmerName: selectedBatch.farmerName,
+                  quantity: selectedBatch.quantity,
+                  grade: processingData.qualityCheck.grade,
+                  nftTxHash: processingData.nftTxHash,
+                  verifiedAt: new Date().toISOString().split('T')[0]
+                }]);
+
+                // Clear saved data for this batch
+                setSavedProcessingData(prev => {
+                  const newData = { ...prev };
+                  delete newData[selectedBatch.batchCode];
+                  return newData;
+                });
+                setShowProcessingModal(false);
+                setSelectedBatch(null);
+              }}
+            />
+          )}
+
           {/* Promote User Modal */}
           {showPromoteModal && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1454,11 +1895,10 @@ export default function AdminDashboard() {
                     <div
                       key={user.id}
                       onClick={() => setSelectedUser(user)}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                        selectedUser?.id === user.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedUser?.id === user.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -1574,9 +2014,8 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="text-lg font-bold text-gray-900">{payment.amount}</span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        payment.status === "completed" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
-                      }`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${payment.status === "completed" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                        }`}>
                         {payment.status}
                       </span>
                     </div>
@@ -1699,7 +2138,7 @@ export default function AdminDashboard() {
             // Approve milestone and trigger USDC payments to farmer and verifier
             try {
               const farmerPayment = selectedVerification.payment_amount;
-              
+
               // Calculate verifier fee based on contract value and milestone count
               // Total verifier fees = 2% of contract value split across milestones
               // Cap at 3% if more than 4 milestones
@@ -1753,10 +2192,10 @@ export default function AdminDashboard() {
                   .eq('contract_id', selectedVerification.contract_id);
 
                 if (contractMilestones) {
-                  const allVerified = contractMilestones.every((m: { id: string; status: string }) => 
+                  const allVerified = contractMilestones.every((m: { id: string; status: string }) =>
                     m.id === selectedVerification.milestone_id || m.status === 'verified'
                   );
-                  
+
                   if (allVerified) {
                     // All milestones verified - mark contract as completed
                     await supabase
@@ -1766,7 +2205,7 @@ export default function AdminDashboard() {
                         completed_at: new Date().toISOString(),
                       })
                       .eq('id', selectedVerification.contract_id);
-                    
+
                     toast.success('🎉 All milestones completed! Contract marked as completed.', { duration: 5000 });
                   }
                 }

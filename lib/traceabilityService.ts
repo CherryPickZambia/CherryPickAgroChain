@@ -464,3 +464,144 @@ export async function getBatchesByContract(contractId: string): Promise<Batch[]>
   if (error) throw error;
   return data || [];
 }
+
+// Milestone to traceability event type mapping
+const MILESTONE_EVENT_MAP: Record<string, { eventType: TraceabilityEventType; title: string; status: BatchStatus }> = {
+  'Land Preparation': { eventType: 'planting', title: 'Land prepared for planting', status: 'growing' },
+  'Planting Complete': { eventType: 'germination', title: 'Planting completed', status: 'growing' },
+  'Seedling Stage': { eventType: 'growth_update', title: 'Seedling stage reached', status: 'growing' },
+  'Growth Stage': { eventType: 'growth_update', title: 'Growth milestone achieved', status: 'growing' },
+  'Flowering Stage': { eventType: 'flowering', title: 'Flowering stage reached', status: 'growing' },
+  'Harvest Ready': { eventType: 'harvest', title: 'Harvest completed', status: 'harvested' },
+  'Harvest Complete': { eventType: 'harvest', title: 'Harvest completed', status: 'harvested' },
+  'Quality Check': { eventType: 'quality_check', title: 'Quality inspection passed', status: 'harvested' },
+  'Storage': { eventType: 'storage', title: 'Stored at farm facility', status: 'stored' },
+  'Transport Started': { eventType: 'transport_start', title: 'Transport to warehouse initiated', status: 'in_transit' },
+  'At Warehouse': { eventType: 'warehouse_arrival', title: 'Arrived at processing facility', status: 'at_warehouse' },
+  'Processing Complete': { eventType: 'processing', title: 'Processing completed', status: 'processing' },
+  'Packaging': { eventType: 'packaging', title: 'Packaging completed', status: 'packaged' },
+  'Distribution': { eventType: 'distribution', title: 'Shipped for distribution', status: 'distributed' },
+  'Retail Ready': { eventType: 'retail_arrival', title: 'Available at retail location', status: 'at_retail' },
+};
+
+// Create traceability event from milestone status change
+export async function logMilestoneEvent(
+  batchId: string,
+  milestoneName: string,
+  farmerId: string,
+  farmerName: string,
+  notes?: string,
+  images?: string[]
+): Promise<TraceabilityEvent | null> {
+  const mapping = MILESTONE_EVENT_MAP[milestoneName];
+  if (!mapping) {
+    console.log(`No traceability mapping for milestone: ${milestoneName}`);
+    return null;
+  }
+
+  // Update batch status
+  try {
+    await updateBatchStatus(batchId, mapping.status);
+  } catch (e) {
+    console.error('Error updating batch status:', e);
+  }
+
+  // Create traceability event
+  return addTraceabilityEvent({
+    batch_id: batchId,
+    farmer_id: farmerId,
+    event_type: mapping.eventType,
+    event_title: mapping.title,
+    event_description: notes || `${milestoneName} milestone verified for batch`,
+    actor_id: farmerId,
+    actor_type: 'farmer',
+    actor_name: farmerName,
+    photos: images,
+  });
+}
+
+// Auto-create batch when contract is created
+export async function createBatchForContract(
+  contractId: string,
+  farmerId: string,
+  cropType: string,
+  variety?: string,
+  quantity?: number,
+  unit?: string
+): Promise<Batch> {
+  const batch = await createBatch({
+    contract_id: contractId,
+    farmer_id: farmerId,
+    crop_type: cropType,
+    variety: variety,
+    total_quantity: quantity,
+    unit: unit || 'kg',
+    current_status: 'growing',
+    organic_certified: false,
+  });
+
+  // Log initial planting event
+  await addTraceabilityEvent({
+    batch_id: batch.id!,
+    contract_id: contractId,
+    farmer_id: farmerId,
+    event_type: 'planting',
+    event_title: 'Contract initiated - Production started',
+    event_description: `New batch created for ${cropType} contract. Tracking begins.`,
+    actor_id: farmerId,
+    actor_type: 'farmer',
+  });
+
+  return batch;
+}
+
+// Log warehouse processing events
+export async function logProcessingEvent(
+  batchId: string,
+  processingType: 'quality_check' | 'sorting' | 'drying' | 'packaging' | 'distribution',
+  details: {
+    title: string;
+    description: string;
+    actorName: string;
+    grade?: string;
+    quantity?: number;
+    method?: string;
+    packageCount?: number;
+    packageType?: string;
+  }
+): Promise<TraceabilityEvent> {
+  const eventTypeMap: Record<string, TraceabilityEventType> = {
+    'quality_check': 'quality_check',
+    'sorting': 'processing',
+    'drying': 'processing',
+    'packaging': 'packaging',
+    'distribution': 'distribution',
+  };
+
+  const statusMap: Record<string, BatchStatus> = {
+    'quality_check': 'at_warehouse',
+    'sorting': 'processing',
+    'drying': 'processing',
+    'packaging': 'packaged',
+    'distribution': 'distributed',
+  };
+
+  // Update batch status
+  try {
+    await updateBatchStatus(batchId, statusMap[processingType]);
+  } catch (e) {
+    console.error('Error updating batch status:', e);
+  }
+
+  return addTraceabilityEvent({
+    batch_id: batchId,
+    event_type: eventTypeMap[processingType],
+    event_title: details.title,
+    event_description: details.description,
+    actor_type: 'warehouse',
+    actor_name: details.actorName,
+    quality_grade: details.grade,
+    quantity: details.quantity,
+  });
+}
+

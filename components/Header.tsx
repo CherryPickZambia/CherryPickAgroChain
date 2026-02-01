@@ -15,37 +15,37 @@ export default function Header({ userRole }: HeaderProps) {
   const getRoleDisplay = () => {
     switch (userRole) {
       case "admin":
-        return { 
-          label: "Admin", 
-          color: "text-purple-700", 
-          bg: "bg-gradient-to-r from-purple-50 to-violet-50", 
+        return {
+          label: "Admin",
+          color: "text-purple-700",
+          bg: "bg-gradient-to-r from-purple-50 to-violet-50",
           border: "border-purple-200",
           icon: Shield,
           gradient: "from-purple-500 to-violet-600"
         };
       case "farmer":
-        return { 
-          label: "Farmer", 
-          color: "text-emerald-700", 
-          bg: "bg-gradient-to-r from-emerald-50 to-teal-50", 
+        return {
+          label: "Farmer",
+          color: "text-emerald-700",
+          bg: "bg-gradient-to-r from-emerald-50 to-teal-50",
           border: "border-emerald-200",
           icon: Leaf,
           gradient: "from-emerald-500 to-teal-600"
         };
       case "buyer":
-        return { 
-          label: "Buyer", 
-          color: "text-blue-700", 
-          bg: "bg-gradient-to-r from-blue-50 to-cyan-50", 
+        return {
+          label: "Buyer",
+          color: "text-blue-700",
+          bg: "bg-gradient-to-r from-blue-50 to-cyan-50",
           border: "border-blue-200",
           icon: Wallet,
           gradient: "from-blue-500 to-cyan-600"
         };
       case "officer":
-        return { 
-          label: "Officer", 
-          color: "text-amber-700", 
-          bg: "bg-gradient-to-r from-amber-50 to-orange-50", 
+        return {
+          label: "Officer",
+          color: "text-amber-700",
+          bg: "bg-gradient-to-r from-amber-50 to-orange-50",
           border: "border-amber-200",
           icon: Shield,
           gradient: "from-amber-500 to-orange-600"
@@ -61,22 +61,20 @@ export default function Header({ userRole }: HeaderProps) {
     <header className="sticky top-0 z-50">
       {/* Gradient line accent at top */}
       <div className="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
-      
+
       <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo Section */}
             <div className="flex items-center space-x-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-red-400 to-rose-600 rounded-xl blur-lg opacity-40" />
-                <div className="relative bg-gradient-to-br from-red-500 to-rose-600 p-2.5 rounded-xl shadow-lg">
-                  <Cherry className="h-6 w-6 text-white" />
-                </div>
+              <div className="relative h-12 w-auto">
+                <img
+                  src="/cherrypick-logo.png"
+                  alt="Cherry Pick Logo"
+                  className="h-12 w-auto object-contain"
+                />
               </div>
               <div>
-                <h1 className="text-lg font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent tracking-tight">
-                  Cherry Pick
-                </h1>
                 {roleDisplay && (
                   <p className={`text-xs font-medium ${roleDisplay.color} flex items-center gap-1`}>
                     <roleDisplay.icon className="h-3 w-3" />
@@ -85,7 +83,7 @@ export default function Header({ userRole }: HeaderProps) {
                 )}
               </div>
             </div>
-            
+
             {/* Right Section - Only Role Badge and Auth Button */}
             <div className="flex items-center space-x-3">
               {/* Role Badge - Only show when logged in */}
@@ -101,7 +99,7 @@ export default function Header({ userRole }: HeaderProps) {
                   </div>
                 </div>
               )}
-              
+
               {/* Auth Button */}
               <div className="[&>button]:!rounded-xl [&>button]:!font-semibold [&>button]:!shadow-sm [&>button]:!border-gray-200 hover:[&>button]:!border-emerald-300 [&>button]:!transition-all [&>button]:!px-5">
                 <AuthButton />
