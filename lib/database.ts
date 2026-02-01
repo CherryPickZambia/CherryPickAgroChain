@@ -252,10 +252,21 @@ export async function getMarketplaceListings(filters?: {
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error fetching listings:', error.message || error.code || JSON.stringify(error));
+      console.log('Falling back to sample data due to database error');
+      return filterSampleListings(SAMPLE_LISTINGS, filters);
+    }
+
+    // If no data returned, use sample data
+    if (!data || data.length === 0) {
+      console.log('No listings in database, using sample data');
+      return filterSampleListings(SAMPLE_LISTINGS, filters);
+    }
+
     return data as MarketplaceListing[];
-  } catch (error) {
-    console.error('Error fetching marketplace listings:', error);
+  } catch (error: any) {
+    console.error('Error fetching marketplace listings:', error?.message || error);
     console.log('Falling back to sample data');
     return filterSampleListings(SAMPLE_LISTINGS, filters);
   }

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const { imageBase64, cropType, additionalContext } = await request.json();
 
     const apiKey = process.env.OPENAI_API_KEY;
-    
+
     if (!apiKey) {
       return NextResponse.json(
         { error: 'OpenAI API key not configured' },
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const contextMessage = cropType 
+    const contextMessage = cropType
       ? `This is a ${cropType} crop. ${additionalContext || ''}`
       : additionalContext || 'Please analyze this crop image for health issues and provide recommendations.';
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
               {
                 type: 'image_url',
                 image_url: {
-                  url: imageBase64.startsWith('data:') 
-                    ? imageBase64 
+                  url: imageBase64.startsWith('data:')
+                    ? imageBase64
                     : `data:image/jpeg;base64,${imageBase64}`,
                 },
               },

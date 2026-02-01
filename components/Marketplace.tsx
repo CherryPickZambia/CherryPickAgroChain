@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Filter, ShoppingCart, TrendingUp, Package, Truck, Clock, DollarSign, MapPin, Star, Heart, MessageCircle, ChevronDown, ChevronUp, User, CheckCircle, Eye, Plus, X, Send, Gavel, Calendar, Target } from "lucide-react";
+import { Search, Filter, ShoppingCart, TrendingUp, Package, Truck, Clock, DollarSign, MapPin, Star, Heart, MessageCircle, ChevronDown, ChevronUp, User, CheckCircle, Eye, Plus, X, Send, Gavel, Calendar, Target, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -118,9 +119,9 @@ export default function Marketplace() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
-  const [cart, setCart] = useState<Array<{id: string, listing: MarketplaceListing}>>([]);
+  const [cart, setCart] = useState<Array<{ id: string, listing: MarketplaceListing }>>([]);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Bulk order form state
   const [bulkOrderForm, setBulkOrderForm] = useState<BulkOrderForm>({
     cropType: "",
@@ -130,7 +131,7 @@ export default function Marketplace() {
     location: "",
     description: ""
   });
-  
+
   // Bid modal state
   const [showBidModal, setShowBidModal] = useState(false);
   const [selectedBulkOrder, setSelectedBulkOrder] = useState<BulkOrder | null>(null);
@@ -182,12 +183,12 @@ export default function Marketplace() {
 
     if (selectedBulkOrder) {
       // Update the order with new bid count
-      setBulkOrders(prev => prev.map(order => 
-        order.id === selectedBulkOrder.id 
+      setBulkOrders(prev => prev.map(order =>
+        order.id === selectedBulkOrder.id
           ? { ...order, bids: order.bids + 1 }
           : order
       ));
-      
+
       toast.success(`Bid placed successfully! You offered K${bidForm.price}/kg for ${bidForm.quantity}kg`);
       setShowBidModal(false);
       setSelectedBulkOrder(null);
@@ -215,13 +216,13 @@ export default function Marketplace() {
     try {
       // Fetch real listings from Supabase
       const filters: any = { status: 'active' };
-      
+
       if (selectedCategory !== 'all') {
         filters.crop_type = selectedCategory;
       }
 
       const dbListings = await getMarketplaceListings(filters);
-      
+
       // Transform database listings to component format
       const transformedListings: MarketplaceListing[] = dbListings.map((listing: DBListing) => {
         // Map quality grades to component format
@@ -229,7 +230,7 @@ export default function Marketplace() {
         if (listing.quality_grade === "Premium") quality = "Premium";
         else if (listing.quality_grade === "A") quality = "Grade A";
         else if (listing.quality_grade === "B" || listing.quality_grade === "C") quality = "Grade B";
-        
+
         return {
           id: listing.id,
           farmerId: listing.farmer_id,
@@ -261,31 +262,31 @@ export default function Marketplace() {
 
       // Mock bulk orders for now
       const mockBulkOrders: BulkOrder[] = [
-      {
-        id: "bulk1",
-        buyerId: "buyer1",
-        cropType: "Mangoes",
-        quantity: 2000,
-        targetPrice: 16,
-        deliveryDate: "2024-12-01",
-        location: "Lusaka",
-        status: "open",
-        bids: 3,
-      },
-      {
-        id: "bulk2",
-        buyerId: "buyer2",
-        cropType: "Tomatoes",
-        quantity: 5000,
-        targetPrice: 10,
-        deliveryDate: "2024-11-25",
-        location: "Ndola",
-        status: "open",
-        bids: 5,
-      },
-    ];
+        {
+          id: "bulk1",
+          buyerId: "buyer1",
+          cropType: "Mangoes",
+          quantity: 2000,
+          targetPrice: 16,
+          deliveryDate: "2024-12-01",
+          location: "Lusaka",
+          status: "open",
+          bids: 3,
+        },
+        {
+          id: "bulk2",
+          buyerId: "buyer2",
+          cropType: "Tomatoes",
+          quantity: 5000,
+          targetPrice: 10,
+          deliveryDate: "2024-11-25",
+          location: "Ndola",
+          status: "open",
+          bids: 5,
+        },
+      ];
 
-    setBulkOrders(mockBulkOrders);
+      setBulkOrders(mockBulkOrders);
     } catch (error) {
       console.error('Error loading marketplace data:', error);
       toast.error('Failed to load marketplace listings');
@@ -299,21 +300,21 @@ export default function Marketplace() {
       toast.error("Product not found!");
       return;
     }
-    
+
     // Check if already in cart
     const existingItem = cart.find(item => item.id === listingId);
     if (existingItem) {
       toast.error("Already in cart!");
       return;
     }
-    
+
     setCart([...cart, { id: listingId, listing }]);
     toast.success(`${listing.cropType} added to cart!`);
   };
 
   const filteredListings = listings.filter(listing => {
     const matchesSearch = listing.cropType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         listing.variety.toLowerCase().includes(searchQuery.toLowerCase());
+      listing.variety.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "all" || listing.cropType === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -321,13 +322,20 @@ export default function Marketplace() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Premium Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
         <div className="flex items-center justify-between">
           <div>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm font-medium">Back to Dashboard</span>
+            </Link>
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
                 <Package className="h-6 w-6 text-white" />
@@ -338,10 +346,10 @@ export default function Marketplace() {
             </div>
             <p className="text-gray-500">Discover fresh produce directly from verified farmers</p>
           </div>
-          
+
           {/* Cart Preview */}
           {cart.length > 0 && (
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200"
@@ -363,11 +371,10 @@ export default function Marketplace() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`relative px-5 py-2.5 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${
-              activeTab === tab.id
-                ? "bg-white text-emerald-700 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
+            className={`relative px-5 py-2.5 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${activeTab === tab.id
+              ? "bg-white text-emerald-700 shadow-sm"
+              : "text-gray-600 hover:text-gray-900"
+              }`}
           >
             <tab.icon className="h-4 w-4" />
             {tab.label}
@@ -541,7 +548,7 @@ export default function Marketplace() {
       {activeTab === "bulk" && (
         <div className="space-y-6">
           {/* Create Bulk Order Form */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
@@ -555,13 +562,13 @@ export default function Marketplace() {
                 <p className="text-sm text-gray-500">Post your requirements and receive bids from farmers</p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Crop Type *</label>
                 <select
                   value={bulkOrderForm.cropType}
-                  onChange={(e) => setBulkOrderForm({...bulkOrderForm, cropType: e.target.value})}
+                  onChange={(e) => setBulkOrderForm({ ...bulkOrderForm, cropType: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Select crop...</option>
@@ -579,7 +586,7 @@ export default function Marketplace() {
                   type="number"
                   placeholder="e.g., 1000"
                   value={bulkOrderForm.quantity}
-                  onChange={(e) => setBulkOrderForm({...bulkOrderForm, quantity: e.target.value})}
+                  onChange={(e) => setBulkOrderForm({ ...bulkOrderForm, quantity: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
@@ -589,7 +596,7 @@ export default function Marketplace() {
                   type="number"
                   placeholder="e.g., 15"
                   value={bulkOrderForm.targetPrice}
-                  onChange={(e) => setBulkOrderForm({...bulkOrderForm, targetPrice: e.target.value})}
+                  onChange={(e) => setBulkOrderForm({ ...bulkOrderForm, targetPrice: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
@@ -598,7 +605,7 @@ export default function Marketplace() {
                 <input
                   type="date"
                   value={bulkOrderForm.deliveryDate}
-                  onChange={(e) => setBulkOrderForm({...bulkOrderForm, deliveryDate: e.target.value})}
+                  onChange={(e) => setBulkOrderForm({ ...bulkOrderForm, deliveryDate: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
@@ -606,7 +613,7 @@ export default function Marketplace() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Location</label>
                 <select
                   value={bulkOrderForm.location}
-                  onChange={(e) => setBulkOrderForm({...bulkOrderForm, location: e.target.value})}
+                  onChange={(e) => setBulkOrderForm({ ...bulkOrderForm, location: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Select location...</option>
@@ -624,13 +631,13 @@ export default function Marketplace() {
                   type="text"
                   placeholder="Additional requirements..."
                   value={bulkOrderForm.description}
-                  onChange={(e) => setBulkOrderForm({...bulkOrderForm, description: e.target.value})}
+                  onChange={(e) => setBulkOrderForm({ ...bulkOrderForm, description: e.target.value })}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
             </div>
-            
-            <button 
+
+            <button
               onClick={handleCreateBulkOrder}
               className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg shadow-emerald-500/25 flex items-center gap-2"
             >
@@ -645,9 +652,9 @@ export default function Marketplace() {
               <h3 className="text-xl font-bold text-gray-900">Active Bulk Orders</h3>
               <span className="text-sm text-gray-500">{bulkOrders.length} open requests</span>
             </div>
-            
+
             {bulkOrders.map((order, index) => (
-              <motion.div 
+              <motion.div
                 key={order.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -687,24 +694,23 @@ export default function Marketplace() {
                     )}
                   </div>
                   <div className="text-right ml-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                      order.status === 'open' 
-                        ? 'bg-emerald-100 text-emerald-700' 
-                        : order.status === 'matched'
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${order.status === 'open'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : order.status === 'matched'
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-gray-100 text-gray-700'
-                    }`}>
+                      }`}>
                       {order.status.toUpperCase()}
                     </span>
                     <p className="text-sm text-gray-500 mt-2">{order.bids} bids</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                   <div className="text-sm text-gray-500">
                     Total Value: <span className="font-semibold text-gray-900">K{(order.quantity * order.targetPrice).toLocaleString()}</span>
                   </div>
-                  <button 
+                  <button
                     onClick={() => openBidModal(order)}
                     className="px-5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md flex items-center gap-2"
                   >
@@ -742,7 +748,7 @@ export default function Marketplace() {
                       <h3 className="text-xl font-bold">Place a Bid</h3>
                       <p className="text-emerald-100 text-sm mt-1">{selectedBulkOrder.cropType} • {selectedBulkOrder.quantity.toLocaleString()} kg needed</p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setShowBidModal(false)}
                       className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                     >
@@ -750,7 +756,7 @@ export default function Marketplace() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="p-6 space-y-4">
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-center justify-between text-sm">
@@ -766,50 +772,50 @@ export default function Marketplace() {
                       <span className="font-medium text-gray-900">{new Date(selectedBulkOrder.deliveryDate).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Your Price (K/kg) *</label>
                     <input
                       type="number"
                       value={bidForm.price}
-                      onChange={(e) => setBidForm({...bidForm, price: e.target.value})}
+                      onChange={(e) => setBidForm({ ...bidForm, price: e.target.value })}
                       placeholder="Enter your price per kg"
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Quantity You Can Supply (kg) *</label>
                     <input
                       type="number"
                       value={bidForm.quantity}
-                      onChange={(e) => setBidForm({...bidForm, quantity: e.target.value})}
+                      onChange={(e) => setBidForm({ ...bidForm, quantity: e.target.value })}
                       placeholder="How much can you provide?"
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Message (optional)</label>
                     <textarea
                       value={bidForm.message}
-                      onChange={(e) => setBidForm({...bidForm, message: e.target.value})}
+                      onChange={(e) => setBidForm({ ...bidForm, message: e.target.value })}
                       placeholder="Add any additional info about your produce..."
                       rows={3}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                     />
                   </div>
-                  
+
                   {bidForm.price && bidForm.quantity && (
                     <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
                       <p className="text-sm text-emerald-800">
-                        <span className="font-semibold">Your Bid Summary:</span> K{bidForm.price}/kg × {parseInt(bidForm.quantity).toLocaleString()} kg = 
+                        <span className="font-semibold">Your Bid Summary:</span> K{bidForm.price}/kg × {parseInt(bidForm.quantity).toLocaleString()} kg =
                         <span className="font-bold"> K{(parseFloat(bidForm.price) * parseInt(bidForm.quantity)).toLocaleString()}</span>
                       </p>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="px-6 pb-6 flex gap-3">
                   <button
                     onClick={() => setShowBidModal(false)}
@@ -848,7 +854,7 @@ export default function Marketplace() {
       {/* Cart Badge */}
       {cart.length > 0 && (
         <div className="fixed bottom-8 right-8 z-50">
-          <button 
+          <button
             onClick={() => toast.success(`You have ${cart.length} item(s) in cart. Cart checkout coming soon!`)}
             className="bg-[#2d5f3f] hover:bg-[#1d4029] text-white p-4 rounded-full shadow-2xl flex items-center gap-2 relative group"
           >
