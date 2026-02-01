@@ -7,50 +7,11 @@ import { createPublicClient, createWalletClient, custom, parseUnits, http, encod
 import { base } from 'viem/chains';
 
 // USDC Contract on Base Mainnet
-const USDC_CONTRACT_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
+// USDC Contract on Base Mainnet
+export const USDC_CONTRACT_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 
 // USDC ABI (only transfer function needed)
-const USDC_ABI = [
-  {
-    name: 'transfer',
-    type: 'function',
-    inputs: [
-      { name: 'to', type: 'address' },
-      { name: 'amount', type: 'uint256' }
-    ],
-    outputs: [{ name: '', type: 'bool' }]
-  },
-  {
-    name: 'balanceOf',
-    type: 'function',
-    inputs: [{ name: 'account', type: 'address' }],
-    outputs: [{ name: '', type: 'uint256' }]
-  },
-  {
-    name: 'allowance',
-    type: 'function',
-    inputs: [
-      { name: 'owner', type: 'address' },
-      { name: 'spender', type: 'address' }
-    ],
-    outputs: [{ name: '', type: 'uint256' }]
-  },
-  {
-    name: 'approve',
-    type: 'function',
-    inputs: [
-      { name: 'spender', type: 'address' },
-      { name: 'amount', type: 'uint256' }
-    ],
-    outputs: [{ name: '', type: 'bool' }]
-  },
-  {
-    name: 'decimals',
-    type: 'function',
-    inputs: [],
-    outputs: [{ name: '', type: 'uint8' }]
-  }
-] as const;
+// USDC ABI (exported below)
 
 // Extend Window interface for ethereum
 declare global {
@@ -155,7 +116,7 @@ export async function sendPayment(
     };
   } catch (error: any) {
     console.error('Payment error:', error);
-    
+
     // Provide user-friendly error messages
     let errorMessage = 'Payment failed';
     if (error.message?.includes('insufficient funds')) {
@@ -165,7 +126,7 @@ export async function sendPayment(
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
+
     return {
       success: false,
       error: errorMessage,
@@ -236,6 +197,148 @@ export function formatTxHash(hash: string): string {
  */
 export function getExplorerUrl(transactionHash: string): string {
   return `https://basescan.org/tx/${transactionHash}`;
+}
+
+// Marketplace Contract Address (Base Mainnet)
+export const MARKETPLACE_ADDRESS = '0x98e1113AbF53cdBAf105947E8946C555c950590b';
+
+// Marketplace ABI
+export const MARKETPLACE_ABI = [
+  {
+    name: 'purchase',
+    type: 'function',
+    inputs: [
+      { name: 'seller', type: 'address' },
+      { name: 'amount', type: 'uint256' },
+      { name: 'orderId', type: 'string' }
+    ],
+    outputs: []
+  }
+] as const;
+
+export const USDC_ABI = [
+  {
+    name: 'transfer',
+    type: 'function',
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  },
+  {
+    name: 'balanceOf',
+    type: 'function',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }]
+  },
+  {
+    name: 'allowance',
+    type: 'function',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' }
+    ],
+    outputs: [{ name: '', type: 'uint256' }]
+  },
+  {
+    name: 'approve',
+    type: 'function',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }]
+  },
+  {
+    name: 'decimals',
+    type: 'function',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint8' }]
+  }
+] as const;
+
+export const USDC_CONTRACT_ADDRESS_EXPORT = USDC_CONTRACT_ADDRESS;
+
+/**
+ * Execute purchase via Marketplace Contract
+ * Handles approval if necessary
+ */
+export async function purchaseViaContract(
+  request: PaymentRequest,
+  onStatusUpdate?: (status: string) => void
+): Promise<PaymentResult> {
+  try {
+    if (typeof window === 'undefined' || !window.ethereum) {
+      return { success: false, error: 'No wallet detected' };
+    }
+
+    const walletClient = createWalletClient({
+      chain: base,
+      transport: custom(window.ethereum),
+    });
+
+    const publicClient = createPublicClient({
+      chain: base,
+      transport: custom(window.ethereum),
+    });
+
+    const [address] = await walletClient.getAddresses();
+    if (!address) return { success: false, error: 'No wallet address found' };
+
+    const usdcAmount = parseUnits(request.amount.toString(), 6);
+
+    // 1. Check Allowance
+    if (onStatusUpdate) onStatusUpdate('Checking allowance...');
+
+    const allowance = await publicClient.readContract({
+      address: USDC_CONTRACT_ADDRESS,
+      abi: USDC_ABI,
+      functionName: 'allowance',
+      args: [address, MARKETPLACE_ADDRESS],
+    }) as unknown as bigint;
+
+    // 2. Approve if needed
+    if (allowance < usdcAmount) {
+      if (onStatusUpdate) onStatusUpdate('Requesting USDC approval...');
+
+      const approveHash = await walletClient.writeContract({
+        address: USDC_CONTRACT_ADDRESS,
+        abi: USDC_ABI,
+        functionName: 'approve',
+        args: [MARKETPLACE_ADDRESS, usdcAmount],
+        account: address,
+      });
+
+      if (onStatusUpdate) onStatusUpdate('Waiting for approval confirmation...');
+      await publicClient.waitForTransactionReceipt({ hash: approveHash });
+    }
+
+    // 3. Execute Purchase
+    if (onStatusUpdate) onStatusUpdate('Executing purchase transaction...');
+
+    const { request: contractRequest } = await publicClient.simulateContract({
+      address: MARKETPLACE_ADDRESS,
+      abi: MARKETPLACE_ABI,
+      functionName: 'purchase',
+      args: [request.to as `0x${string}`, usdcAmount, request.orderId],
+      account: address,
+    });
+
+    const hash = await walletClient.writeContract(contractRequest);
+
+    return {
+      success: true,
+      transactionHash: hash,
+    };
+
+  } catch (error: any) {
+    console.error('Marketplace Purchase Error:', error);
+    return {
+      success: false,
+      error: error.message || 'Purchase failed',
+    };
+  }
 }
 
 /**

@@ -341,7 +341,7 @@ export async function getMarketplaceOrders(buyerAddress?: string) {
   try {
     let query = supabase
       .from('marketplace_orders')
-      .select('*')
+      .select('*, marketplace_listings(farmer_address)')
       .order('created_at', { ascending: false });
 
     if (buyerAddress) {
@@ -351,7 +351,12 @@ export async function getMarketplaceOrders(buyerAddress?: string) {
     const { data, error } = await query;
 
     if (error) throw error;
-    return data as MarketplaceOrder[];
+
+    // Map the result to include farmer_address from listing if missing in order
+    return data.map((order: any) => ({
+      ...order,
+      farmer_address: order.farmer_address || order.marketplace_listings?.farmer_address
+    })) as MarketplaceOrder[];
   } catch (error) {
     console.error('Error fetching marketplace orders:', error);
     return [];

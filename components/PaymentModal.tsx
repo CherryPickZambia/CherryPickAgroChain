@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, DollarSign, Loader, CheckCircle, XCircle, ExternalLink, AlertCircle } from "lucide-react";
-import { sendPayment, getExplorerUrl, formatTxHash } from "@/lib/basePayService";
+import { X, DollarSign, Loader, CheckCircle, XCircle, ExternalLink, AlertCircle, Wallet, CreditCard } from "lucide-react";
+import { sendPayment, purchaseViaContract, getExplorerUrl, formatTxHash, getUSDCBalance, MARKETPLACE_ABI, USDC_ABI, MARKETPLACE_ADDRESS, USDC_CONTRACT_ADDRESS } from "@/lib/basePayService";
+import { useEvmAddress, useSendUserOperation, useCurrentUser } from "@coinbase/cdp-hooks";
+import { encodeFunctionData, parseUnits } from "viem";
 import toast from "react-hot-toast";
 
 interface PaymentModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   order: {
     id: string;
     crop_type: string;
@@ -18,14 +20,32 @@ interface PaymentModalProps {
     farmer_name: string;
     farmer_address: string;
   };
-  onSuccess: (transactionHash: string) => void;
+  onSuccessAction: (transactionHash: string) => void;
 }
 
-export default function PaymentModal({ isOpen, onClose, order, onSuccess }: PaymentModalProps) {
+export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAction }: PaymentModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
   const [transactionHash, setTransactionHash] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [usdcBalance, setUsdcBalance] = useState<number>(0);
+  const { evmAddress } = useEvmAddress();
+  const { sendUserOperation } = useSendUserOperation();
+  const { currentUser } = useCurrentUser();
+  const [paymentMethod, setPaymentMethod] = useState<'smart' | 'external'>('smart');
+
+  // Load balance when modal opens
+  useEffect(() => {
+    if (isOpen && evmAddress) {
+      getUSDCBalance(evmAddress as `0x${string}`)
+        .then((balance) => setUsdcBalance(Number(balance))) // Explicit cast
+        .catch(console.error);
+
+      // Default to smart wallet if available, otherwise external
+      const hasSmartWallet = currentUser?.evmSmartAccounts?.[0];
+      setPaymentMethod(hasSmartWallet ? 'smart' : 'external');
+    }
+  }, [isOpen, evmAddress, currentUser]);
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -33,33 +53,93 @@ export default function PaymentModal({ isOpen, onClose, order, onSuccess }: Paym
     setErrorMessage("");
 
     try {
-      const result = await sendPayment({
-        to: order.farmer_address,
-        amount: order.total_amount,
-        orderId: order.id,
-        cropType: order.crop_type,
-        quantity: order.quantity,
-      });
+      // 1. Check if using Smart Wallet (CDP) and user selected it
+      const smartAccount = currentUser?.evmSmartAccounts?.[0];
 
-      if (result.success && result.transactionHash) {
+      if (paymentMethod === 'smart' && smartAccount) {
+        // --- SMART WALLET FLOW (Batch Transaction) ---
+        console.log("Using Smart Wallet:", smartAccount);
+        toast.loading("Processing with Smart Wallet...", { id: 'payment-status' });
+
+        const usdcAmount = parseUnits(order.total_amount.toString(), 6);
+
+        // a. Encode Approval
+        const approveData = encodeFunctionData({
+          abi: USDC_ABI,
+          functionName: 'approve',
+          args: [MARKETPLACE_ADDRESS, usdcAmount]
+        });
+
+        // b. Encode Purchase
+        const purchaseData = encodeFunctionData({
+          abi: MARKETPLACE_ABI,
+          functionName: 'purchase',
+          args: [order.farmer_address as `0x${string}`, usdcAmount, order.id]
+        });
+
+        // c. Send Batch Transaction
+        const result = await sendUserOperation({
+          evmSmartAccount: smartAccount,
+          network: "base", // Or 'base-sepolia' if strictly testing, but usually inferred
+          calls: [
+            {
+              to: USDC_CONTRACT_ADDRESS,
+              data: approveData,
+              value: BigInt(0)
+            },
+            {
+              to: MARKETPLACE_ADDRESS,
+              data: purchaseData,
+              value: BigInt(0)
+            }
+          ]
+        });
+
+        toast.dismiss('payment-status');
         setPaymentStatus("success");
-        setTransactionHash(result.transactionHash);
+        setTransactionHash(result.userOperationHash);
         toast.success("Payment successful!");
-        
-        // Call success callback
-        onSuccess(result.transactionHash);
-        
-        // Close modal after 3 seconds
+        onSuccessAction(result.userOperationHash);
+
+        // Close modal after delay
         setTimeout(() => {
-          onClose();
-          resetModal();
+          onCloseAction();
+          // resetModal handled via unmount/remount usually but we can reset if needed
         }, 3000);
+
       } else {
-        setPaymentStatus("error");
-        setErrorMessage(result.error || "Payment failed");
-        toast.error(result.error || "Payment failed");
+        // --- EXTERNAL WALLET FLOW (Legacy/Extension) ---
+        console.log("Using External Wallet (window.ethereum)");
+        const result = await purchaseViaContract({
+          to: order.farmer_address,
+          amount: order.total_amount,
+          orderId: order.id,
+          cropType: order.crop_type,
+          quantity: order.quantity,
+        }, (status) => {
+          toast.loading(status, { id: 'payment-status' });
+        });
+
+        toast.dismiss('payment-status');
+
+        if (result.success && result.transactionHash) {
+          setPaymentStatus("success");
+          setTransactionHash(result.transactionHash);
+          toast.success("Payment successful!");
+          onSuccessAction(result.transactionHash);
+          setTimeout(() => {
+            onCloseAction();
+          }, 3000);
+        } else {
+          setPaymentStatus("error");
+          setErrorMessage(result.error || "Payment failed");
+          toast.error(result.error || "Payment failed");
+        }
       }
+
     } catch (error: any) {
+      console.error("Payment error:", error);
+      toast.dismiss('payment-status');
       setPaymentStatus("error");
       setErrorMessage(error.message || "An unexpected error occurred");
       toast.error("Payment failed");
@@ -77,7 +157,7 @@ export default function PaymentModal({ isOpen, onClose, order, onSuccess }: Paym
 
   const handleClose = () => {
     if (!isProcessing) {
-      onClose();
+      onCloseAction();
       setTimeout(resetModal, 300);
     }
   };
@@ -123,6 +203,35 @@ export default function PaymentModal({ isOpen, onClose, order, onSuccess }: Paym
 
               {/* Content */}
               <div className="p-6">
+                {/* Payment Method Selector */}
+                {paymentStatus === "idle" && (
+                  <div className="mb-6 grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setPaymentMethod('smart')}
+                      className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center ${paymentMethod === 'smart'
+                        ? 'border-green-500 bg-green-50 text-green-700'
+                        : 'border-gray-200 hover:border-green-200 text-gray-600'
+                        }`}
+                    >
+                      <Wallet className={`h-6 w-6 mb-2 ${paymentMethod === 'smart' ? 'text-green-600' : 'text-gray-400'}`} />
+                      <span className="text-sm font-bold">Platform Wallet</span>
+                      <span className="text-xs opacity-75">Gasless • Instant</span>
+                    </button>
+
+                    <button
+                      onClick={() => setPaymentMethod('external')}
+                      className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center ${paymentMethod === 'external'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-blue-200 text-gray-600'
+                        }`}
+                    >
+                      <CreditCard className={`h-6 w-6 mb-2 ${paymentMethod === 'external' ? 'text-blue-600' : 'text-gray-400'}`} />
+                      <span className="text-sm font-bold">External Wallet</span>
+                      <span className="text-xs opacity-75">Base Pay • Metamask</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Order Details */}
                 {paymentStatus === "idle" && (
                   <div className="space-y-4 mb-6">
@@ -159,14 +268,33 @@ export default function PaymentModal({ isOpen, onClose, order, onSuccess }: Paym
                       </p>
                     </div>
 
+                    {/* Sender Balance */}
+                    <div className={`p-4 rounded-lg flex justify-between items-center ${usdcBalance >= order.total_amount ? 'bg-green-50' : 'bg-red-50'
+                      }`}>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Your Wallet Balance</p>
+                        <p className={`text-xl font-bold ${usdcBalance >= order.total_amount ? 'text-green-700' : 'text-red-700'
+                          }`}>
+                          ${usdcBalance.toFixed(2)} USDC
+                        </p>
+                      </div>
+                      {usdcBalance < order.total_amount && (
+                        <div className="text-right">
+
+                          <p className="text-xs text-red-600 font-medium">Insufficient Funds</p>
+                          <p className="text-xs text-red-500">Need ${(order.total_amount - usdcBalance).toFixed(2)} more</p>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Warning */}
                     <div className="flex items-start space-x-3 p-4 bg-yellow-50 rounded-lg">
                       <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-yellow-800">
                         <p className="font-medium mb-1">Important</p>
                         <p>
-                          This transaction will be processed on the Base blockchain. Make sure you have
-                          enough ETH for gas fees.
+                          This transaction involves 2 steps: Approving USDC and then Completing Purchase.
+                          Please confirm both in your wallet.
                         </p>
                       </div>
                     </div>
@@ -252,11 +380,13 @@ export default function PaymentModal({ isOpen, onClose, order, onSuccess }: Paym
                     </button>
                     <button
                       onClick={handlePayment}
-                      disabled={isProcessing}
+                      disabled={isProcessing || usdcBalance < order.total_amount}
                       className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <DollarSign className="h-5 w-5" />
-                      <span>Pay K{order.total_amount.toLocaleString()}</span>
+                      <span>
+                        {usdcBalance < order.total_amount ? 'Insufficient Funds' : `Pay K${order.total_amount.toLocaleString()}`}
+                      </span>
                     </button>
                   </div>
                 )}

@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Wallet, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  RefreshCw, 
+import {
+  Wallet,
+  ArrowUpRight,
+  ArrowDownLeft,
+  RefreshCw,
   ExternalLink,
   Copy,
   CheckCircle2,
@@ -162,7 +162,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
       try {
         // Convert amount to USDC decimals (6)
         const amountInDecimals = BigInt(Math.floor(amount * Math.pow(10, USDC_DECIMALS)));
-        
+
         // Encode the USDC transfer function call
         const transferData = encodeFunctionData({
           abi: ERC20_TRANSFER_ABI,
@@ -182,7 +182,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
 
         // Get the smart account address from currentUser
         const smartAccount = currentUser?.evmSmartAccounts?.[0];
-        
+
         if (!smartAccount) {
           throw new Error('Smart account not found. Please ensure you are signed in with a smart wallet.');
         }
@@ -301,7 +301,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
             </div>
             <div>
               <h3 className="font-bold text-lg">My Wallet</h3>
-              <button 
+              <button
                 onClick={copyAddress}
                 className="text-sm text-white/80 hover:text-white flex items-center gap-1 transition-colors"
               >
@@ -339,32 +339,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           )}
         </div>
 
-        {/* Identity Linked */}
-        {(userEmail || userPhone || userName) && (
-          <div className="mb-4 p-3 bg-white/10 rounded-xl">
-            <p className="text-xs text-white/60 mb-2">Wallet linked to:</p>
-            <div className="flex flex-wrap gap-2">
-              {userName && (
-                <span className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
-                  <Twitter className="h-3 w-3" />
-                  {userName}
-                </span>
-              )}
-              {userEmail && (
-                <span className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
-                  <Mail className="h-3 w-3" />
-                  {userEmail.slice(0, 3)}...@{userEmail.split('@')[1]}
-                </span>
-              )}
-              {userPhone && (
-                <span className="flex items-center gap-1 text-xs bg-white/20 px-2 py-1 rounded-full">
-                  <Phone className="h-3 w-3" />
-                  {userPhone.slice(0, 4)}...{userPhone.slice(-2)}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+
 
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-3">
@@ -394,7 +369,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
             <h4 className="text-sm font-medium text-white/80 mb-3">Recent Activity</h4>
             <div className="space-y-2">
               {paymentHistory.map((payment) => (
-                <div 
+                <div
                   key={payment.id}
                   className="flex items-center justify-between py-2 px-3 bg-white/10 rounded-lg"
                 >
@@ -409,8 +384,8 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                     <div>
                       <p className="text-sm font-medium">
                         {payment.type === 'milestone_payment' ? 'Milestone Payment' :
-                         payment.type === 'verification_fee' ? 'Verification Fee' :
-                         'Withdrawal'}
+                          payment.type === 'verification_fee' ? 'Verification Fee' :
+                            'Withdrawal'}
                       </p>
                       <p className="text-xs text-white/60">
                         {new Date(payment.created_at).toLocaleDateString()}
@@ -489,11 +464,10 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => setWithdrawMethod('base')}
-                      className={`p-4 rounded-xl border-2 transition-all text-left ${
-                        withdrawMethod === 'base'
+                      className={`p-4 rounded-xl border-2 transition-all text-left ${withdrawMethod === 'base'
                           ? 'border-emerald-500 bg-emerald-50'
                           : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <ExternalLink className="h-4 w-4 text-blue-600" />
@@ -504,11 +478,10 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                     </button>
                     <button
                       onClick={() => setWithdrawMethod('pandora')}
-                      className={`p-4 rounded-xl border-2 transition-all text-left ${
-                        withdrawMethod === 'pandora'
+                      className={`p-4 rounded-xl border-2 transition-all text-left ${withdrawMethod === 'pandora'
                           ? 'border-emerald-500 bg-emerald-50'
                           : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <Banknote className="h-4 w-4 text-purple-600" />

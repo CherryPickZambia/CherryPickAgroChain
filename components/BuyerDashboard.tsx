@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-  ShoppingBag, Package, Clock, CheckCircle, TrendingUp, 
-  DollarSign, MapPin, User, Mail, Phone, Building, 
+import {
+  ShoppingBag, Package, Clock, CheckCircle, TrendingUp,
+  DollarSign, MapPin, User, Mail, Phone, Building,
   Calendar, Filter, Search, Eye, Download, ArrowRight,
   Store, Leaf, Award, ShoppingCart, X
 } from "lucide-react";
@@ -12,6 +12,7 @@ import { useEvmAddress } from "@coinbase/cdp-hooks";
 import PaymentModal from "./PaymentModal";
 import toast from "react-hot-toast";
 import { getMarketplaceOrders, getBuyerProfile, createOrUpdateBuyerProfile, getMarketplaceListings } from "@/lib/database";
+import WalletBalance from "./WalletBalance";
 
 interface Order {
   id: string;
@@ -57,7 +58,7 @@ export default function BuyerDashboard() {
   // Load real data from Supabase
   useEffect(() => {
     if (!evmAddress) return;
-    
+
     loadBuyerData();
   }, [evmAddress]);
 
@@ -67,7 +68,7 @@ export default function BuyerDashboard() {
     try {
       // Fetch buyer profile
       const buyerProfile = await getBuyerProfile(evmAddress);
-      
+
       if (buyerProfile) {
         setProfile({
           name: buyerProfile.name,
@@ -79,11 +80,31 @@ export default function BuyerDashboard() {
           total_orders: 0, // Calculate from orders
           verified: buyerProfile.verified,
         });
+      } else {
+        // Auto-create profile for new users (Sync with CDP)
+        const newProfile = await createOrUpdateBuyerProfile({
+          wallet_address: evmAddress,
+          name: "New Buyer",
+          country: "Zambia",
+          verified: false
+        });
+
+        setProfile({
+          name: newProfile.name,
+          email: "",
+          phone: "",
+          company_name: "",
+          delivery_address: "",
+          total_spent: 0,
+          total_orders: 0,
+          verified: false,
+        });
+        toast.success("Welcome! Your buyer profile has been created.");
       }
 
       // Fetch orders for this buyer
       const dbOrders = await getMarketplaceOrders(evmAddress);
-      
+
       // Transform orders to component format
       const transformedOrders: Order[] = dbOrders.map((order) => ({
         id: order.id,
@@ -94,7 +115,7 @@ export default function BuyerDashboard() {
         unit_price: Number(order.unit_price),
         total_amount: Number(order.total_amount),
         farmer_name: order.buyer_name || "Farmer",
-        farmer_address: order.farmer_address,
+        farmer_address: order.farmer_address || "",
         payment_status: order.payment_status,
         delivery_status: order.delivery_status,
         order_date: new Date(order.created_at).toISOString().split('T')[0],
@@ -123,6 +144,35 @@ export default function BuyerDashboard() {
     }
   };
 
+  const handleSaveProfile = async () => {
+    if (!evmAddress || !profile) return;
+
+    if (!profile.name || !profile.delivery_address) {
+      toast.error("Name and Delivery Address are required");
+      return;
+    }
+
+    try {
+      toast.loading("Saving profile...", { id: "save-profile" });
+      await createOrUpdateBuyerProfile({
+        wallet_address: evmAddress,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        company_name: profile.company_name,
+        delivery_address: profile.delivery_address,
+        country: "Zambia", // Default
+        verified: profile.verified
+      });
+      toast.dismiss("save-profile");
+      toast.success("Profile saved successfully!");
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast.dismiss("save-profile");
+      toast.error("Failed to save profile");
+    }
+  };
+
   const stats = {
     totalOrders: orders.length,
     pendingPayments: orders.filter(o => o.payment_status === "pending").length,
@@ -141,14 +191,14 @@ export default function BuyerDashboard() {
     try {
       // Update order status in Supabase
       const { updateMarketplaceOrder } = await import('@/lib/database');
-      await updateMarketplaceOrder(selectedOrderForPayment.id, { 
+      await updateMarketplaceOrder(selectedOrderForPayment.id, {
         payment_status: 'completed',
-        payment_tx_hash: transactionHash 
+        payment_tx_hash: transactionHash
       });
 
       // Update local state
-      setOrders(prev => prev.map(o => 
-        o.id === selectedOrderForPayment.id 
+      setOrders(prev => prev.map(o =>
+        o.id === selectedOrderForPayment.id
           ? { ...o, payment_status: "completed" }
           : o
       ));
@@ -168,8 +218,15 @@ export default function BuyerDashboard() {
   };
 
   const handlePlaceOrder = async (listing: any) => {
-    if (!evmAddress || !profile) {
-      toast.error("Please complete your profile first");
+    if (!evmAddress) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
+    if (!profile || !profile.name || !profile.delivery_address) {
+      toast.error("Please complete your profile (Name & Address) to place an order");
+      setActiveTab("profile");
+      setSelectedListing(null);
       return;
     }
 
@@ -179,41 +236,73 @@ export default function BuyerDashboard() {
     }
 
     try {
-      const { supabase } = await import('@/lib/supabase');
-      
+      // Use the centralized function instead of raw insert
+      const { createMarketplaceOrder } = await import('@/lib/database');
+
+      console.log("Placing order for:", listing);
+
       const totalAmount = orderQuantity * listing.price_per_unit;
-      
-      const { error } = await supabase
-        .from('marketplace_orders')
-        .insert({
-          listing_id: listing.id,
-          buyer_address: evmAddress,
-          buyer_name: profile.name,
-          farmer_address: listing.farmer_address,
-          quantity: orderQuantity,
-          unit_price: listing.price_per_unit,
-          total_amount: totalAmount,
-          payment_status: 'pending',
-          delivery_status: 'pending',
-          delivery_address: profile.delivery_address,
-        });
 
-      if (error) throw error;
+      const newOrder = await createMarketplaceOrder({
+        listing_id: listing.id,
+        buyer_address: evmAddress,
+        buyer_name: profile.name,
+        farmer_address: listing.farmer_address,
+        quantity: orderQuantity,
+        unit_price: listing.price_per_unit,
+        total_amount: totalAmount,
+        payment_status: 'pending',
+        delivery_status: 'pending',
+        delivery_address: profile.delivery_address,
+      });
 
-      toast.success("Order placed successfully!");
+      console.log("Order placed:", newOrder);
+
+      toast.success("Order placed successfully! proceeding to payment...");
       setSelectedListing(null);
       setOrderQuantity(1);
+
+      // Refresh data
       await loadBuyerData();
+
+      // Construct full order object for state (combine DB result with listing info)
+      const fullOrder: Order = {
+        ...newOrder,
+        crop_type: listing.crop_type,
+        unit: listing.unit,
+        farmer_name: listing.farmer_name || 'Unknown Farmer', // Fallback
+        order_date: new Date(newOrder.created_at).toISOString().split('T')[0], // Format date
+        id: newOrder.id,
+        listing_id: newOrder.listing_id,
+        payment_status: newOrder.payment_status,
+        delivery_status: newOrder.delivery_status,
+        quantity: newOrder.quantity,
+        unit_price: newOrder.unit_price,
+        total_amount: newOrder.total_amount,
+        farmer_address: newOrder.farmer_address,
+        image_url: listing.image_url, // Add image URL from listing
+        delivery_date: undefined, // Assuming delivery_date is set later
+      };
+
+      // Auto-open payment modal
+      setSelectedOrderForPayment(fullOrder);
+      setShowPaymentModal(true);
+
       setActiveTab("orders");
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Error placing order:", error);
-      toast.error("Failed to place order");
+      // Log detailed error
+      if (error && typeof error === 'object') {
+        console.error("Error details:", JSON.stringify(error, null, 2));
+      }
+      toast.error(`Failed to place order: ${error.message || 'Unknown error'}`);
     }
   };
 
   const filteredOrders = orders.filter(order => {
-    const matchesStatus = filterStatus === "all" || 
-      order.payment_status === filterStatus || 
+    const matchesStatus = filterStatus === "all" ||
+      order.payment_status === filterStatus ||
       order.delivery_status === filterStatus;
     const matchesSearch = order.crop_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.farmer_name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -251,11 +340,10 @@ export default function BuyerDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center space-x-2 px-6 py-3 font-medium transition-all relative ${
-                    activeTab === tab.id
-                      ? "text-green-600"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className={`flex items-center space-x-2 px-6 py-3 font-medium transition-all relative ${activeTab === tab.id
+                    ? "text-green-600"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
                 >
                   <Icon className="h-5 w-5" />
                   <span>{tab.label}</span>
@@ -378,24 +466,22 @@ export default function BuyerDashboard() {
                         <div>
                           <p className="text-lg font-bold text-gray-900">K{order.total_amount.toLocaleString()}</p>
                           <div className="flex items-center space-x-2 mt-2">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            order.payment_status === "completed"
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.payment_status === "completed"
                               ? "bg-green-100 text-green-700"
                               : order.payment_status === "pending"
-                              ? "bg-orange-100 text-orange-700"
-                              : "bg-blue-100 text-blue-700"
-                          }`}>
-                            {order.payment_status}
-                          </span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            order.delivery_status === "delivered"
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-blue-100 text-blue-700"
+                              }`}>
+                              {order.payment_status}
+                            </span>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.delivery_status === "delivered"
                               ? "bg-green-100 text-green-700"
                               : order.delivery_status === "in_transit"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-gray-100 text-gray-700"
-                          }`}>
-                            {order.delivery_status}
-                          </span>
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-700"
+                              }`}>
+                              {order.delivery_status}
+                            </span>
                           </div>
                         </div>
                         <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-green-600 transition-colors" />
@@ -606,25 +692,23 @@ export default function BuyerDashboard() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Payment Status</p>
-                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                          order.payment_status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : order.payment_status === "pending"
+                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${order.payment_status === "completed"
+                          ? "bg-green-100 text-green-700"
+                          : order.payment_status === "pending"
                             ? "bg-orange-100 text-orange-700"
                             : "bg-blue-100 text-blue-700"
-                        }`}>
+                          }`}>
                           {order.payment_status}
                         </span>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Delivery Status</p>
-                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                          order.delivery_status === "delivered"
-                            ? "bg-green-100 text-green-700"
-                            : order.delivery_status === "in_transit"
+                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${order.delivery_status === "delivered"
+                          ? "bg-green-100 text-green-700"
+                          : order.delivery_status === "in_transit"
                             ? "bg-blue-100 text-blue-700"
                             : "bg-gray-100 text-gray-700"
-                        }`}>
+                          }`}>
                           {order.delivery_status}
                         </span>
                       </div>
@@ -633,15 +717,19 @@ export default function BuyerDashboard() {
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <MapPin className="h-4 w-4" />
-                        <span className="font-mono text-xs">{order.farmer_address.slice(0, 10)}...{order.farmer_address.slice(-8)}</span>
+                        <span className="font-mono text-xs">
+                          {order.farmer_address && order.farmer_address.length > 10
+                            ? `${order.farmer_address.slice(0, 10)}...${order.farmer_address.slice(-8)}`
+                            : order.farmer_address || "Unknown"}
+                        </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <button className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors flex items-center space-x-2">
                           <Eye className="h-4 w-4" />
                           <span>View Details</span>
                         </button>
-                        {order.payment_status === "pending" && (
-                          <button 
+                        {order.payment_status === "pending" && order.farmer_address && (
+                          <button
                             onClick={() => handlePayNow(order)}
                             className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center space-x-2"
                           >
@@ -674,6 +762,7 @@ export default function BuyerDashboard() {
                     <input
                       type="text"
                       value={profile.name}
+                      onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
@@ -685,6 +774,7 @@ export default function BuyerDashboard() {
                     <input
                       type="email"
                       value={profile.email}
+                      onChange={(e) => setProfile({ ...profile, email: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
@@ -696,6 +786,7 @@ export default function BuyerDashboard() {
                     <input
                       type="tel"
                       value={profile.phone}
+                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
@@ -707,6 +798,7 @@ export default function BuyerDashboard() {
                     <input
                       type="text"
                       value={profile.company_name}
+                      onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
@@ -717,12 +809,16 @@ export default function BuyerDashboard() {
                     </label>
                     <textarea
                       value={profile.delivery_address}
+                      onChange={(e) => setProfile({ ...profile, delivery_address: e.target.value })}
                       rows={3}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
                 </div>
-                <button className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors">
+                <button
+                  onClick={handleSaveProfile}
+                  className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                >
                   Save Changes
                 </button>
               </div>
@@ -730,35 +826,15 @@ export default function BuyerDashboard() {
 
             {/* Stats Card */}
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl shadow-lg p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Buyer Stats</h3>
-                  <TrendingUp className="h-6 w-6" />
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-green-100 text-sm">Total Orders</p>
-                    <p className="text-3xl font-bold">{profile.total_orders}</p>
-                  </div>
-                  <div>
-                    <p className="text-green-100 text-sm">Total Spent</p>
-                    <p className="text-3xl font-bold">K{profile.total_spent.toLocaleString()}</p>
-                  </div>
-                  <div className="pt-4 border-t border-green-500">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-5 w-5" />
-                      <span className="font-medium">Verified Buyer</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* Wallet Balance Component */}
+              <WalletBalance
+                walletAddress={evmAddress || ''}
+                userRole="buyer"
+                userName={profile.name}
+                userEmail={profile.email}
+                userPhone={profile.phone}
+              />
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Wallet Address</h3>
-                <div className="p-3 bg-gray-50 rounded-lg">
-                  <p className="text-xs font-mono text-gray-600 break-all">{evmAddress}</p>
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -848,7 +924,7 @@ export default function BuyerDashboard() {
       {selectedOrderForPayment && (
         <PaymentModal
           isOpen={showPaymentModal}
-          onClose={() => {
+          onCloseAction={() => {
             setShowPaymentModal(false);
             setSelectedOrderForPayment(null);
           }}
@@ -861,7 +937,7 @@ export default function BuyerDashboard() {
             farmer_name: selectedOrderForPayment.farmer_name,
             farmer_address: selectedOrderForPayment.farmer_address,
           }}
-          onSuccess={handlePaymentSuccess}
+          onSuccessAction={handlePaymentSuccess}
         />
       )}
     </div>
