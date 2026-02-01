@@ -12,7 +12,7 @@ import {
 import { promoteToOfficer, demoteOfficer, isOfficer } from "./Dashboard";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
-import { getUsersByRole } from "@/lib/supabaseService";
+import { getUsersByRole, getFarmers } from "@/lib/supabaseService";
 import AdminApprovalModal from "./AdminApprovalModal";
 import { getVerificationEvidence } from "@/lib/ipfsService";
 import { STANDARD_MILESTONES, payMilestoneApproval, getUSDCBalance, calculateVerifierFee, getVerifierFeeBreakdown } from "@/lib/blockchain/contractInteractions";
@@ -237,6 +237,10 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState<JobData[]>(SAMPLE_JOBS);
   const [showContractModal, setShowContractModal] = useState(false);
 
+  // Real farmers state
+  const [farmersList, setFarmersList] = useState<any[]>(SAMPLE_FARMERS);
+  const [loadingFarmers, setLoadingFarmers] = useState(false);
+
   // Pending verifications state
   const [pendingVerifications, setPendingVerifications] = useState<PendingVerification[]>([]);
   const [loadingVerifications, setLoadingVerifications] = useState(false);
@@ -300,6 +304,47 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Error loading verified products:', error);
+    }
+  };
+
+  // Load farmers from database
+  const loadFarmers = async () => {
+    try {
+      setLoadingFarmers(true);
+      const data = await getFarmers();
+
+      if (data && data.length > 0) {
+        // Transform DB farmers to match UI expectations
+        const mappedFarmers = data.map((f: any) => ({
+          id: f.id,
+          wallet: f.wallet_address,
+          name: f.name,
+          email: f.email || "",
+          phone: f.phone || "",
+          role: "farmer",
+          location: f.location_address || "Unknown Location",
+          locationLat: f.location_lat || -15.4,
+          locationLng: f.location_lng || 28.3,
+          farmSize: f.farm_size || 0,
+          crops: [], // Fetch crops if needed, or leave empty
+          joined: new Date(f.created_at).toLocaleDateString(),
+          verified: f.status === 'approved',
+          totalEarnings: 0, // Calculate if possible
+          completedMilestones: 0,
+          pendingMilestones: 0,
+          contracts: []
+        }));
+
+        // Merge with samples or replace. Replacing is cleaner for "real" view, 
+        // but to keep UI populated let's append unique ones or just prepend.
+        // For now, let's prepend DB farmers to SAMPLE_FARMERS so they show up first.
+        setFarmersList([...mappedFarmers, ...SAMPLE_FARMERS]);
+      }
+    } catch (error) {
+      console.error("Error loading farmers:", error);
+      toast.error("Failed to load farmers");
+    } finally {
+      setLoadingFarmers(false);
     }
   };
 
@@ -445,6 +490,12 @@ export default function AdminDashboard() {
     }
     if (selectedView === 'traceability') {
       loadVerifiedProducts();
+    }
+    if (selectedView === 'traceability') {
+      loadVerifiedProducts();
+    }
+    if (selectedView === 'farmers') {
+      loadFarmers();
     }
   }, [selectedView]);
 
@@ -1201,7 +1252,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">Farmers Directory</h2>
-                    <p className="text-sm text-gray-500 mt-1">{SAMPLE_FARMERS.length} registered farmers</p>
+                    <p className="text-sm text-gray-500 mt-1">{farmersList.length} registered farmers</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="relative">
@@ -1224,7 +1275,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {SAMPLE_FARMERS.filter(f =>
+                  {farmersList.filter(f =>
                     f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     f.location.toLowerCase().includes(searchQuery.toLowerCase())
                   ).map((farmer) => (

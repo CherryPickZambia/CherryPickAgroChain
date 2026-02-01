@@ -33,9 +33,9 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingAI, setLoadingAI] = useState(false);
-  const [farmers, setFarmers] = useState<any[]>(SAMPLE_FARMERS);
+  const [farmers, setFarmers] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     farmerId: "",
     cropType: "",
@@ -59,26 +59,20 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
     try {
       const data = await getFarmers();
       console.log('Raw farmers from DB:', data);
-      
-      // Show all farmers from database (approved or pending - admin can assign to any)
-      const dbFarmers = data || [];
-      
-      // Combine database farmers with sample farmers (database first)
-      if (dbFarmers.length > 0) {
-        // Database farmers first, then sample farmers
-        const combinedFarmers = [...dbFarmers, ...SAMPLE_FARMERS];
-        setFarmers(combinedFarmers);
-        console.log('Loaded', dbFarmers.length, 'farmers from DB +', SAMPLE_FARMERS.length, 'samples');
+
+      // Show only real database farmers
+      if (data && data.length > 0) {
+        setFarmers(data);
+        console.log('Loaded', data.length, 'farmers from DB');
       } else {
-        // No database farmers, use sample farmers only
-        setFarmers(SAMPLE_FARMERS);
-        console.log('No DB farmers, using', SAMPLE_FARMERS.length, 'samples');
+        setFarmers([]);
+        console.log('No registered farmers found in DB');
+        toast.error("No registered farmers found. Cannot create contract.");
       }
     } catch (error) {
       console.error("Error loading farmers:", error);
-      // On error, keep sample farmers
-      setFarmers(SAMPLE_FARMERS);
-      toast.error("Failed to load farmers from database, using sample data");
+      setFarmers([]);
+      toast.error("Failed to load farmers from database");
     }
   };
 
@@ -158,7 +152,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate milestones
     const totalPercentage = getTotalPercentage();
     if (totalPercentage !== 100) {
@@ -173,12 +167,12 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
 
     setLoading(true);
     setError(null);
-    
+
     try {
       const contractId = generateContractId();
       const qrCode = generateQRCode(contractId);
       const totalAmount = parseFloat(formData.requiredQuantity) * parseFloat(formData.discountedPrice);
-      
+
       // Save contract to Supabase
       console.log('Creating contract with data:', {
         contract_code: contractId,
@@ -189,7 +183,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
         price_per_kg: parseFloat(formData.discountedPrice),
         total_value: totalAmount,
       });
-      
+
       const savedContract = await createContract({
         contract_code: contractId,
         farmer_id: formData.farmerId,
@@ -206,7 +200,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
       const milestonePromises = milestones.map(async (milestone, index) => {
         const paymentAmount = (totalAmount * milestone.paymentPercentage) / 100;
         const expectedDate = new Date(Date.now() + milestone.daysFromStart * 24 * 60 * 60 * 1000);
-        
+
         return await createMilestone({
           contract_id: savedContract.id,
           milestone_number: index + 1,
@@ -284,7 +278,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
           {step === 1 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Step 1: Select Farmer & Crop</h3>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Farmer *
@@ -351,7 +345,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
           {step === 2 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Step 2: Contract Terms</h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
