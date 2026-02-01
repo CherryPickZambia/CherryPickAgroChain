@@ -80,62 +80,104 @@ export default function BatchList({ farmerId }: BatchListProps) {
                 </div>
             ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {batches.map((batch) => (
-                        <div key={batch.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 className="font-bold text-lg text-gray-900">{batch.crop_type}</h3>
-                                    <p className="text-sm text-gray-500">{batch.variety}</p>
-                                </div>
-                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${batch.current_status === 'growing' ? 'bg-green-100 text-green-700' :
-                                        batch.current_status === 'harvested' ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-gray-100 text-gray-700'
-                                    }`}>
-                                    {batch.current_status}
-                                </span>
-                            </div>
+                    {batches.map((batch) => {
+                        let metadata: any = {};
+                        try {
+                            if (batch.ipfs_metadata) {
+                                metadata = JSON.parse(batch.ipfs_metadata);
+                            }
+                        } catch (e) {
+                            console.error("Error parsing metadata", e);
+                        }
 
-                            <div className="space-y-3 mb-6">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Batch Code:</span>
-                                    <span className="font-mono font-medium">{batch.batch_code}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Quantity:</span>
-                                    <span className="font-medium">{batch.total_quantity} {batch.unit}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Date:</span>
-                                    <span className="font-medium">
-                                        {batch.created_at ? new Date(batch.created_at).toLocaleDateString() : 'N/A'}
-                                    </span>
-                                </div>
-                            </div>
+                        return (
+                            <div key={batch.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                                {metadata.batch_image && (
+                                    <div className="mb-4 h-48 -mx-6 -mt-6 rounded-t-2xl overflow-hidden relative group">
+                                        <img
+                                            src={metadata.batch_image}
+                                            alt={batch.crop_type}
+                                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60"></div>
+                                        <span className={`absolute bottom-3 right-3 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${batch.current_status === 'growing' ? 'bg-green-100/90 text-green-800' :
+                                            batch.current_status === 'harvested' ? 'bg-yellow-100/90 text-yellow-800' :
+                                                'bg-gray-100/90 text-gray-800'
+                                            }`}>
+                                            {batch.current_status}
+                                        </span>
+                                    </div>
+                                )}
 
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => handleLogEvent(batch.id!)}
-                                    className="flex-1 bg-green-50 text-green-700 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
-                                >
-                                    Log Activity
-                                </button>
-                                <Link
-                                    href={`/trace/${batch.batch_code}`}
-                                    target="_blank"
-                                    className="flex items-center justify-center w-10 h-10 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-                                    title="View Public Page"
-                                >
-                                    <QrCode className="w-5 h-5" />
-                                </Link>
-                                <Link
-                                    href={`/trace/${batch.batch_code}`}
-                                    className="flex items-center justify-center w-10 h-10 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-                                >
-                                    <ArrowRight className="w-5 h-5" />
-                                </Link>
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 className="font-bold text-lg text-gray-900">{batch.crop_type}</h3>
+                                        <p className="text-sm text-gray-500">{batch.variety}</p>
+                                    </div>
+                                    {!metadata.batch_image && (
+                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${batch.current_status === 'growing' ? 'bg-green-100 text-green-700' :
+                                            batch.current_status === 'harvested' ? 'bg-yellow-100 text-yellow-700' :
+                                                'bg-gray-100 text-gray-700'
+                                            }`}>
+                                            {batch.current_status}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="space-y-3 mb-6">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Batch Code:</span>
+                                        <span className="font-mono font-medium">{batch.batch_code}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Est. Yield:</span>
+                                        <span className="font-medium">{batch.total_quantity} {batch.unit}</span>
+                                    </div>
+                                    {metadata.seeding_count && (
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500">Seeding or Plant:</span>
+                                            <span className="font-medium">{metadata.seeding_count}</span>
+                                        </div>
+                                    )}
+                                    {metadata.field_size && (
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-500">Field Size:</span>
+                                            <span className="font-medium">{metadata.field_size}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Date:</span>
+                                        <span className="font-medium">
+                                            {batch.created_at ? new Date(batch.created_at).toLocaleDateString() : 'N/A'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleLogEvent(batch.id!)}
+                                        className="flex-1 bg-green-50 text-green-700 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+                                    >
+                                        Log Activity
+                                    </button>
+                                    <Link
+                                        href={`/trace/${batch.batch_code}`}
+                                        target="_blank"
+                                        className="flex items-center justify-center w-10 h-10 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                                        title="View Public Page"
+                                    >
+                                        <QrCode className="w-5 h-5" />
+                                    </Link>
+                                    <Link
+                                        href={`/trace/${batch.batch_code}`}
+                                        className="flex items-center justify-center w-10 h-10 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                        <ArrowRight className="w-5 h-5" />
+                                    </Link>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -150,10 +192,11 @@ export default function BatchList({ farmerId }: BatchListProps) {
             {selectedBatchId && (
                 <LogEventModal
                     isOpen={showLogModal}
-                    onClose={() => setShowLogModal(false)}
+                    onCloseAction={() => setShowLogModal(false)}
                     batchId={selectedBatchId}
                     farmerId={farmerId}
-                    onSuccess={() => {
+                    isContract={!!batches.find(b => b.id === selectedBatchId)?.contract_id}
+                    onSuccessAction={() => {
                         fetchBatches();
                         // Optional: refresh specific batch data
                     }}

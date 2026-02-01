@@ -6,7 +6,7 @@ export const cdpConfig: Config = {
     createOnLogin: "smart",
   },
   appName: "Cherry Pick",
-  appLogoUrl: "/logo.png",
+  appLogoUrl: "/cherrypick-logo.png",
   // Use email/SMS/OAuth instead of wallet connections to avoid MetaMask errors
   authMethods: ["email", "sms", "oauth:google", "oauth:apple", "oauth:x"],
   showCoinbaseFooter: true,

@@ -86,21 +86,22 @@ export default function FarmerDashboard() {
         farm_size: farmer.farm_size || 0,
       });
       await loadContracts(farmer.id);
-      await loadMarketplaceListings();
+      await loadMarketplaceListings(farmer.id);
       await loadBatches(farmer.id);
     } catch (error: any) {
       console.error("Error loading farmer data:", error);
-      toast.error("Failed to load your data. Please refresh the page.");
+      toast.error(`Failed to load data: ${error.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadMarketplaceListings = async () => {
-    if (!farmerId) return;
+  const loadMarketplaceListings = async (id?: string) => {
+    const targetId = id || farmerId;
+    if (!targetId) return;
 
     try {
-      const listings = await getFarmerListings(farmerId);
+      const listings = await getFarmerListings(targetId);
       setMarketplaceListings(listings);
     } catch (error) {
       console.error("Error loading marketplace listings:", error);

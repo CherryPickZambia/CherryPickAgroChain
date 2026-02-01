@@ -75,6 +75,36 @@ export type TraceabilityEventType =
   | 'verification'
   | 'ai_diagnostic';
 
+export interface BatchMetadata {
+  seeding_count?: number;
+  field_size?: string;
+  batch_image?: string;
+  planting_date?: string;
+}
+
+export interface Contract {
+  id: string;
+  contract_code: string;
+  crop_type: string;
+  variety?: string;
+  status: string;
+  required_quantity: number;
+}
+
+// Get contracts by farmer (for batch creation dropdown)
+export async function getContractsByFarmer(farmerId: string): Promise<Contract[]> {
+  const client = checkSupabase();
+  const { data, error } = await client
+    .from('contracts')
+    .select('id, contract_code, crop_type, variety, status, required_quantity')
+    .eq('farmer_id', farmerId)
+    .in('status', ['active', 'in_progress'])
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
 export interface Batch {
   id?: string;
   batch_code: string;
@@ -125,16 +155,30 @@ export function generateBatchCode(cropType: string, farmerId: string): string {
 }
 
 // Create a new batch for tracking
-export async function createBatch(batch: Omit<Batch, 'id' | 'batch_code'>): Promise<Batch> {
+export async function createBatch(batch: Omit<Batch, 'id' | 'batch_code'> & { metadata?: BatchMetadata }): Promise<Batch> {
   const client = checkSupabase();
   const batchCode = generateBatchCode(batch.crop_type, batch.farmer_id || 'UNKNOWN');
+
+  // Prepare metadata if present
+  let ipfsMetadata = batch.ipfs_metadata;
+  if (batch.metadata) {
+    try {
+      ipfsMetadata = JSON.stringify(batch.metadata);
+    } catch (e) {
+      console.warn('Failed to stringify batch metadata', e);
+    }
+  }
+
+  // Remove metadata object from insert payload as it's not a column
+  const { metadata, ...batchData } = batch;
 
   const { data, error } = await client
     .from('batches')
     .insert({
-      ...batch,
+      ...batchData,
       batch_code: batchCode,
       public_url: `/trace/${batchCode}`,
+      ipfs_metadata: ipfsMetadata
     })
     .select()
     .single();

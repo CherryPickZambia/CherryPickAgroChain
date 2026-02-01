@@ -8,13 +8,14 @@ import toast from "react-hot-toast";
 
 interface LogEventModalProps {
     isOpen: boolean;
-    onClose: () => void;
+    onCloseAction: () => void;
     batchId: string;
     farmerId: string; // The actor logging the event
-    onSuccess: () => void;
+    onSuccessAction: () => void;
+    isContract?: boolean;
 }
 
-const EVENT_TYPES: { value: TraceabilityEventType; label: string; icon: any }[] = [
+const EVENT_TYPES = [
     { value: 'planting', label: 'Planting', icon: Calendar },
     { value: 'germination', label: 'Germination', icon: Sprout },
     { value: 'growth_update', label: 'Growth Update', icon: Calendar },
@@ -22,16 +23,19 @@ const EVENT_TYPES: { value: TraceabilityEventType; label: string; icon: any }[] 
     { value: 'flowering', label: 'Flowering', icon: Sprout },
     { value: 'harvest', label: 'Harvest', icon: Calendar },
     { value: 'transport_start', label: 'Transport Start', icon: Truck },
-    { value: 'storage', label: 'Storage', icon: Warehouse },
-    { value: 'processing', label: 'Processing', icon: Calendar },
 ];
 
-export default function LogEventModal({ isOpen, onClose, batchId, farmerId, onSuccess }: LogEventModalProps) {
+export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId, onSuccessAction, isContract = false }: LogEventModalProps) {
     const [loading, setLoading] = useState(false);
     const [eventType, setEventType] = useState<TraceabilityEventType>('growth_update');
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [location, setLocation] = useState("");
+
+    const availableEventTypes = EVENT_TYPES.filter(type => {
+        if (type.value === 'transport_start') return isContract;
+        return true;
+    });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,7 +45,7 @@ export default function LogEventModal({ isOpen, onClose, batchId, farmerId, onSu
             await addTraceabilityEvent({
                 batch_id: batchId,
                 event_type: eventType,
-                event_title: title || EVENT_TYPES.find(t => t.value === eventType)?.label || 'Event',
+                event_title: title || availableEventTypes.find(t => t.value === eventType)?.label || 'Event',
                 event_description: description,
                 actor_id: farmerId,
                 actor_type: 'farmer', // Simplified for now
@@ -50,8 +54,8 @@ export default function LogEventModal({ isOpen, onClose, batchId, farmerId, onSu
             });
 
             toast.success("Event logged successfully!");
-            onSuccess();
-            onClose();
+            onSuccessAction();
+            onCloseAction();
         } catch (error: any) {
             console.error("Error logging event:", error);
             toast.error(error.message || "Failed to log event");
@@ -73,7 +77,7 @@ export default function LogEventModal({ isOpen, onClose, batchId, farmerId, onSu
                         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                             <h3 className="text-xl font-bold text-gray-900">Log New Activity</h3>
                             <button
-                                onClick={onClose}
+                                onClick={onCloseAction}
                                 className="p-2 hover:bg-gray-200 rounded-full transition-colors"
                             >
                                 <X className="w-5 h-5 text-gray-500" />
@@ -88,7 +92,7 @@ export default function LogEventModal({ isOpen, onClose, batchId, farmerId, onSu
                                     value={eventType}
                                     onChange={(e) => setEventType(e.target.value as TraceabilityEventType)}
                                 >
-                                    {EVENT_TYPES.map(type => (
+                                    {availableEventTypes.map(type => (
                                         <option key={type.value} value={type.value}>{type.label}</option>
                                     ))}
                                 </select>
@@ -134,7 +138,7 @@ export default function LogEventModal({ isOpen, onClose, batchId, farmerId, onSu
                             <div className="pt-4 flex justify-end gap-3">
                                 <button
                                     type="button"
-                                    onClick={onClose}
+                                    onClick={onCloseAction}
                                     className="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-xl transition-colors"
                                 >
                                     Cancel

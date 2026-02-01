@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-  QrCode, MapPin, Truck, Warehouse, Package, Store, 
+import {
+  QrCode, MapPin, Truck, Warehouse, Package, Store,
   Leaf, CheckCircle, Clock, User, Camera, ThermometerSun,
   Droplets, Award, ExternalLink, ChevronDown, ChevronUp,
   Sprout, Factory, ShoppingBag
@@ -86,17 +86,17 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   sold: { label: 'Sold', color: 'bg-gray-100 text-gray-800' },
 };
 
-export default function TraceabilityView({ 
-  batch, 
-  events, 
-  farmer, 
+export default function TraceabilityView({
+  batch,
+  events,
+  farmer,
   contract,
-  isPublic = false 
+  isPublic = false
 }: TraceabilityViewProps) {
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
 
-  const publicUrl = typeof window !== 'undefined' 
+  const publicUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/trace/${batch.batch_code}`
     : `/trace/${batch.batch_code}`;
 
@@ -110,43 +110,60 @@ export default function TraceabilityView({
     });
   };
 
+  let metadata: any = {};
+  try {
+    if (batch.ipfs_metadata) {
+      metadata = JSON.parse(batch.ipfs_metadata);
+    }
+  } catch (e) {
+    console.error("Error parsing metadata", e);
+  }
+
   return (
     <div className={`${isPublic ? 'min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50' : ''}`}>
       <div className={`${isPublic ? 'max-w-4xl mx-auto px-4 py-8' : ''}`}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-600 to-emerald-700 rounded-t-2xl p-6 text-white">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Sprout className="w-6 h-6" />
-                <span className="text-green-200 text-sm font-medium">Cherry Pick Traceability</span>
-              </div>
-              <h1 className="text-2xl font-bold mb-1">{batch.crop_type}</h1>
-              {batch.variety && (
-                <p className="text-green-100">Variety: {batch.variety}</p>
-              )}
-              <p className="text-green-200 text-sm mt-2 font-mono">{batch.batch_code}</p>
-            </div>
-            <div className="text-right">
-              <button
-                onClick={() => setShowQR(!showQR)}
-                className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-colors"
-              >
-                <QrCode className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
-
-          {/* Status Badge */}
-          {batch.current_status && (
-            <div className="mt-4">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
-                STATUS_LABELS[batch.current_status]?.color || 'bg-gray-100 text-gray-800'
-              }`}>
-                {STATUS_LABELS[batch.current_status]?.label || batch.current_status}
-              </span>
+        <div className={`relative rounded-t-2xl overflow-hidden ${!metadata.batch_image ? 'bg-gradient-to-r from-green-600 to-emerald-700' : ''}`}>
+          {metadata.batch_image && (
+            <div className="absolute inset-0 z-0">
+              <img src={metadata.batch_image} alt={batch.crop_type} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/40" />
             </div>
           )}
+
+          <div className="relative z-10 p-6 text-white">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Sprout className="w-6 h-6 text-green-300" />
+                  <span className="text-green-200 text-sm font-medium">Cherry Pick Traceability</span>
+                </div>
+                <h1 className="text-3xl font-bold mb-1 text-white">{batch.crop_type}</h1>
+                {batch.variety && (
+                  <p className="text-green-100 text-lg">Variety: {batch.variety}</p>
+                )}
+                <p className="text-green-200 text-sm mt-2 font-mono bg-black/20 inline-block px-2 py-1 rounded">{batch.batch_code}</p>
+              </div>
+              <div className="text-right">
+                <button
+                  onClick={() => setShowQR(!showQR)}
+                  className="p-3 bg-white/20 rounded-xl hover:bg-white/30 transition-colors backdrop-blur-sm"
+                >
+                  <QrCode className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Status Badge */}
+            {batch.current_status && (
+              <div className="mt-6">
+                <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold shadow-lg ${STATUS_LABELS[batch.current_status]?.color || 'bg-gray-100 text-gray-800'
+                  }`}>
+                  {STATUS_LABELS[batch.current_status]?.label || batch.current_status}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* QR Code Modal */}
@@ -193,33 +210,45 @@ export default function TraceabilityView({
           <div className="grid md:grid-cols-2 gap-6">
             {/* Product Details */}
             <div className="space-y-4">
-              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2 border-b pb-2">
                 <Package className="w-5 h-5 text-green-600" />
                 Product Details
               </h3>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-3 text-sm">
                 {batch.total_quantity && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Quantity:</span>
-                    <span className="font-semibold">{batch.total_quantity} {batch.unit || 'kg'}</span>
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-gray-500">Est. Yield</span>
+                    <span className="font-semibold text-gray-900">{batch.total_quantity} {batch.unit || 'kg'}</span>
+                  </div>
+                )}
+                {metadata.seeding_count && (
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-gray-500">Seeding or Plant</span>
+                    <span className="font-semibold text-gray-900">{metadata.seeding_count}</span>
+                  </div>
+                )}
+                {metadata.field_size && (
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-gray-500">Field Size</span>
+                    <span className="font-semibold text-gray-900">{metadata.field_size}</span>
                   </div>
                 )}
                 {batch.quality_grade && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Quality Grade:</span>
-                    <span className="font-semibold">{batch.quality_grade}</span>
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-gray-500">Quality Grade</span>
+                    <span className="font-semibold text-gray-900">{batch.quality_grade}</span>
                   </div>
                 )}
                 {batch.harvest_date && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Harvest Date:</span>
-                    <span className="font-semibold">{new Date(batch.harvest_date).toLocaleDateString()}</span>
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-gray-500">Harvest Date</span>
+                    <span className="font-semibold text-gray-900">{new Date(batch.harvest_date).toLocaleDateString()}</span>
                   </div>
                 )}
                 {batch.organic_certified && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Certification:</span>
-                    <span className="font-semibold text-green-600">🌿 Organic</span>
+                  <div className="flex justify-between items-center p-2 bg-green-50 rounded-lg border border-green-100">
+                    <span className="text-gray-500">Certification</span>
+                    <span className="font-semibold text-green-700 flex items-center gap-1">🌿 Organic Certified</span>
                   </div>
                 )}
               </div>
@@ -228,28 +257,28 @@ export default function TraceabilityView({
             {/* Farmer Info */}
             {farmer && (
               <div className="space-y-4">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2 border-b pb-2">
                   <User className="w-5 h-5 text-green-600" />
                   Farmer Information
                 </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Name:</span>
-                    <span className="font-semibold flex items-center gap-1">
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                    <span className="text-gray-500">Name</span>
+                    <span className="font-semibold text-gray-900 flex items-center gap-1">
                       {farmer.name}
                       {farmer.verified && <CheckCircle className="w-4 h-4 text-green-500" />}
                     </span>
                   </div>
                   {farmer.location_address && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Location:</span>
-                      <span className="font-semibold">{farmer.location_address}</span>
+                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                      <span className="text-gray-500">Location</span>
+                      <span className="font-semibold text-gray-900 text-right">{farmer.location_address}</span>
                     </div>
                   )}
                   {farmer.farm_size && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Farm Size:</span>
-                      <span className="font-semibold">{farmer.farm_size} hectares</span>
+                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                      <span className="text-gray-500">Total Farm Size</span>
+                      <span className="font-semibold text-gray-900">{farmer.farm_size} ha</span>
                     </div>
                   )}
                 </div>
@@ -259,11 +288,15 @@ export default function TraceabilityView({
 
           {/* Current Location */}
           {batch.current_location && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-              <div className="flex items-center gap-2 text-blue-800">
-                <MapPin className="w-5 h-5" />
-                <span className="font-semibold">Current Location:</span>
-                <span>{batch.current_location}</span>
+            <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <div className="flex items-center gap-3 text-blue-800">
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Current Location</p>
+                  <p className="font-bold text-lg">{batch.current_location}</p>
+                </div>
               </div>
             </div>
           )}
@@ -308,10 +341,9 @@ export default function TraceabilityView({
                       </div>
 
                       {/* Content */}
-                      <div 
-                        className={`bg-gray-50 rounded-xl p-4 cursor-pointer hover:bg-gray-100 transition-colors ${
-                          isExpanded ? 'ring-2 ring-green-500' : ''
-                        }`}
+                      <div
+                        className={`bg-gray-50 rounded-xl p-4 cursor-pointer hover:bg-gray-100 transition-colors ${isExpanded ? 'ring-2 ring-green-500' : ''
+                          }`}
                         onClick={() => setExpandedEvent(isExpanded ? null : event.id || null)}
                       >
                         <div className="flex items-start justify-between">
