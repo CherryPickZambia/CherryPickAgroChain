@@ -131,6 +131,7 @@ export interface MarketplaceListing {
   id: string;
   farmer_id: string;
   farmer_address: string;
+  farmer_name?: string;
   crop_type: string;
   quantity: number;
   unit: string;
@@ -234,7 +235,7 @@ export async function getMarketplaceListings(filters?: {
 
     let query = supabase
       .from('marketplace_listings')
-      .select('*')
+      .select('*, farmers(name)')
       .order('created_at', { ascending: false });
 
     if (filters?.crop_type) {
@@ -264,7 +265,11 @@ export async function getMarketplaceListings(filters?: {
       return filterSampleListings(SAMPLE_LISTINGS, filters);
     }
 
-    return data as MarketplaceListing[];
+    // Map the result to include farmer_name from joined table
+    return data.map((listing: any) => ({
+      ...listing,
+      farmer_name: listing.farmers?.name || 'Unknown Farmer'
+    })) as MarketplaceListing[];
   } catch (error: any) {
     console.error('Error fetching marketplace listings:', error?.message || error);
     console.log('Falling back to sample data');

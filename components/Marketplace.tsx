@@ -67,6 +67,7 @@ const SAMPLE_BULK_ORDERS: BulkOrder[] = [
 interface MarketplaceListing {
   id: string;
   farmerId: string;
+  farmerAddress: string;
   farmerName: string;
   farmerRating: number;
   cropType: string;
@@ -234,7 +235,8 @@ export default function Marketplace() {
         return {
           id: listing.id,
           farmerId: listing.farmer_id,
-          farmerName: "Farmer", // TODO: Join with farmers table
+          farmerAddress: listing.farmer_address,
+          farmerName: listing.farmer_name || "Unknown Farmer",
           farmerRating: 4.5,
           cropType: listing.crop_type,
           variety: listing.crop_type,
