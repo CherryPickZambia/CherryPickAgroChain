@@ -64,10 +64,10 @@ export default function FarmerDashboard() {
         farmer = await createFarmer({
           wallet_address: evmAddress,
           name: "Farmer",
-          email: "",
-          phone: "",
-          location_lat: 0,
-          location_lng: 0,
+          email: null,
+          phone: null,
+          location_lat: null,
+          location_lng: null,
           location_address: "",
           farm_size: 0,
           status: "pending",
@@ -309,6 +309,8 @@ export default function FarmerDashboard() {
       // Ensure farm_size is a number
       const updateData = {
         ...profileForm,
+        email: profileForm.email || null,
+        phone: profileForm.phone || null,
         farm_size: Number(profileForm.farm_size) || 0,
       };
 
@@ -547,17 +549,19 @@ export default function FarmerDashboard() {
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveProfile}
-                  className="p-2 hover:bg-green-100 rounded-lg transition-colors"
+                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md flex items-center gap-2"
                   title="Save Changes"
                 >
-                  <Save className="h-5 w-5 text-green-600" />
+                  <Save className="h-4 w-4" />
+                  Save Changes
                 </button>
                 <button
                   onClick={handleCancelEdit}
-                  className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                  className="px-4 py-2 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
                   title="Cancel"
                 >
-                  <X className="h-5 w-5 text-red-600" />
+                  <X className="h-4 w-4" />
+                  Cancel
                 </button>
               </div>
             )}

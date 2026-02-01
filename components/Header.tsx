@@ -67,11 +67,11 @@ export default function Header({ userRole }: HeaderProps) {
           <div className="flex justify-between items-center h-16">
             {/* Logo Section */}
             <div className="flex items-center space-x-3">
-              <div className="relative h-12 w-auto">
+              <div className="relative h-6 w-auto">
                 <img
                   src="/cherrypick-logo.png"
                   alt="Cherry Pick Logo"
-                  className="h-12 w-auto object-contain"
+                  className="h-6 w-auto object-contain"
                 />
               </div>
               <div>

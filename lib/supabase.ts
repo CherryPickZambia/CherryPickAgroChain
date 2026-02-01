@@ -29,12 +29,12 @@ export interface Database {
           id: string;
           wallet_address: string;
           name: string;
-          email: string;
-          phone: string;
-          location_lat: number;
-          location_lng: number;
+          email: string | null;
+          phone: string | null;
+          location_lat: number | null;
+          location_lng: number | null;
           location_address: string;
-          farm_size: number;
+          farm_size: number | null;
           status: 'pending' | 'approved' | 'rejected';
           rejection_reason: string | null;
           created_at: string;
