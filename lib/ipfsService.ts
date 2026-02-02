@@ -23,7 +23,6 @@ export async function uploadToIPFS(file: File): Promise<UploadResult> {
       formData,
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${PINATA_JWT}`,
         },
       }
@@ -72,28 +71,28 @@ async function compressImage(file: File, maxWidth: number): Promise<File> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    
+
     reader.onload = (event) => {
       const img = new Image();
       img.src = event.target?.result as string;
-      
+
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        
+
         // Calculate new dimensions
         if (width > maxWidth) {
           height = (height * maxWidth) / width;
           width = maxWidth;
         }
-        
+
         canvas.width = width;
         canvas.height = height;
-        
+
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, width, height);
-        
+
         canvas.toBlob(
           (blob) => {
             if (blob) {
@@ -110,10 +109,10 @@ async function compressImage(file: File, maxWidth: number): Promise<File> {
           0.85 // Quality
         );
       };
-      
+
       img.onerror = () => reject(new Error('Failed to load image'));
     };
-    
+
     reader.onerror = () => reject(new Error('Failed to read file'));
   });
 }
@@ -190,7 +189,7 @@ export async function listPinnedFiles(options?: {
     params.append('status', options?.status || 'pinned');
     params.append('pageLimit', String(options?.pageLimit || 100));
     params.append('pageOffset', String(options?.pageOffset || 0));
-    
+
     // Add metadata filters if provided
     if (options?.metadata) {
       Object.entries(options.metadata).forEach(([key, value]) => {
@@ -229,7 +228,7 @@ export async function getVerificationEvidence(): Promise<{
 }[]> {
   try {
     const result = await listPinnedFiles({ pageLimit: 100 });
-    
+
     return result.rows.map(file => ({
       id: file.id,
       cid: file.ipfs_pin_hash,

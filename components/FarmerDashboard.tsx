@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package, List } from "lucide-react";
+import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package, List, Camera } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import MilestoneCard from "./MilestoneCard";
 import WalletBalance from "./WalletBalance";
@@ -11,6 +11,8 @@ import { getContractsByFarmer, getFarmerByWallet, createFarmer, updateFarmer } f
 import { getFarmerListings, type MarketplaceListing } from "@/lib/database";
 import { getBatchesByFarmer, Batch } from "@/lib/traceabilityService";
 import BatchList from "./BatchList";
+import EvidenceUploadModal from "./EvidenceUploadModal";
+import { submitMilestoneEvidence } from "@/lib/supabaseService";
 import toast from "react-hot-toast";
 
 export default function FarmerDashboard() {
@@ -42,6 +44,56 @@ export default function FarmerDashboard() {
     batch_id: '',
   });
   const [activeTab, setActiveTab] = useState<'contracts' | 'listings' | 'traceability'>('contracts');
+
+  // Evidence Capture State
+  const [showEvidenceModal, setShowEvidenceModal] = useState(false);
+  const [showMilestoneSelector, setShowMilestoneSelector] = useState(false);
+  const [selectedMilestone, setSelectedMilestone] = useState<{ id: string, name: string, contractId: string } | null>(null);
+
+  const handleOpenCaptureEvidence = () => {
+    // Filter active milestones
+    const activeMilestones = contracts.flatMap(c =>
+      c.milestones.filter(m => m.status === 'pending').map(m => ({
+        id: m.id,
+        name: m.name,
+        contractId: c.id,
+        contractName: `${c.cropType} - ${c.variety} (${m.name})`
+      }))
+    );
+
+    if (activeMilestones.length === 0) {
+      toast.error("No pending milestones found to add evidence to.");
+      return;
+    }
+
+    if (activeMilestones.length === 1) {
+      setSelectedMilestone(activeMilestones[0]);
+      setShowEvidenceModal(true);
+    } else {
+      setShowMilestoneSelector(true);
+    }
+  };
+
+  const handleEvidenceSubmit = async (data: { images: string[]; iotReadings: any[]; notes: string }) => {
+    if (!selectedMilestone) return;
+
+    try {
+      await submitMilestoneEvidence(selectedMilestone.id, {
+        images: data.images,
+        iot_readings: data.iotReadings,
+        notes: data.notes
+      });
+
+      toast.success("Evidence submitted successfully!");
+      setShowEvidenceModal(false);
+      setSelectedMilestone(null);
+      // Refresh contracts
+      if (farmerId) loadContracts(farmerId);
+    } catch (error: any) {
+      console.error("Error submitting evidence:", error);
+      toast.error("Failed to submit evidence");
+    }
+  };
 
   // Load farmer data and contracts
   useEffect(() => {
@@ -538,13 +590,23 @@ export default function FarmerDashboard() {
               <h3 className="text-xl font-bold text-[#1a1a1a]">Farmer Profile</h3>
             </div>
             {!isEditingProfile ? (
-              <button
-                onClick={() => setIsEditingProfile(true)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Edit Profile"
-              >
-                <Edit2 className="h-5 w-5 text-gray-600" />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleOpenCaptureEvidence}
+                  className="px-3 py-2 hover:bg-green-100 text-green-700 bg-green-50 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+                  title="Capture Evidence"
+                >
+                  <Camera className="h-4 w-4" />
+                  <span>Capture Evidence</span>
+                </button>
+                <button
+                  onClick={() => setIsEditingProfile(true)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                  title="Edit Profile"
+                >
+                  <Edit2 className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
             ) : (
               <div className="flex gap-2">
                 <button
@@ -1195,6 +1257,77 @@ export default function FarmerDashboard() {
           </div>
         )
       )}
-    </div >
+      {/* Milestone Selector Modal */}
+      {showMilestoneSelector && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Select Milestone</h3>
+              <button
+                onClick={() => setShowMilestoneSelector(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <p className="text-gray-600 mb-4 text-sm">
+              Please select which milestone you want to upload evidence for:
+            </p>
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+              {contracts.flatMap(c =>
+                c.milestones.filter(m => m.status === 'pending').map(m => ({
+                  id: m.id,
+                  name: m.name,
+                  contractId: c.id,
+                  contractName: `${c.cropType} - ${c.variety}`,
+                  dueDate: m.expectedDate
+                }))
+              ).map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => {
+                    setSelectedMilestone({
+                      id: m.id,
+                      name: m.name,
+                      contractId: m.contractId
+                    });
+                    setShowMilestoneSelector(false);
+                    setShowEvidenceModal(true);
+                  }}
+                  className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all group"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-gray-900 group-hover:text-green-700">{m.contractName}</p>
+                      <p className="text-sm text-gray-600 mt-1">Milestone: {m.name}</p>
+                    </div>
+                    {m.dueDate && (
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                        Due: {new Date(m.dueDate).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Evidence Upload Modal */}
+      {selectedMilestone && (
+        <EvidenceUploadModal
+          isOpen={showEvidenceModal}
+          onCloseAction={() => {
+            setShowEvidenceModal(false);
+            setSelectedMilestone(null);
+          }}
+          milestoneId={selectedMilestone.id}
+          milestoneName={selectedMilestone.name}
+          contractId={selectedMilestone.contractId}
+          onSubmitAction={handleEvidenceSubmit}
+        />
+      )}
+    </div>
   );
 }
