@@ -197,6 +197,8 @@ export interface Farmer {
   farm_size?: number;
   crops?: string[];
   certifications?: string[];
+  nrc_id?: string;
+  gender?: 'male' | 'female' | 'other';
   verified: boolean;
   created_at: string;
   updated_at: string;

@@ -30,7 +30,11 @@ export default function FarmerDashboard() {
     email: '',
     phone: '',
     location_address: '',
+    location_lat: 0,
+    location_lng: 0,
     farm_size: 0,
+    nrc_id: '',
+    gender: 'male',
   });
   const [showCreateListing, setShowCreateListing] = useState(false);
   const [listingForm, setListingForm] = useState({
@@ -135,7 +139,11 @@ export default function FarmerDashboard() {
         email: farmer.email || '',
         phone: farmer.phone || '',
         location_address: farmer.location_address || '',
+        location_lat: farmer.location_lat || 0,
+        location_lng: farmer.location_lng || 0,
         farm_size: farmer.farm_size || 0,
+        nrc_id: farmer.nrc_id || '',
+        gender: farmer.gender || 'male',
       });
       await loadContracts(farmer.id);
       await loadMarketplaceListings(farmer.id);
@@ -363,7 +371,11 @@ export default function FarmerDashboard() {
         ...profileForm,
         email: profileForm.email || null,
         phone: profileForm.phone || null,
+        location_lat: Number(profileForm.location_lat) || null,
+        location_lng: Number(profileForm.location_lng) || null,
         farm_size: Number(profileForm.farm_size) || 0,
+        nrc_id: profileForm.nrc_id || null,
+        gender: profileForm.gender || null,
       };
 
       await updateFarmer(farmerId, updateData);
@@ -383,7 +395,11 @@ export default function FarmerDashboard() {
         email: farmerData.email || '',
         phone: farmerData.phone || '',
         location_address: farmerData.location_address || '',
+        location_lat: farmerData.location_lat || 0,
+        location_lng: farmerData.location_lng || 0,
         farm_size: farmerData.farm_size || 0,
+        nrc_id: farmerData.nrc_id || '',
+        gender: farmerData.gender || 'male',
       });
     }
     setIsEditingProfile(false);
@@ -687,21 +703,123 @@ export default function FarmerDashboard() {
               )}
             </div>
 
+            {/* NRC/ID Number */}
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-2 block">NRC/ID Number</label>
+              {isEditingProfile ? (
+                <input
+                  type="text"
+                  value={profileForm.nrc_id}
+                  onChange={(e) => setProfileForm({ ...profileForm, nrc_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="e.g. 123456/11/1"
+                />
+              ) : (
+                <div className="flex items-center gap-2 text-gray-900">
+                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-sm">
+                    {farmerData?.nrc_id || 'Not set'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-2 block">Gender</label>
+              {isEditingProfile ? (
+                <select
+                  value={profileForm.gender}
+                  onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              ) : (
+                <div className="flex items-center gap-2 text-gray-900">
+                  <span className="capitalize">{farmerData?.gender || 'Not set'}</span>
+                </div>
+              )}
+            </div>
+
             {/* Location */}
             <div>
               <label className="text-sm font-medium text-gray-600 mb-2 block">Farm Location</label>
               {isEditingProfile ? (
-                <input
-                  type="text"
-                  value={profileForm.location_address}
-                  onChange={(e) => setProfileForm({ ...profileForm, location_address: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="City, District, Zambia"
-                />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={profileForm.location_address}
+                      onChange={(e) => setProfileForm({ ...profileForm, location_address: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="City, District, Zambia"
+                    />
+                    <button
+                      onClick={() => {
+                        if (navigator.geolocation) {
+                          const toastId = toast.loading("Getting location...");
+                          navigator.geolocation.getCurrentPosition(
+                            async (position) => {
+                              const lat = position.coords.latitude;
+                              const lng = position.coords.longitude;
+                              setProfileForm(prev => ({
+                                ...prev,
+                                location_lat: lat,
+                                location_lng: lng
+                              }));
+
+                              // Create maps link
+                              const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
+
+                              // Reverse geocoding (optional/mock)
+                              // For now, we update the lat/lng
+                              toast.success("Location captured!", { id: toastId });
+                              toast(t => (
+                                <div className="flex flex-col gap-1">
+                                  <span>Coordinates updated!</span>
+                                  <span className="text-xs text-gray-500">Lat: {lat.toFixed(6)}, Lng: {lng.toFixed(6)}</span>
+                                </div>
+                              ));
+                            },
+                            (error) => {
+                              console.error(error);
+                              toast.error("Failed to get location. Please enable GPS.", { id: toastId });
+                            }
+                          );
+                        } else {
+                          toast.error("Geolocation not supported by this browser.");
+                        }
+                      }}
+                      className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center"
+                      title="Use My Location"
+                      type="button"
+                    >
+                      <MapPin className="h-5 w-5" />
+                    </button>
+                  </div>
+                  {profileForm.location_lat !== 0 && (
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      GPS Coordinates captured ({profileForm.location_lat.toFixed(4)}, {profileForm.location_lng.toFixed(4)})
+                    </p>
+                  )}
+                </div>
               ) : (
                 <div className="flex items-center gap-2 text-gray-900">
                   <MapPin className="h-4 w-4 text-gray-400" />
                   <span>{farmerData?.location_address || 'Not set'}</span>
+                  {farmerData?.location_lat && farmerData?.location_lat !== 0 && (
+                    <a
+                      href={`https://maps.google.com/?q=${farmerData.location_lat},${farmerData.location_lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+                    >
+                      View on Map
+                    </a>
+                  )}
                 </div>
               )}
             </div>
