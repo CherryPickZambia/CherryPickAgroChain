@@ -348,6 +348,25 @@ export default function AdminDashboard() {
     }
   };
 
+  // Approve farmer function
+  const approveFarmer = async (farmerId: string, farmerName: string) => {
+    try {
+      const { error } = await supabase
+        .from('farmers')
+        .update({ status: 'approved' })
+        .eq('id', farmerId);
+
+      if (error) throw error;
+
+      toast.success(`${farmerName} has been approved!`);
+      // Refresh the farmers list
+      loadFarmers();
+    } catch (error) {
+      console.error('Error approving farmer:', error);
+      toast.error('Failed to approve farmer');
+    }
+  };
+
   const [contracts, setContracts] = useState([
     { id: "C001", farmer: "John Mwale", crop: "Mangoes", amount: "K15,000", status: "active", date: "2024-11-01" },
     { id: "C002", farmer: "Mary Banda", crop: "Tomatoes", amount: "K12,000", status: "active", date: "2024-11-03" },
@@ -1340,7 +1359,20 @@ export default function AdminDashboard() {
                             <Mail className="h-3 w-3" />{farmer.email}
                           </span>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+                        <div className="flex items-center gap-2">
+                          {!farmer.verified && !farmer.id.startsWith('sample') && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                approveFarmer(farmer.id, farmer.name);
+                              }}
+                              className="px-3 py-1 text-xs font-medium text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-colors"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -2157,178 +2189,182 @@ export default function AdminDashboard() {
       />
 
       {/* Create Contract Modal */}
-      {showContractModal && (
-        <AdminCreateContractModal
-          onCloseAction={() => setShowContractModal(false)}
-          onContractCreatedAction={handleCreateContract}
-        />
-      )}
+      {
+        showContractModal && (
+          <AdminCreateContractModal
+            onCloseAction={() => setShowContractModal(false)}
+            onContractCreatedAction={handleCreateContract}
+          />
+        )
+      }
 
       {/* Admin Approval Modal for Verifications */}
-      {showApprovalModal && selectedVerification && (
-        <AdminApprovalModal
-          isOpen={showApprovalModal}
-          onClose={() => {
-            setShowApprovalModal(false);
-            setSelectedVerification(null);
-          }}
-          milestone={{
-            id: selectedVerification.milestone_id,
-            name: selectedVerification.milestone_name,
-            description: `${selectedVerification.crop_type} - Payment: K${selectedVerification.payment_amount.toLocaleString()}`,
-            farmerName: selectedVerification.farmer_name,
-            farmerActivities: [],
-            officerEvidence: {
-              images: selectedVerification.evidence_images,
-              iotReadings: [],
-              notes: selectedVerification.officer_notes,
-              officerName: selectedVerification.officer_name,
-            },
-          }}
-          onApprove={async (adminNotes: string) => {
-            // Approve milestone and trigger USDC payments to farmer and verifier
-            try {
-              const farmerPayment = selectedVerification.payment_amount;
+      {
+        showApprovalModal && selectedVerification && (
+          <AdminApprovalModal
+            isOpen={showApprovalModal}
+            onClose={() => {
+              setShowApprovalModal(false);
+              setSelectedVerification(null);
+            }}
+            milestone={{
+              id: selectedVerification.milestone_id,
+              name: selectedVerification.milestone_name,
+              description: `${selectedVerification.crop_type} - Payment: K${selectedVerification.payment_amount.toLocaleString()}`,
+              farmerName: selectedVerification.farmer_name,
+              farmerActivities: [],
+              officerEvidence: {
+                images: selectedVerification.evidence_images,
+                iotReadings: [],
+                notes: selectedVerification.officer_notes,
+                officerName: selectedVerification.officer_name,
+              },
+            }}
+            onApprove={async (adminNotes: string) => {
+              // Approve milestone and trigger USDC payments to farmer and verifier
+              try {
+                const farmerPayment = selectedVerification.payment_amount;
 
-              // Calculate verifier fee based on contract value and milestone count
-              // Total verifier fees = 2% of contract value split across milestones
-              // Cap at 3% if more than 4 milestones
-              const feeBreakdown = getVerifierFeeBreakdown(
-                selectedVerification.total_contract_value,
-                selectedVerification.total_milestones,
-                selectedVerification.custom_verifier_fee_percent
-              );
-              const verifierFee = feeBreakdown.feePerMilestone;
+                // Calculate verifier fee based on contract value and milestone count
+                // Total verifier fees = 2% of contract value split across milestones
+                // Cap at 3% if more than 4 milestones
+                const feeBreakdown = getVerifierFeeBreakdown(
+                  selectedVerification.total_contract_value,
+                  selectedVerification.total_milestones,
+                  selectedVerification.custom_verifier_fee_percent
+                );
+                const verifierFee = feeBreakdown.feePerMilestone;
 
-              // Update milestone status in database
-              if (supabase) {
-                // First get existing metadata
-                const { data: existingMilestone } = await supabase
-                  .from('milestones')
-                  .select('metadata')
-                  .eq('id', selectedVerification.milestone_id)
-                  .single();
+                // Update milestone status in database
+                if (supabase) {
+                  // First get existing metadata
+                  const { data: existingMilestone } = await supabase
+                    .from('milestones')
+                    .select('metadata')
+                    .eq('id', selectedVerification.milestone_id)
+                    .single();
 
-                const existingMetadata = existingMilestone?.metadata || {};
+                  const existingMetadata = existingMilestone?.metadata || {};
 
-                const { error: updateError } = await supabase
-                  .from('milestones')
-                  .update({
-                    status: 'verified',
-                    payment_status: 'completed',
-                    verified_at: new Date().toISOString(),
-                    metadata: {
-                      ...existingMetadata,
-                      admin_notes: adminNotes,
-                      approved_at: new Date().toISOString(),
-                      farmer_payment_zmw: farmerPayment,
-                      verifier_fee_zmw: verifierFee,
-                      verifier_fee_percent: feeBreakdown.feePerMilestonePercent,
-                      total_verifier_fee_percent: feeBreakdown.totalFeePercent,
-                    },
-                  })
-                  .eq('id', selectedVerification.milestone_id);
+                  const { error: updateError } = await supabase
+                    .from('milestones')
+                    .update({
+                      status: 'verified',
+                      payment_status: 'completed',
+                      verified_at: new Date().toISOString(),
+                      metadata: {
+                        ...existingMetadata,
+                        admin_notes: adminNotes,
+                        approved_at: new Date().toISOString(),
+                        farmer_payment_zmw: farmerPayment,
+                        verifier_fee_zmw: verifierFee,
+                        verifier_fee_percent: feeBreakdown.feePerMilestonePercent,
+                        total_verifier_fee_percent: feeBreakdown.totalFeePercent,
+                      },
+                    })
+                    .eq('id', selectedVerification.milestone_id);
 
-                if (updateError) {
-                  console.error('Error updating milestone:', updateError);
-                  throw new Error(`Failed to update milestone: ${updateError.message}`);
-                }
-
-                console.log('Milestone updated successfully:', selectedVerification.milestone_id);
-
-                // Check if this was the last milestone - if so, mark contract as completed
-                const { data: contractMilestones } = await supabase
-                  .from('milestones')
-                  .select('id, status')
-                  .eq('contract_id', selectedVerification.contract_id);
-
-                if (contractMilestones) {
-                  const allVerified = contractMilestones.every((m: { id: string; status: string }) =>
-                    m.id === selectedVerification.milestone_id || m.status === 'verified'
-                  );
-
-                  if (allVerified) {
-                    // All milestones verified - mark contract as completed
-                    await supabase
-                      .from('contracts')
-                      .update({
-                        status: 'completed',
-                        completed_at: new Date().toISOString(),
-                      })
-                      .eq('id', selectedVerification.contract_id);
-
-                    toast.success('🎉 All milestones completed! Contract marked as completed.', { duration: 5000 });
+                  if (updateError) {
+                    console.error('Error updating milestone:', updateError);
+                    throw new Error(`Failed to update milestone: ${updateError.message}`);
                   }
+
+                  console.log('Milestone updated successfully:', selectedVerification.milestone_id);
+
+                  // Check if this was the last milestone - if so, mark contract as completed
+                  const { data: contractMilestones } = await supabase
+                    .from('milestones')
+                    .select('id, status')
+                    .eq('contract_id', selectedVerification.contract_id);
+
+                  if (contractMilestones) {
+                    const allVerified = contractMilestones.every((m: { id: string; status: string }) =>
+                      m.id === selectedVerification.milestone_id || m.status === 'verified'
+                    );
+
+                    if (allVerified) {
+                      // All milestones verified - mark contract as completed
+                      await supabase
+                        .from('contracts')
+                        .update({
+                          status: 'completed',
+                          completed_at: new Date().toISOString(),
+                        })
+                        .eq('id', selectedVerification.contract_id);
+
+                      toast.success('🎉 All milestones completed! Contract marked as completed.', { duration: 5000 });
+                    }
+                  }
+
+                  // Record payments in database for dashboard display
+                  await supabase.from('payments').insert([
+                    {
+                      user_wallet: selectedVerification.farmer_wallet,
+                      amount: farmerPayment,
+                      currency: 'USDC',
+                      type: 'milestone_payment',
+                      status: 'completed',
+                      milestone_id: selectedVerification.milestone_id,
+                      notes: `Payment for ${selectedVerification.milestone_name}`,
+                    },
+                    {
+                      user_wallet: selectedVerification.officer_wallet,
+                      amount: verifierFee,
+                      currency: 'USDC',
+                      type: 'verification_fee',
+                      status: 'completed',
+                      milestone_id: selectedVerification.milestone_id,
+                      notes: `Verification fee for ${selectedVerification.milestone_name} (${feeBreakdown.feePerMilestonePercent.toFixed(2)}% of $${selectedVerification.total_contract_value} contract)`,
+                    },
+                  ]);
                 }
 
-                // Record payments in database for dashboard display
-                await supabase.from('payments').insert([
-                  {
-                    user_wallet: selectedVerification.farmer_wallet,
-                    amount: farmerPayment,
-                    currency: 'USDC',
-                    type: 'milestone_payment',
-                    status: 'completed',
-                    milestone_id: selectedVerification.milestone_id,
-                    notes: `Payment for ${selectedVerification.milestone_name}`,
-                  },
-                  {
-                    user_wallet: selectedVerification.officer_wallet,
-                    amount: verifierFee,
-                    currency: 'USDC',
-                    type: 'verification_fee',
-                    status: 'completed',
-                    milestone_id: selectedVerification.milestone_id,
-                    notes: `Verification fee for ${selectedVerification.milestone_name} (${feeBreakdown.feePerMilestonePercent.toFixed(2)}% of $${selectedVerification.total_contract_value} contract)`,
-                  },
-                ]);
+                // Show success with payment details
+                toast.success(
+                  `✅ Milestone Approved!\n` +
+                  `💰 Farmer: $${farmerPayment.toFixed(2)} USDC → ${selectedVerification.farmer_name}\n` +
+                  `🔍 Verifier: $${verifierFee.toFixed(2)} USDC (${feeBreakdown.feePerMilestonePercent.toFixed(2)}%) → ${selectedVerification.officer_name}`,
+                  { duration: 5000 }
+                );
+
+                // Remove from pending list
+                setPendingVerifications(prev => prev.filter(v => v.id !== selectedVerification.id));
+                setShowApprovalModal(false);
+                setSelectedVerification(null);
+              } catch (error: any) {
+                console.error('Approval error:', error);
+                toast.error('Failed to process approval');
+                throw error;
               }
+            }}
+            onReject={async (adminNotes: string) => {
+              // Reject milestone
+              try {
+                if (supabase) {
+                  await supabase
+                    .from('milestones')
+                    .update({
+                      status: 'rejected',
+                      metadata: {
+                        admin_rejection_notes: adminNotes,
+                        rejected_at: new Date().toISOString(),
+                      },
+                    })
+                    .eq('id', selectedVerification.milestone_id);
+                }
 
-              // Show success with payment details
-              toast.success(
-                `✅ Milestone Approved!\n` +
-                `💰 Farmer: $${farmerPayment.toFixed(2)} USDC → ${selectedVerification.farmer_name}\n` +
-                `🔍 Verifier: $${verifierFee.toFixed(2)} USDC (${feeBreakdown.feePerMilestonePercent.toFixed(2)}%) → ${selectedVerification.officer_name}`,
-                { duration: 5000 }
-              );
-
-              // Remove from pending list
-              setPendingVerifications(prev => prev.filter(v => v.id !== selectedVerification.id));
-              setShowApprovalModal(false);
-              setSelectedVerification(null);
-            } catch (error: any) {
-              console.error('Approval error:', error);
-              toast.error('Failed to process approval');
-              throw error;
-            }
-          }}
-          onReject={async (adminNotes: string) => {
-            // Reject milestone
-            try {
-              if (supabase) {
-                await supabase
-                  .from('milestones')
-                  .update({
-                    status: 'rejected',
-                    metadata: {
-                      admin_rejection_notes: adminNotes,
-                      rejected_at: new Date().toISOString(),
-                    },
-                  })
-                  .eq('id', selectedVerification.milestone_id);
+                // Remove from pending list
+                setPendingVerifications(prev => prev.filter(v => v.id !== selectedVerification.id));
+                setShowApprovalModal(false);
+                setSelectedVerification(null);
+              } catch (error: any) {
+                console.error('Rejection error:', error);
+                throw error;
               }
-
-              // Remove from pending list
-              setPendingVerifications(prev => prev.filter(v => v.id !== selectedVerification.id));
-              setShowApprovalModal(false);
-              setSelectedVerification(null);
-            } catch (error: any) {
-              console.error('Rejection error:', error);
-              throw error;
-            }
-          }}
-        />
-      )}
-    </div>
+            }}
+          />
+        )
+      }
+    </div >
   );
 }
