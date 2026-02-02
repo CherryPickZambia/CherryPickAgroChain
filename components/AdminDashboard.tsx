@@ -1327,7 +1327,7 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="flex flex-wrap gap-1.5 mb-3">
-                        {farmer.crops.map((crop, i) => (
+                        {farmer.crops.map((crop: string, i: number) => (
                           <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-xs font-medium">
                             {crop}
                           </span>

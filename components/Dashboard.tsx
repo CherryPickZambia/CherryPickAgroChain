@@ -18,6 +18,8 @@ import toast from "react-hot-toast";
 const ADMIN_WALLETS = [
   "0x919134626100399ed78D386beA6b27C8E0507b9D", // Main deployer/admin
   "0x978535960Bfa1BE18f7D78E82c262AB0F9A022E1", // basezambia@gmail.com
+  "0xE0BC20bE750aAF6E2628Eaff5a35Ac23767c01c4", // L1dobbuku@gmail.com
+  "0xBC5bEcc9E15065102643b6Becb58e30A38b41c28", // L1dobbuku@gmail.com (alternate)
 ].map(addr => addr.toLowerCase());
 
 // Officer wallet addresses - promoted by admin
@@ -66,10 +68,10 @@ export default function Dashboard() {
         setIsLoading(false);
         return;
       }
-      
+
       // Log wallet address for admin setup
       console.log("🔐 Your wallet address:", evmAddress);
-      
+
       // First check if user is an admin
       if (checkIsAdmin(evmAddress)) {
         setIsAdmin(true);
@@ -114,7 +116,7 @@ export default function Dashboard() {
 
       // Check URL parameter (for non-admin users) - only farmer or buyer allowed
       const roleParam = searchParams.get('role');
-      
+
       if (roleParam && (roleParam === "farmer" || roleParam === "buyer")) {
         setUserRole(roleParam);
         localStorage.setItem(`cherrypick_role_${evmAddress}`, roleParam);
@@ -149,7 +151,7 @@ export default function Dashboard() {
     if (evmAddress && !isAdmin) {
       localStorage.setItem(`cherrypick_role_${evmAddress}`, role);
       setUserRole(role);
-      
+
       // Try to save to database, but don't block on failure
       try {
         await getOrCreateUser(evmAddress, role);
@@ -163,21 +165,21 @@ export default function Dashboard() {
   // Handle verifier onboarding completion
   const handleVerifierOnboardingComplete = async (data: VerifierData) => {
     if (!evmAddress) return;
-    
+
     // Save as officer role to localStorage (works without database)
     localStorage.setItem(`cherrypick_role_${evmAddress}`, 'officer');
-    
+
     // Store verifier type and details in localStorage
     localStorage.setItem(`cherrypick_verifier_${evmAddress}`, JSON.stringify(data));
     localStorage.setItem(`cherrypick_name_${evmAddress}`, data.name);
-    
+
     // Try to save to database, but don't block on failure
     try {
       await getOrCreateUser(evmAddress, 'officer', data.name);
     } catch (error: any) {
       console.warn("Database not available, using localStorage only:", error?.message || 'Unknown error');
     }
-    
+
     setUserRole('officer');
     setShowVerifierOnboarding(false);
     toast.success(`Registered as ${data.verifierType === 'professional' ? 'Professional' : 'Freelance'} Verifier!`);
@@ -228,7 +230,7 @@ export default function Dashboard() {
               <span className="text-sm font-medium">This is a one-time choice and cannot be changed later</span>
             </div>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             <button
               onClick={() => handleRoleSelection("farmer")}
