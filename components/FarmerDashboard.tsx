@@ -54,50 +54,8 @@ export default function FarmerDashboard() {
   const [showMilestoneSelector, setShowMilestoneSelector] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<{ id: string, name: string, contractId: string } | null>(null);
 
-  const handleOpenCaptureEvidence = () => {
-    // Filter active milestones
-    const activeMilestones = contracts.flatMap(c =>
-      c.milestones.filter(m => m.status === 'pending').map(m => ({
-        id: m.id,
-        name: m.name,
-        contractId: c.id,
-        contractName: `${c.cropType} - ${c.variety} (${m.name})`
-      }))
-    );
+  // Note: Evidence capture is now handled within the Milestone Log Modal
 
-    if (activeMilestones.length === 0) {
-      toast.error("No pending milestones found to add evidence to.");
-      return;
-    }
-
-    if (activeMilestones.length === 1) {
-      setSelectedMilestone(activeMilestones[0]);
-      setShowEvidenceModal(true);
-    } else {
-      setShowMilestoneSelector(true);
-    }
-  };
-
-  const handleEvidenceSubmit = async (data: { images: string[]; iotReadings: any[]; notes: string }) => {
-    if (!selectedMilestone) return;
-
-    try {
-      await submitMilestoneEvidence(selectedMilestone.id, {
-        images: data.images,
-        iot_readings: data.iotReadings,
-        notes: data.notes
-      });
-
-      toast.success("Evidence submitted successfully!");
-      setShowEvidenceModal(false);
-      setSelectedMilestone(null);
-      // Refresh contracts
-      if (farmerId) loadContracts(farmerId);
-    } catch (error: any) {
-      console.error("Error submitting evidence:", error);
-      toast.error("Failed to submit evidence");
-    }
-  };
 
   // Load farmer data and contracts
   useEffect(() => {
@@ -607,14 +565,6 @@ export default function FarmerDashboard() {
             </div>
             {!isEditingProfile ? (
               <div className="flex gap-2">
-                <button
-                  onClick={handleOpenCaptureEvidence}
-                  className="px-3 py-2 hover:bg-green-100 text-green-700 bg-green-50 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
-                  title="Capture Evidence"
-                >
-                  <Camera className="h-4 w-4" />
-                  <span>Capture Evidence</span>
-                </button>
                 <button
                   onClick={() => setIsEditingProfile(true)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
@@ -1432,20 +1382,6 @@ export default function FarmerDashboard() {
         </div>
       )}
 
-      {/* Evidence Upload Modal */}
-      {selectedMilestone && (
-        <EvidenceUploadModal
-          isOpen={showEvidenceModal}
-          onCloseAction={() => {
-            setShowEvidenceModal(false);
-            setSelectedMilestone(null);
-          }}
-          milestoneId={selectedMilestone.id}
-          milestoneName={selectedMilestone.name}
-          contractId={selectedMilestone.contractId}
-          onSubmitAction={handleEvidenceSubmit}
-        />
-      )}
     </div>
   );
 }

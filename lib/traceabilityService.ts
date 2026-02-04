@@ -273,7 +273,7 @@ export async function getBatchTraceability(batchId: string): Promise<Traceabilit
 }
 
 // Get traceability by batch code (for public QR scanning)
-export async function getTraceabilityByBatchCode(batchCode: string): Promise<{
+export async function getTraceabilityByBatchCode(batchCodeOrContractId: string): Promise<{
   batch: Batch;
   events: TraceabilityEvent[];
   farmer?: any;
@@ -281,8 +281,24 @@ export async function getTraceabilityByBatchCode(batchCode: string): Promise<{
 } | null> {
   const client = checkSupabase();
 
-  // Get batch
-  const batch = await getBatchByCode(batchCode);
+  // 1. Try to find batch by code
+  let batch = await getBatchByCode(batchCodeOrContractId);
+
+  // 2. If not found, try to find batch by contract_id (fallback for Contract QR codes)
+  if (!batch) {
+    const { data } = await client
+      .from('batches')
+      .select('*')
+      .eq('contract_id', batchCodeOrContractId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (data) {
+      batch = data;
+    }
+  }
+
   if (!batch) return null;
 
   // Get events

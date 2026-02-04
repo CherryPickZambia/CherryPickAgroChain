@@ -38,11 +38,11 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
     try {
       // Save farmer entries to database
       const { supabase } = await import('@/lib/supabase');
-      
+
       // Get GPS location for verification
       let location: { lat: number; lng: number } | null = null;
       const hasKeyMilestone = activities.some((a: any) => a.isKeyMilestone);
-      
+
       if (hasKeyMilestone && navigator.geolocation) {
         try {
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -60,12 +60,12 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
           console.warn("Could not get GPS location:", geoError);
         }
       }
-      
+
       // Store activities in milestone metadata with location
       await supabase
         .from('milestones')
         .update({
-          metadata: { 
+          metadata: {
             farmer_activities: activities,
             verification_location: location,
             has_key_milestone: hasKeyMilestone,
@@ -84,7 +84,7 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
           .select('contract_id, contract:contracts(farmer_id, crop_type, farmer:farmers(name, location_address))')
           .eq('id', milestone.id)
           .single();
-        
+
         if (milestoneData) {
           await supabase
             .from('verification_requests')
@@ -97,12 +97,16 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
               status: 'pending',
               priority: 'normal',
               activities: activities.filter((a: any) => a.isKeyMilestone),
+              // Compensation Logic
+              fee: 100.00, // Fixed fee for milestone verification (K100)
+              verification_type: 'milestone',
+              distance_km: 0, // Placeholder, calculated when assigned
             });
         }
       }
 
       toast.success("Entries submitted! Awaiting officer verification.");
-      
+
       if (onEvidenceSubmitted) {
         onEvidenceSubmitted();
       }
@@ -142,7 +146,7 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
         </div>
 
         {milestone.status === "pending" && (
-          <button 
+          <button
             onClick={() => setShowEntryModal(true)}
             className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center space-x-2 mt-3"
           >
@@ -192,10 +196,10 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
       {/* Farmer Entry Modal */}
       <FarmerMilestoneEntryModal
         isOpen={showEntryModal}
-        onClose={() => setShowEntryModal(false)}
+        onCloseAction={() => setShowEntryModal(false)}
         milestoneId={milestone.id}
         milestoneName={milestone.name}
-        onSubmit={handleFarmerEntries}
+        onSubmitAction={handleFarmerEntries}
       />
     </div>
   );
