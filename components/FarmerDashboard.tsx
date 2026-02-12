@@ -14,6 +14,8 @@ import BatchList from "./BatchList";
 import EvidenceUploadModal from "./EvidenceUploadModal";
 import { submitMilestoneEvidence } from "@/lib/supabaseService";
 import toast from "react-hot-toast";
+import FarmerBiddingPanel from "./FarmerBiddingPanel";
+import FarmerGrowthPanel from "./FarmerGrowthPanel";
 
 export default function FarmerDashboard() {
   const { evmAddress } = useEvmAddress();
@@ -47,7 +49,7 @@ export default function FarmerDashboard() {
     organic: false,
     batch_id: '',
   });
-  const [activeTab, setActiveTab] = useState<'contracts' | 'listings' | 'traceability'>('contracts');
+  const [activeTab, setActiveTab] = useState<'contracts' | 'listings' | 'traceability' | 'bidding' | 'growth'>('contracts');
 
   // Evidence Capture State
   const [showEvidenceModal, setShowEvidenceModal] = useState(false);
@@ -169,6 +171,9 @@ export default function FarmerDashboard() {
       toast.error("Failed to load contracts");
     }
   };
+
+  // Pending farmer check — restricts traceability, batches, bidding, contracts
+  const isPending = farmerData?.status !== 'approved';
 
   const stats = {
     activeContracts: contracts.filter(c => c.status === "active").length,
@@ -464,6 +469,25 @@ export default function FarmerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Pending Approval Banner */}
+      {isPending && (
+        <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-4 mb-6 flex items-center gap-3">
+          <div className="p-2 bg-yellow-100 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-yellow-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-yellow-800">Account Pending Approval</p>
+            <p className="text-xs text-yellow-700 mt-0.5">
+              Your farm is being verified. You can edit your profile, use AI diagnostics, and view the marketplace.
+              Contracts, traceability, and batches will unlock after approval.
+            </p>
+          </div>
+          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
+            {farmerData?.status || 'pending'}
+          </span>
+        </div>
+      )}
 
       {/* Premium Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -868,15 +892,50 @@ export default function FarmerDashboard() {
         </button>
 
         <button
-          onClick={() => setActiveTab('traceability')}
-          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'traceability' ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'
+          onClick={() => {
+            if (isPending) {
+              toast.error('Account pending approval. Traceability unlocks after your farm is verified.');
+              return;
+            }
+            setActiveTab('traceability');
+          }}
+          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'traceability' ? 'text-green-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           <div className="flex items-center gap-2">
             <QrCode className="w-5 h-5" />
             Traceability
+            {isPending && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Locked</span>}
           </div>
           {activeTab === 'traceability' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('bidding')}
+          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'bidding' ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5" />
+            Bidding
+          </div>
+          {activeTab === 'bidding' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('growth')}
+          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'growth' ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5" />
+            Growth & Development
+          </div>
+          {activeTab === 'growth' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />
           )}
         </button>
@@ -1324,6 +1383,20 @@ export default function FarmerDashboard() {
             })}
           </div>
         )
+      )}
+
+      {/* Bidding Tab */}
+      {activeTab === 'bidding' && farmerId && (
+        <FarmerBiddingPanel farmerId={farmerId} isPending={isPending} />
+      )}
+
+      {/* Growth Tab */}
+      {activeTab === 'growth' && farmerId && (
+        <FarmerGrowthPanel
+          farmerId={farmerId}
+          contracts={contracts.map(c => ({ id: c.id, cropType: c.cropType, variety: c.variety, status: c.status }))}
+          isPending={isPending}
+        />
       )}
       {/* Milestone Selector Modal */}
       {showMilestoneSelector && (

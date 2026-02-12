@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Clock, XCircle, Activity, FileText } from "lucide-react";
+import { CheckCircle, Clock, XCircle, Activity, FileText, Camera } from "lucide-react";
 import { type Milestone } from "@/lib/types";
 import { getStatusColor, formatDate } from "@/lib/utils";
 import FarmerMilestoneEntryModal from "./FarmerMilestoneEntryModal";
@@ -150,7 +150,7 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
             onClick={() => setShowEntryModal(true)}
             className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center space-x-2 mt-3"
           >
-            <FileText className="h-4 w-4" />
+            <Camera className="h-4 w-4" />
             <span>Log Farm Activities</span>
           </button>
         )}

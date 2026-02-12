@@ -296,6 +296,49 @@ export default function FarmerMilestoneEntryModal({
                     />
                   </div>
 
+                  {/* Evidence Images - Moved up for visibility */}
+                  <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <label className="block text-sm font-medium text-blue-800 mb-2 flex items-center gap-2">
+                      <Camera className="w-4 h-4" />
+                      Evidence Photos (Recommended for verification)
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
+                      {imagePreviews.map((src, idx) => (
+                        <div key={idx} className="relative group aspect-square">
+                          <img src={src} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                          <button
+                            onClick={() => removeImage(idx)}
+                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {imagePreviews.length < 5 && (
+                        <label className="border-2 border-dashed border-blue-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100 aspect-square bg-white">
+                          <Camera className="w-6 h-6 text-blue-500 mb-1" />
+                          <span className="text-xs text-blue-600 font-medium">Add Photo</span>
+                          <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
+                        </label>
+                      )}
+                    </div>
+                    {evidenceImages.length > 0 && uploadedImageUrls.length === 0 && (
+                      <button
+                        onClick={uploadImages}
+                        disabled={uploadingImages}
+                        className="text-sm text-blue-600 font-medium flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-blue-200"
+                      >
+                        {uploadingImages ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                        {uploadingImages ? "Uploading..." : "Upload Photos"}
+                      </button>
+                    )}
+                    {uploadedImageUrls.length > 0 && (
+                      <p className="text-xs text-green-600 flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> {uploadedImageUrls.length} photos ready
+                      </p>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Quantity (Optional)</label>
                     <input
@@ -407,45 +450,7 @@ export default function FarmerMilestoneEntryModal({
                     </label>
                   </div>
 
-                  {/* Evidence Images */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Evidence Photos (Optional)</label>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
-                      {imagePreviews.map((src, idx) => (
-                        <div key={idx} className="relative group aspect-square">
-                          <img src={src} alt="Preview" className="w-full h-full object-cover rounded-lg" />
-                          <button
-                            onClick={() => removeImage(idx)}
-                            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                      {imagePreviews.length < 5 && (
-                        <label className="border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 aspect-square">
-                          <Camera className="w-6 h-6 text-gray-400 mb-1" />
-                          <span className="text-xs text-gray-500">Add Photo</span>
-                          <input type="file" accept="image/*" multiple onChange={handleImageSelect} className="hidden" />
-                        </label>
-                      )}
-                    </div>
-                    {evidenceImages.length > 0 && uploadedImageUrls.length === 0 && (
-                      <button
-                        onClick={uploadImages}
-                        disabled={uploadingImages}
-                        className="text-sm text-green-600 font-medium flex items-center gap-1"
-                      >
-                        {uploadingImages ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-                        {uploadingImages ? "Uploading..." : "Upload Photos"}
-                      </button>
-                    )}
-                    {uploadedImageUrls.length > 0 && (
-                      <p className="text-xs text-green-600 flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" /> Photos ready
-                      </p>
-                    )}
-                  </div>
+
                 </div>
 
                 <div className="flex gap-2">

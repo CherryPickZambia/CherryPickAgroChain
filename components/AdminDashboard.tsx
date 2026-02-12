@@ -7,12 +7,12 @@ import {
   ShoppingBag, User, UserPlus, Shield, XCircle, AlertCircle, Eye,
   MoreVertical, Filter, Download, Calendar, Leaf, Globe, Phone, Mail,
   ChevronRight, ExternalLink, Landmark, Award, BarChart3, PieChart,
-  Wallet, Zap, Target, RefreshCw, QrCode, Truck
+  Wallet, Zap, Target, RefreshCw, QrCode, Truck, Loader2
 } from "lucide-react";
 import { promoteToOfficer, demoteOfficer, isOfficer } from "./Dashboard";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
-import { getUsersByRole, getFarmers } from "@/lib/supabaseService";
+import { getUsersByRole, getFarmers, getAllContracts } from "@/lib/supabaseService";
 import AdminApprovalModal from "./AdminApprovalModal";
 import { getVerificationEvidence } from "@/lib/ipfsService";
 import { STANDARD_MILESTONES, payMilestoneApproval, getUSDCBalance, calculateVerifierFee, getVerifierFeeBreakdown } from "@/lib/blockchain/contractInteractions";
@@ -22,6 +22,7 @@ import FarmerDetailModal from "./FarmerDetailModal";
 import NewJobModal, { JobData } from "./NewJobModal";
 import FarmMap from "./FarmMap";
 import AdminCreateContractModal from "./AdminCreateContractModal";
+import AdminBiddingPanel from "./AdminBiddingPanel";
 import WarehouseProcessingModal from "./WarehouseProcessingModal";
 import UniversalQRCode from "./UniversalQRCode";
 import { logProcessingEvent } from "@/lib/traceabilityService";
@@ -227,18 +228,18 @@ export default function AdminDashboard() {
   const [selectedView, setSelectedView] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState(SAMPLE_USERS);
+  const [users, setUsers] = useState<any[]>([]);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<typeof SAMPLE_USERS[0] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [showFarmerModal, setShowFarmerModal] = useState(false);
-  const [selectedFarmer, setSelectedFarmer] = useState<typeof SAMPLE_FARMERS[0] | null>(null);
+  const [selectedFarmer, setSelectedFarmer] = useState<any | null>(null);
   const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
   const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [jobs, setJobs] = useState<JobData[]>(SAMPLE_JOBS);
   const [showContractModal, setShowContractModal] = useState(false);
 
-  // Real farmers state
-  const [farmersList, setFarmersList] = useState<any[]>(SAMPLE_FARMERS);
+  // Real farmers state (empty until loaded from Supabase)
+  const [farmersList, setFarmersList] = useState<any[]>([]);
   const [loadingFarmers, setLoadingFarmers] = useState(false);
 
   // Pending verifications state
@@ -335,10 +336,9 @@ export default function AdminDashboard() {
           contracts: []
         }));
 
-        // Merge with samples or replace. Replacing is cleaner for "real" view, 
-        // but to keep UI populated let's append unique ones or just prepend.
-        // For now, let's prepend DB farmers to SAMPLE_FARMERS so they show up first.
-        setFarmersList([...mappedFarmers, ...SAMPLE_FARMERS]);
+        setFarmersList(mappedFarmers);
+        // Also set users list for admin views
+        setUsers(mappedFarmers);
       }
     } catch (error) {
       console.error("Error loading farmers:", error);
@@ -367,12 +367,35 @@ export default function AdminDashboard() {
     }
   };
 
-  const [contracts, setContracts] = useState([
-    { id: "C001", farmer: "John Mwale", crop: "Mangoes", amount: "K15,000", status: "active", date: "2024-11-01" },
-    { id: "C002", farmer: "Mary Banda", crop: "Tomatoes", amount: "K12,000", status: "active", date: "2024-11-03" },
-    { id: "C003", farmer: "Peter Phiri", crop: "Pineapples", amount: "K8,500", status: "pending", date: "2024-11-05" },
-    { id: "C004", farmer: "Sarah Phiri", crop: "Cashews", amount: "K10,000", status: "active", date: "2024-11-02" },
-  ]);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [loadingContracts, setLoadingContracts] = useState(false);
+
+  // Load contracts from database
+  const loadContracts = async () => {
+    try {
+      setLoadingContracts(true);
+      const data = await getAllContracts();
+
+      if (data && data.length > 0) {
+        const mappedContracts = data.map((c: any) => ({
+          id: c.contract_code || c.id,
+          farmer: c.farmer?.name || 'Unknown Farmer',
+          crop: c.crop_type,
+          amount: `K${Number(c.total_value || 0).toLocaleString()}`,
+          status: c.status,
+          date: new Date(c.created_at).toISOString().split('T')[0],
+        }));
+        setContracts(mappedContracts);
+      } else {
+        setContracts([]);
+      }
+    } catch (error) {
+      console.error('Error loading contracts:', error);
+      toast.error('Failed to load contracts');
+    } finally {
+      setLoadingContracts(false);
+    }
+  };
 
   // Load pending verifications from database - milestones with status 'submitted'
   const loadPendingVerifications = async () => {
@@ -500,6 +523,14 @@ export default function AdminDashboard() {
   };
 
   // Load verifications when view changes to verifications
+  // Load initial data for dashboard overview
+  useEffect(() => {
+    loadFarmers();
+    loadContracts();
+    loadPendingVerifications();
+    loadVerifiedProducts();
+  }, []);
+
   useEffect(() => {
     if (selectedView === 'verifications') {
       loadPendingVerifications();
@@ -510,11 +541,11 @@ export default function AdminDashboard() {
     if (selectedView === 'traceability') {
       loadVerifiedProducts();
     }
-    if (selectedView === 'traceability') {
-      loadVerifiedProducts();
-    }
     if (selectedView === 'farmers') {
       loadFarmers();
+    }
+    if (selectedView === 'contracts') {
+      loadContracts();
     }
   }, [selectedView]);
 
@@ -582,6 +613,7 @@ export default function AdminDashboard() {
     { icon: QrCode, label: "Traceability", id: "traceability" },
     { icon: TrendingUp, label: "Analytics", id: "analytics" },
     { icon: DollarSign, label: "Payments", id: "payments" },
+    { icon: Award, label: "Bidding", id: "bidding" },
     { icon: Settings, label: "Settings", id: "settings" },
   ];
 
@@ -1113,35 +1145,58 @@ export default function AdminDashboard() {
                   <h2 className="text-2xl font-bold text-gray-900">All Contracts</h2>
                   <p className="text-gray-600 mt-1">Manage farming contracts and agreements</p>
                 </div>
-                <button
-                  onClick={() => setShowContractModal(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/25 flex items-center space-x-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>New Contract</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={loadContracts}
+                    disabled={loadingContracts}
+                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                    title="Refresh Contracts"
+                  >
+                    <RefreshCw className={`h-5 w-5 ${loadingContracts ? 'animate-spin' : ''}`} />
+                  </button>
+                  <button
+                    onClick={() => setShowContractModal(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 transition-all shadow-lg shadow-green-500/25 flex items-center space-x-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>New Contract</span>
+                  </button>
+                </div>
               </div>
               <div className="space-y-4">
-                {contracts.map((contract) => (
-                  <div key={contract.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-green-500 transition-colors cursor-pointer">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-green-50 rounded-lg">
-                        <FileText className="h-6 w-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{contract.id} - {contract.crop}</h3>
-                        <p className="text-sm text-gray-600">{contract.farmer} • {contract.date}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <span className="text-lg font-bold text-gray-900">{contract.amount}</span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${contract.status === "active" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-                        }`}>
-                        {contract.status}
-                      </span>
-                    </div>
+                {loadingContracts ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 text-green-500 animate-spin mb-2" />
+                    <p className="text-gray-500">Loading contracts...</p>
                   </div>
-                ))}
+                ) : contracts.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 font-medium">No contracts found</p>
+                    <p className="text-sm text-gray-400 mt-1">Create a new contract to get started</p>
+                  </div>
+                ) : (
+                  contracts.map((contract) => (
+                    <div key={contract.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-green-500 transition-colors cursor-pointer bg-white hover:shadow-md">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-3 bg-green-50 rounded-lg">
+                          <FileText className="h-6 w-6 text-green-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{contract.id} - {contract.crop}</h3>
+                          <p className="text-sm text-gray-600">{contract.farmer} • {contract.date}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <span className="text-lg font-bold text-gray-900">{contract.amount}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${contract.status === "active" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                          }`}>
+                          {contract.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -2166,6 +2221,11 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Bidding View */}
+          {selectedView === "bidding" && (
+            <AdminBiddingPanel />
           )}
         </main>
       </div>

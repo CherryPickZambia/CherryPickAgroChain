@@ -222,7 +222,30 @@ export async function getContractsByFarmer(farmerId: string) {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
+
+  // Sort milestones by milestone_number within each contract
+  if (data) {
+    data.forEach((contract: any) => {
+      if (contract.milestones && Array.isArray(contract.milestones)) {
+        contract.milestones.sort((a: any, b: any) =>
+          (a.milestone_number || 0) - (b.milestone_number || 0)
+        );
+      }
+    });
+  }
+
   return data;
+}
+
+export async function getAllContracts() {
+  const client = checkSupabase();
+  const { data, error } = await client
+    .from('contracts')
+    .select('*, milestones(*), farmer:farmers(id, name, wallet_address)')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
 }
 
 export async function getContractById(id: string) {
@@ -252,7 +275,7 @@ export async function updateContract(id: string, updates: Partial<Contract>) {
 
 // ==================== MILESTONES ====================
 
-export async function createMilestone(milestone: Omit<Milestone, 'id' | 'created_at' | 'updated_at'>) {
+export async function createMilestone(milestone: Record<string, any>) {
   const client = checkSupabase();
   const { data, error } = await client
     .from('milestones')
@@ -332,6 +355,98 @@ export async function submitMilestoneEvidence(
 
   return { evidence: evidenceData, milestone: milestoneData };
 }
+
+/**
+ * Officer verifies a milestone - sets status to 'submitted' (for admin review) and stores evidence
+ * This is different from submitMilestoneEvidence which is for farmer submissions.
+ * The officer RECOMMENDS approval — admin gives final approval.
+ */
+export async function officerVerifyMilestone(
+  milestoneId: string,
+  evidence: {
+    images: string[];
+    iot_readings: any[];
+    notes: string;
+  },
+  officerId?: string
+) {
+  const client = checkSupabase();
+
+  // Try to create evidence record (graceful degradation if table doesn't exist yet)
+  let evidenceData: any = null;
+  try {
+    const { data, error: evidenceError } = await client
+      .from('evidence')
+      .insert({
+        milestone_id: milestoneId,
+        evidence_type: 'officer_verification',
+        ipfs_hash: evidence.images[0] || '',
+        metadata: {
+          images: evidence.images,
+          iot_readings: evidence.iot_readings,
+          notes: evidence.notes,
+          officer_id: officerId,
+          verified_at: new Date().toISOString(),
+        },
+      })
+      .select()
+      .single();
+
+    if (evidenceError) {
+      console.warn('Evidence table insert failed (table may not exist yet):', evidenceError.message);
+    } else {
+      evidenceData = data;
+    }
+  } catch (err) {
+    console.warn('Evidence insert skipped:', err);
+  }
+
+  // First, fetch the existing milestone to preserve its metadata
+  const { data: existingMilestone, error: fetchError } = await client
+    .from('milestones')
+    .select('metadata')
+    .eq('id', milestoneId)
+    .single();
+
+  if (fetchError) {
+    console.error('Error fetching milestone:', fetchError);
+    throw fetchError;
+  }
+
+  // Merge existing metadata with officer verification data
+  const existingMetadata = existingMilestone?.metadata || {};
+  const mergedMetadata = {
+    ...existingMetadata,
+    officer_verified: true,
+    officer_id: officerId,
+    officer_notes: evidence.notes,
+    officer_images: evidence.images,
+    officer_iot_readings: evidence.iot_readings,
+    verified_at: new Date().toISOString(),
+    evidence_id: evidenceData?.id || null,
+  };
+
+  // Update milestone status to 'submitted' for admin review
+  // (officer recommends, admin approves)
+  const { data: milestoneData, error: milestoneError } = await client
+    .from('milestones')
+    .update({
+      status: 'submitted',
+      completed_date: new Date().toISOString(),
+      metadata: mergedMetadata,
+    })
+    .eq('id', milestoneId)
+    .select()
+    .single();
+
+  if (milestoneError) {
+    console.error('Error updating milestone status:', milestoneError);
+    throw milestoneError;
+  }
+
+  return { evidence: evidenceData, milestone: milestoneData };
+}
+
 
 // ==================== EXTENSION OFFICERS ====================
 

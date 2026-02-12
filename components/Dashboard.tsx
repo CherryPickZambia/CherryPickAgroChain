@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import Header from "./Header";
 import LandingPage from "./LandingPage";
+import ErrorBoundary from "./ErrorBoundary";
 import SignInScreen from "./SignInScreen";
 import FarmerDashboard from "./FarmerDashboard";
 import BuyerDashboard from "./BuyerDashboard";
@@ -341,10 +342,12 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#fafafa]">
       <Header userRole={userRole} />
       <div className="fade-in">
-        {userRole === "farmer" && <FarmerDashboard />}
-        {userRole === "buyer" && <BuyerDashboard />}
-        {userRole === "officer" && <OfficerDashboard />}
-        {userRole === "admin" && <AdminDashboard />}
+        <ErrorBoundary fallbackMessage="An error occurred loading this dashboard. Please refresh.">
+          {userRole === "farmer" && <FarmerDashboard />}
+          {userRole === "buyer" && <BuyerDashboard />}
+          {userRole === "officer" && <OfficerDashboard />}
+          {userRole === "admin" && <AdminDashboard />}
+        </ErrorBoundary>
       </div>
     </div>
   );

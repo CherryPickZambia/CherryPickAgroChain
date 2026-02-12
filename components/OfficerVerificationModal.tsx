@@ -45,22 +45,27 @@ export default function OfficerVerificationModal({
       return;
     }
 
+    if (!officerNotes.trim()) {
+      toast.error("Please add verification notes");
+      return;
+    }
+
     try {
       setVerifying(true);
-      const { submitMilestoneEvidence } = await import('@/lib/supabaseService');
-      
-      await submitMilestoneEvidence(milestone.id, {
+      const { officerVerifyMilestone } = await import('@/lib/supabaseService');
+
+      await officerVerifyMilestone(milestone.id, {
         images: evidence.images,
         iot_readings: evidence.iotReadings,
         notes: `${evidence.notes}\n\nOfficer Notes: ${officerNotes}`,
       });
 
-      toast.success("Evidence uploaded! Milestone ready for admin approval.");
+      toast.success("Milestone verified successfully! Farmer can now track this milestone as complete.");
       onVerificationCompleteAction();
       onCloseAction();
     } catch (error) {
       console.error("Verification error:", error);
-      toast.error("Failed to submit evidence");
+      toast.error("Failed to verify milestone. Please try again.");
     } finally {
       setVerifying(false);
     }
@@ -75,7 +80,7 @@ export default function OfficerVerificationModal({
     try {
       setVerifying(true);
       const { supabase } = await import('@/lib/supabase');
-      
+
       // Update milestone status to rejected
       await supabase
         .from('milestones')

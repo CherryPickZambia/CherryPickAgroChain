@@ -11,12 +11,49 @@ export interface UploadResult {
 }
 
 /**
+ * Check if Pinata is properly configured
+ */
+export function isPinataConfigured(): boolean {
+  return PINATA_JWT.length > 0;
+}
+
+/**
  * Upload a file to IPFS using Pinata
+ * Falls back to base64 data URL if Pinata is not configured
  */
 export async function uploadToIPFS(file: File): Promise<UploadResult> {
+  // Check if Pinata JWT is configured
+  if (!PINATA_JWT || PINATA_JWT.length < 10) {
+    console.warn('Pinata JWT not configured. Falling back to base64 storage.');
+    // Fallback: return a data URL for the image
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        resolve({
+          cid: `local-${Date.now()}`,
+          url: base64,
+          size: file.size,
+        });
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   try {
     const formData = new FormData();
     formData.append('file', file);
+
+    // Add metadata for better organization
+    const metadata = JSON.stringify({
+      name: file.name,
+      keyvalues: {
+        type: 'evidence',
+        uploadedAt: new Date().toISOString(),
+      }
+    });
+    formData.append('pinataMetadata', metadata);
 
     const response = await axios.post(
       `${PINATA_API_URL}/pinning/pinFileToIPFS`,
@@ -25,6 +62,7 @@ export async function uploadToIPFS(file: File): Promise<UploadResult> {
         headers: {
           'Authorization': `Bearer ${PINATA_JWT}`,
         },
+        timeout: 60000, // 60 second timeout
       }
     );
 
@@ -38,7 +76,18 @@ export async function uploadToIPFS(file: File): Promise<UploadResult> {
     };
   } catch (error: any) {
     console.error('Pinata upload failed:', error);
-    throw new Error(`Failed to upload to IPFS: ${error.message}`);
+
+    // If it's an auth error, provide clear message
+    if (error.response?.status === 401) {
+      throw new Error('Pinata authentication failed. Please check your PINATA_JWT in environment variables.');
+    }
+
+    // If it's a network error or timeout
+    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+      throw new Error('Could not connect to Pinata. Please check your internet connection.');
+    }
+
+    throw new Error(`Failed to upload to IPFS: ${error.response?.data?.message || error.message}`);
   }
 }
 

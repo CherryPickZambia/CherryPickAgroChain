@@ -13,6 +13,8 @@ interface Milestone {
   description: string;
   paymentPercentage: number;
   daysFromStart: number;
+  isKey?: boolean;
+  requiresProfessionalVerifier?: boolean;
 }
 
 interface AdminCreateContractModalProps {
@@ -60,10 +62,14 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
       const data = await getFarmers();
       console.log('Raw farmers from DB:', data);
 
-      // Show only real database farmers
       if (data && data.length > 0) {
-        setFarmers(data);
-        console.log('Loaded', data.length, 'farmers from DB');
+        // Only show approved farmers for contract creation
+        const approvedFarmers = data.filter((f: any) => f.status === 'approved');
+        setFarmers(approvedFarmers);
+        console.log('Loaded', approvedFarmers.length, 'approved farmers from DB');
+        if (approvedFarmers.length === 0) {
+          toast.error("No approved farmers found. Farmers must be approved before creating contracts.");
+        }
       } else {
         setFarmers([]);
         console.log('No registered farmers found in DB');
@@ -132,7 +138,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
   const addCustomMilestone = () => {
     setMilestones([
       ...milestones,
-      { name: "", description: "", paymentPercentage: 0, daysFromStart: 0 }
+      { name: "", description: "", paymentPercentage: 0, daysFromStart: 0, isKey: false, requiresProfessionalVerifier: false }
     ]);
   };
 
@@ -212,6 +218,9 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
           status: "pending",
           payment_amount: paymentAmount,
           payment_status: "pending",
+          is_key: milestone.isKey,
+          requires_professional_verifier: milestone.requiresProfessionalVerifier,
+          sequence_order: index + 1,
         });
       });
 
@@ -296,7 +305,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Database farmers shown first, then sample farmers</p>
+                <p className="text-xs text-gray-500 mt-1">Only approved farmers are shown</p>
               </div>
 
               <div>
@@ -537,6 +546,37 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                         />
                       </div>
                     </div>
+
+                    {/* Key Milestone & Professional Verifier toggles */}
+                    <div className="flex gap-4 pt-2 border-t border-gray-100">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={milestone.isKey || false}
+                          onChange={(e) => {
+                            const updated = [...milestones];
+                            updated[index] = { ...updated[index], isKey: e.target.checked };
+                            if (e.target.checked) updated[index].requiresProfessionalVerifier = true;
+                            setMilestones(updated);
+                          }}
+                          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                        <span className="text-xs font-medium text-gray-700">Key Milestone</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={milestone.requiresProfessionalVerifier || false}
+                          onChange={(e) => {
+                            const updated = [...milestones];
+                            updated[index] = { ...updated[index], requiresProfessionalVerifier: e.target.checked };
+                            setMilestones(updated);
+                          }}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-xs font-medium text-gray-700">Requires Professional Verifier</span>
+                      </label>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -586,7 +626,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
             </div>
           )}
         </form>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
