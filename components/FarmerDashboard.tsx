@@ -202,7 +202,7 @@ export default function FarmerDashboard() {
   };
 
   const handleShowQR = (contract: SmartContract) => {
-    const qrData = `https://cherrypick.co.zm/trace/${contract.id}`;
+    const qrData = `https://cherrypick.co.zm/trace/${contract.qrCode || contract.id}`;
 
     const qrWindow = window.open("", "QR Code", "width=400,height=550");
     if (qrWindow) {

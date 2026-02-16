@@ -1,489 +1,634 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValue, useSpring, AnimatePresence } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import Link from "next/link";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import {
   Sprout, Shield, TrendingUp, Users, CheckCircle, ArrowRight,
   Leaf, DollarSign, BarChart3, Globe, Smartphone, Lock,
-  Award, Target, Zap, Heart
+  Award, Target, Zap, Heart, ChevronDown, Play, Star,
+  Layers, Eye, ArrowUpRight, Search, Grape, Cherry, Wheat
 } from "lucide-react";
 
+/* ─────────────────────────────── STYLES ─────────────────────────────── */
+const injectStyles = () => {
+  if (typeof window === "undefined") return;
+  if (document.getElementById("cp-landing-styles")) return;
+  const style = document.createElement("style");
+  style.id = "cp-landing-styles";
+  style.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+    /* Aurora gradient animation */
+    @keyframes aurora {
+      0%, 100% { background-position: 0% 50%; }
+      25% { background-position: 50% 100%; }
+      50% { background-position: 100% 50%; }
+      75% { background-position: 50% 0%; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      33% { transform: translateY(-12px) rotate(1deg); }
+      66% { transform: translateY(6px) rotate(-1deg); }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    @keyframes grain {
+      0%, 100% { transform: translate(0, 0); }
+      10% { transform: translate(-2%, -2%); }
+      30% { transform: translate(2%, -3%); }
+      50% { transform: translate(-1%, 2%); }
+      70% { transform: translate(3%, 1%); }
+      90% { transform: translate(-3%, 3%); }
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.1); opacity: 0.3; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+
+    @keyframes gradient-text {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .cp-landing * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .cp-landing h1, .cp-landing h2, .cp-landing h3 { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+
+    /* Fix for white space below footer: set body bg to footer color */
+    html, body {
+      background-color: #0a0f0d;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .cp-aurora-bg {
+      background: linear-gradient(135deg, #0a0f0d 0%, #0d1a14 20%, #081510 40%, #0a1f17 60%, #050d09 80%, #0a0f0d 100%);
+      background-size: 300% 300%;
+      /* animation: aurora 60s ease infinite; disabled for static */
+    }
+
+    .cp-grain::after {
+      content: '';
+      position: absolute;
+      inset: -200%;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+      animation: grain 8s steps(10) infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .cp-glass {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .cp-glass-card {
+      background: rgba(255, 255, 255, 0.02);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .cp-glass-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(16, 185, 129, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px -15px rgba(16, 185, 129, 0.15), 0 0 0 1px rgba(16, 185, 129, 0.1);
+    }
+
+    .cp-light-card {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.12); /* Darker border */
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04); /* Darker shadow */
+      transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .cp-light-card:hover {
+      border-color: rgba(16, 185, 129, 0.4); /* Darker hover border */
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(16, 185, 129, 0.2); /* Darker hover shadow */
+      transform: translateY(-6px);
+    }
+
+    .cp-gradient-text {
+      background: linear-gradient(135deg, #6ee7b7 0%, #34d399 25%, #10b981 50%, #059669 75%, #6ee7b7 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradient-text 4s linear infinite;
+    }
+
+    .cp-shimmer {
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+      background-size: 200% 100%;
+      animation: shimmer 3s ease-in-out infinite;
+    }
+
+    .cp-glow-emerald {
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.15), 0 0 60px rgba(16, 185, 129, 0.05);
+    }
+
+    .cp-btn-primary {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .cp-btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .cp-btn-primary:hover::before { opacity: 1; }
+    .cp-btn-primary:hover {
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.4), 0 10px 40px rgba(16, 185, 129, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .cp-btn-ghost {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(10px);
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .cp-btn-ghost:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.06);
+      transform: translateY(-2px);
+    }
+
+    .cp-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.2), transparent);
+    }
+
+    .cp-number {
+      font-family: 'Space Grotesk', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .cp-noise-overlay {
+      mix-blend-mode: overlay;
+      opacity: 0.5;
+    }
+  `;
+  document.head.appendChild(style);
+};
+
+/* ─────────────────────────────── MAIN COMPONENT ─────────────────────────── */
 export default function LandingPage() {
   const router = useRouter();
   const { evmAddress } = useEvmAddress();
   const { scrollYProgress } = useScroll();
-  const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
-  const y = useTransform(scrollYProgress, [0, 0.2], [0, 100]);
+  const heroRef = useRef<HTMLElement>(null);
 
-  // Redirect to dashboard if user is signed in
   useEffect(() => {
-    if (evmAddress) {
-      router.push('/dashboard');
-    }
+    injectStyles();
+  }, []);
+
+  useEffect(() => {
+    if (evmAddress) router.push("/dashboard");
   }, [evmAddress, router]);
 
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.15], [1, 0.96]);
+
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Section with Parallax */}
-      <section className="relative h-screen overflow-hidden">
-        {/* Background with Advanced Parallax */}
-        <motion.div
-          style={{ y }}
-          className="absolute inset-0 z-0"
-        >
-          <div className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: "url('https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1920&q=80')",
-              filter: "brightness(0.7) contrast(1.1)",
-            }}
-          ></div>
-          <div className="absolute inset-0 bg-gradient-to-br from-green-900/95 via-emerald-800/90 to-green-700/95"></div>
-          {/* Animated gradient overlay */}
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-tr from-green-600/20 to-emerald-500/20"
-            animate={{
-              background: [
-                "linear-gradient(to top right, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2))",
-                "linear-gradient(to top right, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))",
-                "linear-gradient(to top right, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2))",
-              ]
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          />
-        </motion.div>
+    <div className="cp-landing flex flex-col min-h-screen bg-[#fafaf9]">
+      <main className="flex-grow">
+        {/* ──────────── HERO ──────────── */}
+        <section ref={heroRef} className="relative overflow-hidden cp-aurora-bg cp-grain">
+          {/* Ambient light orbs */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div
+              className="absolute w-[800px] h-[800px] rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(16,185,129,0.12) 0%, transparent 70%)",
+                top: "-20%", left: "-10%",
+              }}
+            />
+            <div
+              className="absolute w-[600px] h-[600px] rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 70%)",
+                bottom: "-10%", right: "-5%",
+              }}
+            />
+            <div
+              className="absolute w-[400px] h-[400px] rounded-full"
+              style={{
+                background: "radial-gradient(circle, rgba(6,95,70,0.15) 0%, transparent 60%)",
+                top: "30%", right: "20%",
+              }}
+            />
+          </div>
 
-        {/* Hero Content */}
-        <div className="relative z-0 h-full flex items-center">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-center"
-            >
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{
-                  delay: 0.2,
-                  type: "spring",
-                  stiffness: 200,
-                  damping: 20
-                }}
-                whileHover={{ scale: 1.05 }}
-                className="inline-flex items-center space-x-3 bg-white/10 backdrop-blur-lg px-7 py-3.5 rounded-full mb-8 border border-white/30 shadow-2xl"
-              >
-                <motion.div
-                  animate={{ rotate: [0, 10, -10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <Sprout className="h-5 w-5 text-green-300" />
-                </motion.div>
-                <span className="text-white font-semibold tracking-wide">Blockchain-Powered Agriculture</span>
-              </motion.div>
+          {/* Floating Icons (White plant/fruit based) */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
+            <div className="absolute top-[15%] left-[10%] text-white/10">
+              <Leaf className="w-12 h-12" />
+            </div>
+            <div className="absolute top-[25%] right-[15%] text-white/5">
+              <Grape className="w-16 h-16" />
+            </div>
+            <div className="absolute bottom-[20%] left-[20%] text-white/5">
+              <Sprout className="w-14 h-14" />
+            </div>
+            <div className="absolute top-[40%] right-[30%] text-white/5">
+              <Wheat className="w-10 h-10" />
+            </div>
+            <div className="absolute bottom-[30%] right-[10%] text-white/10">
+              <Cherry className="w-12 h-12" />
+            </div>
+          </div>
 
-              <motion.h1
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: 0.4,
-                  duration: 0.8,
-                  ease: [0.22, 1, 0.36, 1]
-                }}
-                className="text-6xl md:text-7xl lg:text-8xl font-extrabold text-white mb-6 leading-[1.1] tracking-tight"
-              >
-                <span className="inline-block">Grow Your Farm,</span>
-                <br />
-                <motion.span
-                  className="inline-block bg-gradient-to-r from-green-300 via-emerald-300 to-green-400 bg-clip-text text-transparent"
-                  animate={{
-                    backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
-                  }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                  style={{ backgroundSize: "200% 200%" }}
-                >
-                  Harvest Success
-                </motion.span>
-              </motion.h1>
+          {/* Top navigation bar */}
+          <motion.nav
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="relative z-30 flex items-center justify-between px-6 md:px-12 lg:px-20 py-6"
+          >
+            <div className="flex items-center gap-3">
+              <img src="/logo-new.png" alt="Cherry Pick" className="h-10 w-auto object-contain" />
+            </div>
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-white/50 hover:text-white text-sm font-medium transition-colors duration-300">Features</a>
+              <a href="#how-it-works" className="text-white/50 hover:text-white text-sm font-medium transition-colors duration-300">How It Works</a>
+              <a href="#testimonials" className="text-white/50 hover:text-white text-sm font-medium transition-colors duration-300">Testimonials</a>
+              <Link href="/signin">
+                <button className="cp-btn-primary text-white text-sm font-semibold px-6 py-2.5 rounded-full">
+                  <span className="relative z-10">Get Started</span>
+                </button>
+              </Link>
+            </div>
+          </motion.nav>
 
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="text-xl md:text-2xl text-green-50 mb-12 max-w-3xl mx-auto leading-relaxed"
-              >
-                Cherry Pick connects farmers with buyers through secure, transparent smart contracts.
-                Get paid fairly, track your crops, and grow your business with blockchain technology.
-              </motion.p>
-
+          {/* Hero Content */}
+          <motion.div style={{ opacity: heroOpacity, scale: heroScale }} className="relative z-20 translate-y-[4%]">
+            <div className="max-w-5xl mx-auto px-6 md:px-12 pt-8 md:pt-12 lg:pt-16 text-center">
+              {/* Badge */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8, duration: 0.6 }}
-                className="flex flex-col sm:flex-row gap-6 justify-center items-center"
+                transition={{ delay: 0.4, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
               >
-                <Link href="/signin">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="relative group px-12 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full font-bold text-lg shadow-2xl hover:shadow-green-500/25 transition-all duration-300"
-                  >
-                    <span className="relative z-10 flex items-center gap-3">
-                      Sign In
-                      <ArrowRight className="h-5 w-5" />
-                    </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  </motion.button>
-                </Link>
-                <motion.button
-                  whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.15)" }}
-                  whileTap={{ scale: 0.95 }}
-                  className="group px-10 py-5 bg-white/5 text-white rounded-full font-bold text-lg border-2 border-white/80 hover:border-white transition-all backdrop-blur-md shadow-2xl relative overflow-hidden"
-                >
-                  <span className="relative z-10 flex items-center gap-2">
-                    Watch Demo
-                    <motion.span
-                      animate={{ x: [0, 5, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    >
-                      →
-                    </motion.span>
+                <div className="inline-flex items-center gap-2.5 cp-glass rounded-full px-5 py-2 mb-6">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-emerald-300/90 text-xs font-medium tracking-[0.15em] uppercase">
+                    Blockchain-Powered Agriculture
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-green-400/10 to-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </motion.button>
+                </div>
               </motion.div>
 
-              {/* Stats with Advanced Animations */}
+              {/* Headline */}
+              <motion.h1
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 1, ease: [0.22, 1, 0.36, 1] }}
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.05] tracking-[-0.03em] mb-6"
+              >
+                <span className="block text-white">Grow Your Farm,</span>
+                <span className="block cp-gradient-text mt-1">Harvest Success</span>
+              </motion.h1>
+
+              {/* Subheadline */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8, duration: 0.8 }}
+                className="text-base md:text-lg text-white/40 max-w-2xl mx-auto leading-relaxed font-light mb-10"
+              >
+                Cherry Pick connects farmers with buyers through secure, transparent
+                smart contracts. Get paid fairly, track your crops, and grow your
+                business with blockchain technology.
+              </motion.p>
+
+              {/* CTA Buttons */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1, duration: 0.8 }}
-                className="grid grid-cols-3 gap-12 mt-24 max-w-4xl mx-auto"
+                className="flex flex-col sm:flex-row gap-5 justify-center items-center mb-16"
+              >
+                <Link href="/signin">
+                  <button className="group cp-btn-primary text-white font-semibold px-10 py-4 rounded-full text-base flex items-center gap-3">
+                    <span className="relative z-10 flex items-center gap-3">
+                      Start Growing
+                      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                    </span>
+                  </button>
+                </Link>
+                <Link href="/lookup">
+                  <button className="group cp-btn-ghost text-white/70 hover:text-white font-medium px-8 py-4 rounded-full text-base flex items-center gap-3">
+                    <Search className="h-4 w-4" />
+                    Verify Product
+                  </button>
+                </Link>
+              </motion.div>
+
+              {/* Stats */}
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2, duration: 0.8 }}
+                className="grid grid-cols-3 gap-4 md:gap-8 max-w-3xl mx-auto pb-16"
               >
                 {[
-                  { value: "500+", label: "Active Farmers", icon: Users },
-                  { value: "K2.5M", label: "Paid Out", icon: DollarSign },
-                  { value: "98%", label: "Success Rate", icon: Award },
-                ].map((stat, index) => {
-                  const Icon = stat.icon;
-                  return (
-                    <motion.div
-                      key={index}
-                      className="relative group"
-                      initial={{ opacity: 0, scale: 0.5 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{
-                        delay: 1.2 + index * 0.1,
-                        type: "spring",
-                        stiffness: 150,
-                        damping: 15
-                      }}
-                    >
-                      <motion.div
-                        className="absolute inset-0 bg-white/5 backdrop-blur-md rounded-2xl"
-                        whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
-                        transition={{ duration: 0.3 }}
-                      />
-                      <div className="relative text-center p-8">
-                        <motion.div
-                          className="inline-flex items-center justify-center w-14 h-14 bg-green-400/20 rounded-2xl mb-4"
-                          whileHover={{ rotate: 360, scale: 1.1 }}
-                          transition={{ duration: 0.6 }}
-                        >
-                          <Icon className="h-7 w-7 text-green-300" />
-                        </motion.div>
-                        <motion.p
-                          className="text-5xl md:text-6xl font-extrabold text-white mb-3"
-                          whileHover={{ scale: 1.1 }}
-                          transition={{ type: "spring", stiffness: 300 }}
-                        >
-                          {stat.value}
-                        </motion.p>
-                        <p className="text-green-100 text-base font-medium tracking-wide">{stat.label}</p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                  { value: "500+", label: "Active Farmers" },
+                  { value: "K2.5M", label: "Paid Out" },
+                  { value: "98%", label: "Success Rate" },
+                ].map((stat, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.4 + i * 0.1 }}
+                    className="cp-glass rounded-2xl p-6 md:p-8"
+                  >
+                    <p className="cp-number text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-1">
+                      {stat.value}
+                    </p>
+                    <p className="text-white/30 text-xs md:text-sm font-medium tracking-wide">
+                      {stat.label}
+                    </p>
+                  </motion.div>
+                ))}
               </motion.div>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Premium Scroll Indicator */}
-        <motion.div
-          animate={{ y: [0, 12, 0] }}
-          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-          className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-30 cursor-pointer group"
-        >
-          <motion.div
-            className="w-7 h-12 border-2 border-white/40 rounded-full flex items-start justify-center p-2 backdrop-blur-sm bg-white/5"
-            whileHover={{ borderColor: "rgba(255, 255, 255, 0.8)", scale: 1.1 }}
-          >
-            <motion.div
-              className="w-1.5 h-4 bg-white/80 rounded-full"
-              animate={{ y: [0, 12, 0], opacity: [1, 0.5, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-            />
+            </div>
           </motion.div>
-          <p className="text-white/60 text-xs mt-3 text-center font-medium tracking-wider">SCROLL</p>
-        </motion.div>
-      </section>
+        </section>
 
-      {/* Features Section with Scroll Animations */}
-      <ScrollSection
-        title="Why Farmers Choose Cherry Pick"
-        subtitle="Everything you need to succeed in modern agriculture"
-      >
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              icon: Shield,
-              title: "Secure Payments",
-              description: "Get paid automatically when milestones are verified. No delays, no disputes.",
-              color: "from-blue-500 to-blue-600",
-            },
-            {
-              icon: TrendingUp,
-              title: "Fair Pricing",
-              description: "AI-powered market analysis ensures you always get the best price for your crops.",
-              color: "from-green-500 to-emerald-600",
-            },
-            {
-              icon: Smartphone,
-              title: "Easy to Use",
-              description: "Manage everything from your phone. No technical knowledge required.",
-              color: "from-purple-500 to-purple-600",
-            },
-          ].map((feature, index) => (
-            <FeatureCard key={index} {...feature} delay={index * 0.2} />
-          ))}
-        </div>
-      </ScrollSection>
+        {/* ──────────── FEATURES ──────────── */}
+        <section id="features" className="relative py-32 md:py-40 bg-[#F3F4F6]">
+          <div className="max-w-6xl mx-auto px-6 md:px-12">
+            <SectionHeader
+              badge="Why Cherry Pick"
+              title="Everything you need to succeed in modern agriculture"
+              subtitle="We built the infrastructure so you can focus on what matters most — growing."
+            />
 
-      {/* How It Works - Premium Scroll Telling */}
-      <section className="py-40 bg-gradient-to-br from-green-50 via-emerald-50 to-green-50 relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-full h-full">
-          <motion.div
-            className="absolute top-20 left-20 w-64 h-64 bg-green-200 rounded-full blur-3xl opacity-30"
-            animate={{ scale: [1, 1.3, 1], rotate: [0, 90, 0] }}
-            transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute bottom-20 right-20 w-80 h-80 bg-emerald-200 rounded-full blur-3xl opacity-30"
-            animate={{ scale: [1, 1.2, 1], rotate: [0, -90, 0] }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          />
-        </div>
+            <div className="grid md:grid-cols-3 gap-6 mt-20">
+              {[
+                {
+                  icon: Shield,
+                  title: "Secure Payments",
+                  desc: "Get paid automatically when milestones are verified. No delays, no disputes, no middlemen.",
+                  accent: "#10b981",
+                },
+                {
+                  icon: TrendingUp,
+                  title: "Fair Pricing",
+                  desc: "AI-powered market analysis ensures you always get the best price for your crops in real-time.",
+                  accent: "#10b981",
+                },
+                {
+                  icon: Smartphone,
+                  title: "Easy to Use",
+                  desc: "Manage everything from your phone. No technical knowledge required — just farm and earn.",
+                  accent: "#10b981",
+                },
+              ].map((f, i) => (
+                <FeatureCard key={i} {...f} index={i} />
+              ))}
+            </div>
+          </div>
+        </section>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <ScrollReveal>
-            <div className="text-center mb-32">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <span className="inline-block px-6 py-2 bg-green-500/10 border-2 border-green-500/30 rounded-full text-green-700 font-semibold mb-6">
-                  Simple Process
+        {/* ──────────── HOW IT WORKS ──────────── */}
+        <section id="how-it-works" className="relative py-32 md:py-40 bg-white overflow-hidden">
+          {/* Subtle grid background */}
+          <div className="absolute inset-0 opacity-[0.015]" style={{
+            backgroundImage: "linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)",
+            backgroundSize: "60px 60px"
+          }} />
+
+          <div className="max-w-6xl mx-auto px-6 md:px-12 relative z-10">
+            <SectionHeader
+              badge="Simple Process"
+              title={<>From seed to sale, <span className="cp-gradient-text">we&apos;re with you</span></>}
+              subtitle="Three simple steps to transform your farming business forever."
+            />
+
+            <div className="mt-24 space-y-24 md:space-y-32">
+              {[
+                {
+                  step: "01",
+                  title: "Create Your Contract",
+                  desc: "Set your terms, crop type, and expected yield. Our smart contracts handle the rest — instantly.",
+                  bullets: ["Flexible terms", "Automated verification", "Instant approval"],
+                  image: "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=800&q=80",
+                },
+                {
+                  step: "02",
+                  title: "Track Your Progress",
+                  desc: "Upload photos and updates as your crops grow. Extension officers verify each milestone in real-time.",
+                  bullets: ["Real-time tracking", "Photo verification", "Expert support"],
+                  image: "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800&q=80",
+                },
+                {
+                  step: "03",
+                  title: "Get Paid Automatically",
+                  desc: "Once verified, payments are released instantly to your wallet. No waiting, no hassle, no paperwork.",
+                  bullets: ["Instant payments", "Secure blockchain", "Full transparency"],
+                  image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&q=80",
+                },
+              ].map((s, i) => (
+                <ProcessStep key={i} {...s} reverse={i % 2 !== 0} index={i} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ──────────── BENEFITS GRID ──────────── */}
+        <section className="relative py-32 md:py-40 bg-[#F3F4F6]">
+          <div className="max-w-6xl mx-auto px-6 md:px-12">
+            <SectionHeader
+              badge="Platform"
+              title="Built for modern farmers"
+              subtitle="Technology that works as hard as you do."
+            />
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mt-20">
+              {[
+                { icon: Lock, title: "Blockchain Security", desc: "Encrypted & immutable records" },
+                { icon: DollarSign, title: "Fair Pricing", desc: "AI-powered market analysis" },
+                { icon: BarChart3, title: "Analytics", desc: "Track & optimize performance" },
+                { icon: Globe, title: "Global Market", desc: "Connect worldwide" },
+                { icon: Award, title: "Quality Verified", desc: "Professional verification" },
+                { icon: Target, title: "Goal Tracking", desc: "Set & achieve milestones" },
+                { icon: Zap, title: "Fast Payments", desc: "Minutes, not months" },
+                { icon: Heart, title: "Community", desc: "500+ successful farmers" },
+              ].map((b, i) => (
+                <BenefitCard key={i} {...b} index={i} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ──────────── TESTIMONIALS ──────────── */}
+        <section id="testimonials" className="relative py-32 md:py-40 cp-aurora-bg cp-grain overflow-hidden">
+          {/* Ambient orb */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute w-[600px] h-[600px] rounded-full" style={{
+              background: "radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 60%)",
+              top: "10%", left: "50%", transform: "translateX(-50%)",
+            }} />
+          </div>
+
+          <div className="max-w-6xl mx-auto px-6 md:px-12 relative z-10">
+            <SectionHeader
+              badge="Testimonials"
+              title="Trusted by farmers across Zambia"
+              subtitle="Real stories from real farmers."
+              dark
+            />
+
+            <div className="grid md:grid-cols-3 gap-6 mt-20">
+              {[
+                {
+                  name: "John Mwale",
+                  role: "Mango Farmer, Lusaka",
+                  quote: "Cherry Pick changed my life. I now get paid on time and can plan for my family's future with confidence.",
+                  initials: "JM",
+                },
+                {
+                  name: "Mary Banda",
+                  role: "Pineapple Farmer, Ndola",
+                  quote: "The transparency is amazing. I can see exactly when my payments will arrive — no more uncertainty.",
+                  initials: "MB",
+                },
+                {
+                  name: "Peter Phiri",
+                  role: "Tomato Farmer, Kitwe",
+                  quote: "Best decision I ever made. My income has doubled since joining Cherry Pick. It's a game-changer.",
+                  initials: "PP",
+                },
+              ].map((t, i) => (
+                <TestimonialCard key={i} {...t} index={i} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ──────────── CTA ──────────── */}
+        <section className="relative py-32 md:py-40 bg-white overflow-hidden">
+          {/* Subtle Crops Background */}
+          <div className="absolute inset-0 pointer-events-none">
+            <img
+              src="https://images.unsplash.com/photo-1625246333195-551e5d2c5e34?q=80&w=2070&auto=format&fit=crop"
+              alt="Crops Field Background"
+              className="w-full h-full object-cover opacity-[0.03] grayscale"
+            />
+          </div>
+
+          <div className="absolute inset-0 opacity-[0.02]" style={{
+            backgroundImage: "radial-gradient(circle at 30% 50%, #10b981 0%, transparent 50%), radial-gradient(circle at 70% 50%, #059669 0%, transparent 50%)",
+          }} />
+
+          <div className="max-w-3xl mx-auto px-6 md:px-12 text-center relative z-10">
+            <ScrollReveal>
+              <div className="inline-flex items-center gap-2 bg-emerald-50 rounded-full px-4 py-1.5 mb-8">
+                <Sprout className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-700 text-xs font-semibold tracking-wide uppercase">
+                  Get Started Today
                 </span>
-              </motion.div>
-              <h2 className="text-6xl md:text-7xl lg:text-8xl font-black text-gray-900 mb-8 tracking-tight leading-[1.1]">
-                How It <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">Works</span>
+              </div>
+
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 tracking-[-0.03em] leading-[1.1] mb-6">
+                Ready to transform{" "}
+                <span className="cp-gradient-text">your farm?</span>
               </h2>
-              <p className="text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                From seed to sale, we're with you every step of the way
+
+              <p className="text-lg text-gray-500 mb-12 leading-relaxed max-w-xl mx-auto">
+                Join hundreds of successful farmers already using Cherry Pick to
+                secure contracts, track crops, and get paid on time.
               </p>
-              <motion.div
-                initial={{ scaleX: 0 }}
-                whileInView={{ scaleX: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.4, duration: 0.8 }}
-                className="w-32 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mx-auto mt-10"
-              />
-            </div>
-          </ScrollReveal>
 
-          <div className="space-y-32">
-            {[
-              {
-                step: "01",
-                title: "Create Your Contract",
-                description: "Set your terms, crop type, and expected yield. Our smart contracts handle the rest.",
-                image: "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=800&q=80",
-                features: ["Flexible terms", "Automated verification", "Instant approval"],
-              },
-              {
-                step: "02",
-                title: "Track Your Progress",
-                description: "Upload photos and updates as your crops grow. Extension officers verify each milestone.",
-                image: "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800&q=80",
-                features: ["Real-time tracking", "Photo verification", "Expert support"],
-              },
-              {
-                step: "03",
-                title: "Get Paid Automatically",
-                description: "Once verified, payments are released instantly to your wallet. No waiting, no hassle.",
-                image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&q=80",
-                features: ["Instant payments", "Secure blockchain", "Full transparency"],
-              },
-            ].map((step, index) => (
-              <HowItWorksStep key={index} {...step} reverse={index % 2 !== 0} />
-            ))}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link href="/signin">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="cp-btn-primary text-white font-semibold px-10 py-4 rounded-full text-base flex items-center gap-3"
+                  >
+                    <span className="relative z-10 flex items-center gap-3">
+                      Start Growing
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </motion.button>
+                </Link>
+                <button className="text-gray-500 hover:text-gray-900 font-medium px-8 py-4 rounded-full text-base transition-colors duration-300 border border-gray-200 hover:border-gray-300">
+                  Contact Sales
+                </button>
+              </div>
+            </ScrollReveal>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* Benefits Grid */}
-      <ScrollSection
-        title="Built for Modern Farmers"
-        subtitle="Technology that works as hard as you do"
-        className="bg-white"
-      >
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { icon: Lock, title: "Blockchain Security", description: "Your data is encrypted and immutable" },
-            { icon: DollarSign, title: "Fair Pricing", description: "AI-powered market analysis" },
-            { icon: BarChart3, title: "Analytics", description: "Track performance and optimize" },
-            { icon: Globe, title: "Global Market", description: "Connect with buyers worldwide" },
-            { icon: Award, title: "Quality Verified", description: "Professional verification system" },
-            { icon: Target, title: "Goal Tracking", description: "Set and achieve milestones" },
-            { icon: Zap, title: "Fast Payments", description: "Get paid in minutes, not months" },
-            { icon: Heart, title: "Community", description: "Join 500+ successful farmers" },
-          ].map((benefit, index) => (
-            <BenefitCard key={index} {...benefit} delay={index * 0.1} />
-          ))}
-        </div>
-      </ScrollSection>
-
-      {/* Testimonials */}
-      <section className="py-32 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ScrollReveal>
-            <div className="text-center mb-20">
-              <h2 className="text-5xl md:text-6xl font-bold mb-6">
-                Trusted by Farmers Across Zambia
-              </h2>
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                See how Cherry Pick is transforming lives
-              </p>
-            </div>
-          </ScrollReveal>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "John Mwale",
-                role: "Mango Farmer, Lusaka",
-                quote: "Cherry Pick changed my life. I now get paid on time and can plan for my family's future.",
-                avatar: "JM",
-              },
-              {
-                name: "Mary Banda",
-                role: "Pineapple Farmer, Ndola",
-                quote: "The transparency is amazing. I can see exactly when my payments will arrive.",
-                avatar: "MB",
-              },
-              {
-                name: "Peter Phiri",
-                role: "Tomato Farmer, Kitwe",
-                quote: "Best decision I ever made. My income has doubled since joining Cherry Pick.",
-                avatar: "PP",
-              },
-            ].map((testimonial, index) => (
-              <TestimonialCard key={index} {...testimonial} delay={index * 0.2} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="relative py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-600 to-emerald-700"></div>
-        <div className="absolute inset-0 opacity-10">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: "url('https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1920&q=80')",
-            }}
-          ></div>
-        </div>
-
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <ScrollReveal>
-            <h2 className="text-5xl md:text-6xl font-bold text-white mb-6">
-              Ready to Transform Your Farm?
-            </h2>
-            <p className="text-xl text-green-50 mb-12 max-w-2xl mx-auto">
-              Join hundreds of successful farmers already using Cherry Pick
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href="/signin">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-10 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full font-bold text-lg shadow-2xl hover:shadow-green-500/25 transition-all duration-300"
-                >
-                  Sign In Now
-                </motion.button>
-              </Link>
-              <button className="px-10 py-5 bg-transparent text-white rounded-full font-bold text-lg border-2 border-white hover:bg-white/10 transition-all">
-                Contact Sales
-              </button>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
+      {/* ──────────── FOOTER ──────────── */}
+      <footer className="relative mt-auto w-full cp-aurora-bg cp-grain flex-shrink-0 overflow-hidden">
+        <div className="cp-divider" />
+        <div className="max-w-6xl mx-auto px-6 md:px-12 pt-16 pb-8 relative z-10">
+          <div className="grid md:grid-cols-4 gap-10 mb-14">
             <div>
-              <div className="flex items-center space-x-2 mb-4">
+              <div className="flex items-center gap-2.5 mb-5">
+                {/* Fixed Logo: using new logo, removed brightness/invert filter */}
                 <img
-                  src="/cherrypick-logo.png"
+                  src="/logo-new.png"
                   alt="Cherry Pick"
-                  className="h-10 w-auto object-contain"
+                  className="h-14 w-auto object-contain hover:opacity-100 transition-opacity"
                 />
               </div>
-              <p className="text-gray-400">
-                Empowering farmers with blockchain technology
+              <p className="text-white/30 text-sm leading-relaxed">
+                Empowering farmers with blockchain technology for a more transparent and fair future.
               </p>
             </div>
-            <div>
-              <h4 className="text-white font-bold mb-4">Product</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="hover:text-green-400 transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">Security</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4">Company</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="hover:text-green-400 transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">Careers</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4">Support</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="hover:text-green-400 transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-green-400 transition-colors">FAQ</a></li>
-              </ul>
-            </div>
+            {[
+              { title: "Product", links: ["Features", "Pricing", "Security", "Roadmap"] },
+              { title: "Company", links: ["About", "Blog", "Careers", "Press"] },
+              { title: "Support", links: ["Help Center", "Contact", "FAQ", "Status"] },
+            ].map((col, i) => (
+              <div key={i}>
+                <h4 className="text-white text-xs font-semibold tracking-[0.15em] uppercase mb-5" style={{ color: '#ffffff' }}>{col.title}</h4>
+                <ul className="space-y-3">
+                  {col.links.map((link, j) => (
+                    <li key={j}>
+                      <a href="#" className="text-white/30 hover:text-white/70 text-sm transition-colors duration-300">
+                        {link}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Cherry Pick. All rights reserved.</p>
+
+          <div className="cp-divider mb-8" />
+
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-white/20 text-xs">&copy; 2026 Cherry Pick. All rights reserved.</p>
+            <div className="flex gap-6">
+              <a href="#" className="text-white/20 hover:text-white/50 text-xs transition-colors">Privacy</a>
+              <a href="#" className="text-white/20 hover:text-white/50 text-xs transition-colors">Terms</a>
+              <a href="#" className="text-white/20 hover:text-white/50 text-xs transition-colors">Cookies</a>
+            </div>
           </div>
         </div>
       </footer>
@@ -491,290 +636,200 @@ export default function LandingPage() {
   );
 }
 
-// Reusable Components
-function ScrollSection({ title, subtitle, children, className = "bg-gray-50" }: any) {
-  const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
+/* ─────────────────────────────── SUB COMPONENTS ─────────────────────────── */
 
-  return (
-    <section ref={ref} className={`py-32 ${className} relative overflow-hidden`}>
-      {/* Decorative background elements */}
-      <motion.div
-        className="absolute top-20 right-10 w-72 h-72 bg-green-100 rounded-full blur-3xl opacity-20"
-        animate={{ scale: [1, 1.2, 1], x: [0, 50, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute bottom-20 left-10 w-96 h-96 bg-emerald-100 rounded-full blur-3xl opacity-20"
-        animate={{ scale: [1, 1.1, 1], x: [0, -30, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-      />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center mb-24"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={inView ? { opacity: 1, scale: 1 } : {}}
-            transition={{ delay: 0.2 }}
-          >
-            <h2 className="text-5xl md:text-6xl lg:text-7xl font-black text-gray-900 mb-6 tracking-tight leading-tight">
-              {title}
-            </h2>
-          </motion.div>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={inView ? { opacity: 1 } : {}}
-            transition={{ delay: 0.4 }}
-            className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed"
-          >
-            {subtitle}
-          </motion.p>
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={inView ? { scaleX: 1 } : {}}
-            transition={{ delay: 0.6, duration: 0.8 }}
-            className="w-24 h-1.5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full mx-auto mt-8"
-          />
-        </motion.div>
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function FeatureCard({ icon: Icon, title, description, color, delay }: any) {
+function SectionHeader({ badge, title, subtitle, dark = false }: any) {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
 
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 50, scale: 0.95 }}
-      animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-      transition={{
-        duration: 0.7,
-        delay,
-        ease: [0.25, 0.46, 0.45, 0.94]
-      }}
-      whileHover={{ y: -12, scale: 1.02 }}
-      className="group bg-white rounded-3xl p-10 shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] transition-all relative overflow-hidden"
+      initial={{ opacity: 0, y: 30 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      className="text-center"
     >
-      {/* Animated gradient background on hover */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-      />
+      <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 ${dark
+        ? "bg-white/5 border border-white/10"
+        : "bg-emerald-50 border border-emerald-100"
+        }`}>
+        <span className={`text-xs font-semibold tracking-[0.15em] uppercase ${dark ? "text-emerald-300/80" : "text-emerald-700"
+          }`}>
+          {badge}
+        </span>
+      </div>
 
-      <div className="relative z-10">
+      <h2
+        style={dark ? { color: "#ffffff" } : {}}
+        className={`text-3xl md:text-4xl lg:text-5xl font-bold tracking-[-0.03em] leading-[1.15] mb-5 ${dark ? "text-white" : "text-gray-900"
+          }`}>
+        {title}
+      </h2>
+
+      <p className={`text-base md:text-lg max-w-2xl mx-auto leading-relaxed ${dark ? "text-white/35" : "text-gray-500"
+        }`}>
+        {subtitle}
+      </p>
+    </motion.div>
+  );
+}
+
+function FeatureCard({ icon: Icon, title, desc, accent, index }: any) {
+  const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 40 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.7, delay: index * 0.12, ease: [0.22, 1, 0.36, 1] }}
+      className="cp-light-card rounded-2xl p-8 md:p-10 group cursor-default"
+    >
+      <div
+        className="w-12 h-12 rounded-xl flex items-center justify-center mb-6"
+        style={{ backgroundColor: `${accent}10` }}
+      >
+        <Icon className="h-6 w-6" style={{ color: accent }} />
+      </div>
+
+      <h3 className="text-xl font-bold text-gray-900 tracking-tight mb-3">{title}</h3>
+      <p className="text-gray-500 leading-relaxed text-[15px]">{desc}</p>
+
+      {/* Bottom accent line */}
+      <div className="mt-8 h-[2px] bg-gray-100 rounded-full overflow-hidden">
         <motion.div
-          className={`w-20 h-20 bg-gradient-to-br ${color} rounded-2xl flex items-center justify-center mb-7 shadow-xl`}
-          whileHover={{ rotate: [0, -10, 10, -10, 0], scale: 1.1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Icon className="h-9 w-9 text-white" />
-        </motion.div>
-
-        <h3 className="text-2xl font-extrabold text-gray-900 mb-4 tracking-tight">{title}</h3>
-        <p className="text-gray-600 leading-relaxed text-lg">{description}</p>
-
-        {/* Decorative element */}
-        <motion.div
-          className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-emerald-500 transform scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500"
+          className="h-full rounded-full"
+          style={{ backgroundColor: accent }}
+          initial={{ width: "0%" }}
+          whileInView={{ width: "40%" }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.5 + index * 0.15, duration: 1, ease: "easeOut" }}
         />
       </div>
     </motion.div>
   );
 }
 
-function HowItWorksStep({ step, title, description, image, features, reverse }: any) {
-  const [ref, inView] = useInView({ threshold: 0.2, triggerOnce: true });
+function ProcessStep({ step, title, desc, bullets, image, reverse, index }: any) {
+  const [ref, inView] = useInView({ threshold: 0.25, triggerOnce: true });
 
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, x: reverse ? 60 : -60 }}
-      animate={inView ? { opacity: 1, x: 0 } : {}}
-      transition={{
-        duration: 0.9,
-        ease: [0.25, 0.46, 0.45, 0.94]
-      }}
-      className={`flex flex-col ${reverse ? "md:flex-row-reverse" : "md:flex-row"} gap-16 items-center`}
+      initial={{ opacity: 0, y: 60 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 1.0, ease: [0.22, 1, 0.36, 1] }}
+      className={`flex flex-col ${reverse ? "md:flex-row-reverse" : "md:flex-row"} gap-12 md:gap-16 items-center`}
     >
-      <div className="flex-1 space-y-8">
+      <div className="flex-1 space-y-6">
         <motion.div
-          initial={{ opacity: 0, scale: 0 }}
+          initial={{ opacity: 0, scale: 0.5 }}
           animate={inView ? { opacity: 1, scale: 1 } : {}}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="inline-block"
+          transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 20 }}
         >
-          <div className="text-8xl font-black bg-gradient-to-br from-green-200 to-emerald-300 bg-clip-text text-transparent mb-6">
-            {step}
-          </div>
+          <span className="cp-number text-6xl md:text-7xl font-bold cp-gradient-text">{step}</span>
         </motion.div>
 
-        <motion.h3
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.3 }}
-          className="text-5xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight"
-        >
+        <h3 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-[-0.02em] leading-tight">
           {title}
-        </motion.h3>
+        </h3>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ delay: 0.4 }}
-          className="text-xl text-gray-600 leading-relaxed"
-        >
-          {description}
-        </motion.p>
+        <p className="text-gray-500 text-lg leading-relaxed">{desc}</p>
 
-        <motion.ul
-          className="space-y-5"
-          initial="hidden"
-          animate={inView ? "visible" : "hidden"}
-          variants={{
-            visible: {
-              transition: {
-                staggerChildren: 0.1,
-                delayChildren: 0.5
-              }
-            }
-          }}
-        >
-          {features.map((feature: string, index: number) => (
+        <ul className="space-y-3 pt-2">
+          {bullets.map((b: string, i: number) => (
             <motion.li
-              key={index}
-              variants={{
-                hidden: { opacity: 0, x: -20 },
-                visible: { opacity: 1, x: 0 }
-              }}
-              className="flex items-center space-x-4 group"
+              key={i}
+              initial={{ opacity: 0, x: -15 }}
+              animate={inView ? { opacity: 1, x: 0 } : {}}
+              transition={{ delay: 0.5 + i * 0.1 }}
+              className="flex items-center gap-3"
             >
-              <motion.div
-                whileHover={{ scale: 1.2, rotate: 360 }}
-                transition={{ duration: 0.6 }}
-                className="flex-shrink-0"
-              >
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-500 transition-colors">
-                  <CheckCircle className="h-5 w-5 text-green-600 group-hover:text-white transition-colors" />
-                </div>
-              </motion.div>
-              <span className="text-lg text-gray-700 font-medium">{feature}</span>
+              <div className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+              </div>
+              <span className="text-gray-700 font-medium text-[15px]">{b}</span>
             </motion.li>
           ))}
-        </motion.ul>
+        </ul>
       </div>
 
-      <div className="flex-1">
+      <div className="flex-1 w-full">
+        {/* Simple Fade In (User Requested) */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={inView ? { opacity: 1, scale: 1 } : {}}
-          transition={{ delay: 0.4, duration: 0.6 }}
-          whileHover={{ scale: 1.03, rotate: reverse ? 2 : -2 }}
-          className="relative rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] group"
+          initial={{ opacity: 0 }}
+          animate={inView ? { opacity: 1 } : {}}
+          transition={{ delay: 0.3, duration: 1.0 }}
+          className="relative group"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-green-600/20 to-emerald-600/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
-          <img src={image} alt={title} className="w-full h-[28rem] object-cover" />
+          <div className="relative rounded-2xl overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.12)] border border-gray-100">
+            <MotionImage
+              src={image}
+              alt={title}
+              className="w-full h-[300px] md:h-[400px] object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
+          </div>
         </motion.div>
       </div>
     </motion.div>
   );
 }
 
-function BenefitCard({ icon: Icon, title, description, delay }: any) {
+// Wrapper for image to support motion and hover scale
+const MotionImage = motion.img;
+
+function BenefitCard({ icon: Icon, title, desc, index }: any) {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
 
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, scale: 0.8, y: 30 }}
-      animate={inView ? { opacity: 1, scale: 1, y: 0 } : {}}
-      transition={{
-        duration: 0.6,
-        delay,
-        ease: [0.22, 1, 0.36, 1]
-      }}
-      whileHover={{ y: -8, scale: 1.03 }}
-      className="group bg-gradient-to-br from-white via-gray-50 to-white p-8 rounded-2xl border-2 border-gray-100 hover:border-green-400 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] transition-all relative overflow-hidden"
+      initial={{ opacity: 0, y: 30 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.6, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+      className="cp-light-card rounded-xl p-6 group cursor-default"
     >
-      {/* Hover gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-      <div className="relative z-10">
-        <motion.div
-          whileHover={{ rotate: 360, scale: 1.2 }}
-          transition={{ duration: 0.7 }}
-          className="inline-block"
-        >
-          <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mb-5 shadow-lg group-hover:shadow-xl transition-shadow">
-            <Icon className="h-7 w-7 text-white" />
-          </div>
-        </motion.div>
-        <h4 className="text-xl font-extrabold text-gray-900 mb-3 tracking-tight">{title}</h4>
-        <p className="text-base text-gray-600 leading-relaxed">{description}</p>
+      <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center mb-4 group-hover:bg-emerald-100 transition-colors duration-300">
+        <Icon className="h-5 w-5 text-emerald-600" />
       </div>
+      <h4 className="text-base font-bold text-gray-900 tracking-tight mb-1.5">{title}</h4>
+      <p className="text-gray-400 text-sm leading-relaxed">{desc}</p>
     </motion.div>
   );
 }
 
-function TestimonialCard({ name, role, quote, avatar, delay }: any) {
+function TestimonialCard({ name, role, quote, initials, index }: any) {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
 
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 40, rotateX: -15 }}
-      animate={inView ? { opacity: 1, y: 0, rotateX: 0 } : {}}
-      transition={{
-        duration: 0.7,
-        delay,
-        ease: [0.22, 1, 0.36, 1]
-      }}
-      whileHover={{ y: -10, scale: 1.02 }}
-      className="bg-white/15 backdrop-blur-lg rounded-3xl p-10 border border-white/30 shadow-[0_20px_60px_rgba(0,0,0,0.3)] group relative overflow-hidden"
+      initial={{ opacity: 0, y: 40 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.7, delay: index * 0.15, ease: [0.22, 1, 0.36, 1] }}
+      className="cp-glass-card rounded-2xl p-8 md:p-10 h-full flex flex-col justify-between"
     >
-      {/* Decorative gradient on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 to-emerald-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-      <div className="relative z-10">
-        <div className="flex items-center space-x-5 mb-8">
-          <motion.div
-            className="w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl"
-            whileHover={{ scale: 1.1, rotate: 5 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
-            <span className="text-white font-extrabold text-2xl">{avatar}</span>
-          </motion.div>
-          <div>
-            <h4 className="text-2xl font-extrabold text-white mb-1 tracking-tight">{name}</h4>
-            <p className="text-green-300 text-base font-medium">{role}</p>
-          </div>
+      <div>
+        {/* Stars */}
+        <div className="flex gap-1 mb-6">
+          {[...Array(5)].map((_, i) => (
+            <Star key={i} className="h-4 w-4 fill-emerald-400 text-emerald-400" />
+          ))}
         </div>
 
-        {/* Quote marks */}
-        <div className="text-6xl text-green-300/20 font-serif mb-4 leading-none">"</div>
-        <p className="text-gray-100 text-lg leading-relaxed italic font-light -mt-6 mb-4">
-          {quote}
+        <p className="text-white/60 text-base leading-relaxed mb-8 font-light">
+          &ldquo;{quote}&rdquo;
         </p>
+      </div>
 
-        {/* Star rating */}
-        <div className="flex space-x-1">
-          {[...Array(5)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={inView ? { opacity: 1, scale: 1 } : {}}
-              transition={{ delay: delay + 0.5 + i * 0.1 }}
-            >
-              <svg className="w-5 h-5 text-yellow-400 fill-current" viewBox="0 0 20 20">
-                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-              </svg>
-            </motion.div>
-          ))}
+      <div className="flex items-center gap-4">
+        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+          <span className="text-white font-bold text-sm">{initials}</span>
+        </div>
+        <div>
+          <h4 style={{ color: "#ffffff" }} className="text-white font-semibold text-sm">{name}</h4>
+          <p className="text-white/30 text-xs">{role}</p>
         </div>
       </div>
     </motion.div>
@@ -783,13 +838,12 @@ function TestimonialCard({ name, role, quote, avatar, delay }: any) {
 
 function ScrollReveal({ children }: any) {
   const [ref, inView] = useInView({ threshold: 0.1, triggerOnce: true });
-
   return (
     <motion.div
       ref={ref}
       initial={{ opacity: 0, y: 30 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.8 }}
+      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.div>

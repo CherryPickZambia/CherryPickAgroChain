@@ -141,17 +141,14 @@ export type BatchStatus =
   | 'at_retail'
   | 'sold';
 
-// Generate unique batch code
+// Generate unique batch code (short format for printing on packaging)
 export function generateBatchCode(cropType: string, farmerId: string): string {
-  const date = new Date();
-  const year = date.getFullYear().toString().slice(-2);
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const cropCode = cropType.slice(0, 3).toUpperCase();
-  const farmerCode = farmerId.slice(-4).toUpperCase();
-  const random = Math.random().toString(36).slice(-4).toUpperCase();
-
-  return `CP-${cropCode}-${year}${month}${day}-${farmerCode}-${random}`;
+  const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `B-${code}`;
 }
 
 // Create a new batch for tracking
@@ -296,6 +293,29 @@ export async function getTraceabilityByBatchCode(batchCodeOrContractId: string):
 
     if (data) {
       batch = data;
+    }
+  }
+
+  // 3. If still not found, try to find by contract_code on the contracts table
+  if (!batch) {
+    const { data: contract } = await client
+      .from('contracts')
+      .select('id')
+      .eq('contract_code', batchCodeOrContractId)
+      .single();
+
+    if (contract) {
+      const { data } = await client
+        .from('batches')
+        .select('*')
+        .eq('contract_id', contract.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data) {
+        batch = data;
+      }
     }
   }
 
