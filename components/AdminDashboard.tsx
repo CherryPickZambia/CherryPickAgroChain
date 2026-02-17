@@ -25,7 +25,7 @@ import AdminCreateContractModal from "./AdminCreateContractModal";
 import AdminBiddingPanel from "./AdminBiddingPanel";
 import WarehouseProcessingModal from "./WarehouseProcessingModal";
 import UniversalQRCode from "./UniversalQRCode";
-import { logProcessingEvent } from "@/lib/traceabilityService";
+import { logProcessingEvent, getAllBatches, getRecentTraceabilityEvents, type Batch, type TraceabilityEvent } from "@/lib/traceabilityService";
 
 // Sample jobs data
 const SAMPLE_JOBS: JobData[] = [
@@ -270,6 +270,11 @@ export default function AdminDashboard() {
     { batchCode: "CP-CAS-241120-D2T6", cropType: "Cashews", farmerName: "David Tembo", quantity: "320 kg", grade: "Grade A", nftTxHash: "0xabcdef1234567890", verifiedAt: "2024-11-25" },
   ]);
 
+  // Traceability data state
+  const [allBatches, setAllBatches] = useState<(Batch & { farmer_name?: string })[]>([]);
+  const [recentEvents, setRecentEvents] = useState<(TraceabilityEvent & { batch_code?: string })[]>([]);
+  const [loadingBatches, setLoadingBatches] = useState(false);
+
   // Load verified products (batches with NFTs)
   const loadVerifiedProducts = async () => {
     try {
@@ -305,6 +310,23 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Error loading verified products:', error);
+    }
+  };
+
+  // Load traceability data (batches and events from Supabase)
+  const loadTraceabilityData = async () => {
+    try {
+      setLoadingBatches(true);
+      const [batchesData, eventsData] = await Promise.all([
+        getAllBatches(),
+        getRecentTraceabilityEvents(20),
+      ]);
+      setAllBatches(batchesData);
+      setRecentEvents(eventsData);
+    } catch (error: any) {
+      console.error('Error loading traceability data:', error?.message || JSON.stringify(error));
+    } finally {
+      setLoadingBatches(false);
     }
   };
 
@@ -389,8 +411,8 @@ export default function AdminDashboard() {
       } else {
         setContracts([]);
       }
-    } catch (error) {
-      console.error('Error loading contracts:', error);
+    } catch (error: any) {
+      console.error('Error loading contracts:', error?.message || JSON.stringify(error));
       toast.error('Failed to load contracts');
     } finally {
       setLoadingContracts(false);
@@ -477,10 +499,10 @@ export default function AdminDashboard() {
           crop_type: contract?.crop_type || 'Unknown',
           payment_amount: milestone.payment_amount || 0,
           submitted_date: milestone.completed_date || new Date().toISOString(),
-          officer_name: metadata.officer_name || 'Verifier',
+          officer_name: metadata.officer_name || metadata.officer_id || 'Verifier',
           officer_wallet: metadata.officer_wallet || '',
-          evidence_images: metadata.images || [],
-          officer_notes: metadata.notes || '',
+          evidence_images: metadata.officer_images || metadata.images || [],
+          officer_notes: metadata.officer_notes || metadata.notes || '',
           contract_id: milestone.contract_id,
           blockchain_contract_id: undefined,
           total_contract_value: contract?.total_value || 5000,
@@ -540,6 +562,7 @@ export default function AdminDashboard() {
     }
     if (selectedView === 'traceability') {
       loadVerifiedProducts();
+      loadTraceabilityData();
     }
     if (selectedView === 'farmers') {
       loadFarmers();
@@ -1649,8 +1672,8 @@ export default function AdminDashboard() {
                         className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 w-64"
                       />
                     </div>
-                    <button className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2">
-                      <RefreshCw className="h-4 w-4" />
+                    <button onClick={() => loadTraceabilityData()} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2">
+                      <RefreshCw className={`h-4 w-4 ${loadingBatches ? 'animate-spin' : ''}`} />
                       Refresh
                     </button>
                   </div>
@@ -1663,7 +1686,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500">Total Batches</p>
-                      <p className="text-3xl font-bold text-gray-900">47</p>
+                      <p className="text-3xl font-bold text-gray-900">{allBatches.length}</p>
                     </div>
                     <div className="p-3 bg-teal-50 rounded-lg">
                       <Package className="h-6 w-6 text-teal-600" />
@@ -1674,7 +1697,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500">In Transit</p>
-                      <p className="text-3xl font-bold text-gray-900">12</p>
+                      <p className="text-3xl font-bold text-gray-900">{allBatches.filter(b => b.current_status === 'in_transit').length}</p>
                     </div>
                     <div className="p-3 bg-blue-50 rounded-lg">
                       <MapPin className="h-6 w-6 text-blue-600" />
@@ -1685,7 +1708,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-gray-500">At Warehouse</p>
-                      <p className="text-3xl font-bold text-gray-900">23</p>
+                      <p className="text-3xl font-bold text-gray-900">{allBatches.filter(b => b.current_status === 'at_warehouse' || b.current_status === 'processing').length}</p>
                     </div>
                     <div className="p-3 bg-purple-50 rounded-lg">
                       <Landmark className="h-6 w-6 text-purple-600" />
@@ -1695,104 +1718,105 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-500">QR Scans Today</p>
-                      <p className="text-3xl font-bold text-gray-900">156</p>
+                      <p className="text-sm text-gray-500">Distributed</p>
+                      <p className="text-3xl font-bold text-gray-900">{allBatches.filter(b => b.current_status === 'distributed' || b.current_status === 'at_retail').length}</p>
                     </div>
                     <div className="p-3 bg-emerald-50 rounded-lg">
-                      <QrCode className="h-6 w-6 text-emerald-600" />
+                      <Truck className="h-6 w-6 text-emerald-600" />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Sample Batches List */}
+              {/* Real Batches List */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Batches</h3>
-                <div className="space-y-4">
-                  {[
-                    { id: "CP-MAN-241201-J8K2", farmer: "John Mwale", crop: "Mangoes", quantity: "500 kg", status: "in_transit", location: "En route to Lusaka Warehouse", events: 8 },
-                    { id: "CP-TOM-241128-M4R9", farmer: "Mary Banda", crop: "Tomatoes", quantity: "800 kg", status: "at_warehouse", location: "Kabwe Cold Storage", events: 12 },
-                    { id: "CP-PIN-241125-P7Q3", farmer: "Peter Phiri", crop: "Pineapples", quantity: "350 kg", status: "growing", location: "Farm - Kitwe", events: 5 },
-                    { id: "CP-CAS-241120-D2T6", farmer: "David Tembo", crop: "Cashews", quantity: "200 kg", status: "harvested", location: "Chipata Farm", events: 7 },
-                    { id: "CP-TOM-241115-A9B4", farmer: "Agnes Mulenga", crop: "Tomatoes", quantity: "420 kg", status: "distributed", location: "Retail - Livingstone", events: 15 },
-                  ].map((batch, index) => (
-                    <motion.div
-                      key={batch.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl group-hover:from-teal-100 group-hover:to-emerald-100 transition-colors">
-                          <QrCode className="h-6 w-6 text-teal-600" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-gray-900 font-mono">{batch.id}</h4>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${batch.status === 'growing' ? 'bg-green-100 text-green-700' :
-                              batch.status === 'harvested' ? 'bg-yellow-100 text-yellow-700' :
-                                batch.status === 'in_transit' ? 'bg-blue-100 text-blue-700' :
-                                  batch.status === 'at_warehouse' ? 'bg-purple-100 text-purple-700' :
-                                    'bg-gray-100 text-gray-700'
-                              }`}>
-                              {batch.status.replace('_', ' ')}
-                            </span>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Batches{loadingBatches && <Loader2 className="inline h-4 w-4 ml-2 animate-spin" />}</h3>
+                {allBatches.length === 0 && !loadingBatches ? (
+                  <p className="text-sm text-gray-500 text-center py-8">No batches created yet. Batches are auto-created when contracts are set up.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {allBatches.slice(0, 10).map((batch, index) => (
+                      <motion.div
+                        key={batch.id || batch.batch_code}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl group-hover:from-teal-100 group-hover:to-emerald-100 transition-colors">
+                            <QrCode className="h-6 w-6 text-teal-600" />
                           </div>
-                          <p className="text-sm text-gray-600">{batch.farmer} • {batch.crop} • {batch.quantity}</p>
-                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {batch.location}
-                          </p>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-semibold text-gray-900 font-mono">{batch.batch_code}</h4>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${batch.current_status === 'growing' ? 'bg-green-100 text-green-700' :
+                                batch.current_status === 'harvested' ? 'bg-yellow-100 text-yellow-700' :
+                                  batch.current_status === 'in_transit' ? 'bg-blue-100 text-blue-700' :
+                                    batch.current_status === 'at_warehouse' ? 'bg-purple-100 text-purple-700' :
+                                      batch.current_status === 'distributed' ? 'bg-emerald-100 text-emerald-700' :
+                                        'bg-gray-100 text-gray-700'
+                                }`}>
+                                {(batch.current_status || 'unknown').replace(/_/g, ' ')}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600">{batch.farmer_name} • {batch.crop_type} • {batch.total_quantity || ''} {batch.unit || 'kg'}</p>
+                            {batch.current_location && (
+                              <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                                <MapPin className="h-3 w-3" />
+                                {batch.current_location}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900">{batch.events} events</p>
-                          <p className="text-xs text-gray-500">tracked</p>
+                        <div className="flex items-center gap-4">
+                          <a
+                            href={`/trace/${batch.batch_code}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+                          >
+                            <Eye className="h-4 w-4" />
+                            View
+                          </a>
                         </div>
-                        <a
-                          href={`/trace/${batch.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
-                        >
-                          <Eye className="h-4 w-4" />
-                          View
-                        </a>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Recent Events Timeline */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Supply Chain Events</h3>
-                <div className="space-y-4">
-                  {[
-                    { event: "Warehouse Arrival", batch: "CP-MAN-241201-J8K2", time: "2 hours ago", actor: "Transport Team", icon: Landmark, color: "purple" },
-                    { event: "Transport Started", batch: "CP-TOM-241128-M4R9", time: "5 hours ago", actor: "ABC Logistics", icon: MapPin, color: "blue" },
-                    { event: "Quality Verified", batch: "CP-PIN-241125-P7Q3", time: "1 day ago", actor: "Grace Zulu", icon: CheckCircle2, color: "green" },
-                    { event: "Harvest Complete", batch: "CP-CAS-241120-D2T6", time: "2 days ago", actor: "David Tembo", icon: Leaf, color: "emerald" },
-                    { event: "AI Diagnostic", batch: "CP-TOM-241115-A9B4", time: "3 days ago", actor: "System", icon: Activity, color: "orange" },
-                  ].map((event, index) => (
-                    <div key={index} className="flex items-start gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-                      <div className={`p-2 bg-${event.color}-50 rounded-lg`}>
-                        <event.icon className={`h-5 w-5 text-${event.color}-600`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-gray-900">{event.event}</h4>
-                          <span className="text-xs text-gray-500">{event.time}</span>
+                {recentEvents.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">No supply chain events recorded yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {recentEvents.slice(0, 10).map((event, index) => (
+                      <div key={event.id || index} className="flex items-start gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                        <div className="p-2 bg-teal-50 rounded-lg">
+                          <Activity className="h-5 w-5 text-teal-600" />
                         </div>
-                        <p className="text-sm text-gray-600">
-                          <span className="font-mono text-teal-600">{event.batch}</span> • {event.actor}
-                        </p>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium text-gray-900">{event.event_title}</h4>
+                            <span className="text-xs text-gray-500">
+                              {event.created_at ? new Date(event.created_at).toLocaleDateString() : ''}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            <span className="font-mono text-teal-600">{event.batch_code}</span>
+                            {event.actor_name && ` • ${event.actor_name}`}
+                          </p>
+                          {event.event_description && (
+                            <p className="text-xs text-gray-400 mt-1">{event.event_description}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Universal QR Code Section */}
@@ -1814,46 +1838,47 @@ export default function AdminDashboard() {
                     Select a batch that has arrived at the warehouse to begin processing (quality checks, sorting, processing, packaging).
                   </p>
                   <div className="space-y-3">
-                    {[
-                      { id: "CP-MAN-241201-J8K2", crop: "Mangoes", farmer: "John Mwale", quantity: "500 kg", status: "at_warehouse" },
-                      { id: "CP-TOM-241128-M4R9", crop: "Tomatoes", farmer: "Mary Banda", quantity: "800 kg", status: "at_warehouse" },
-                    ].map((batch) => {
-                      const hasSavedProgress = !!savedProcessingData[batch.id];
-                      return (
-                        <button
-                          key={batch.id}
-                          onClick={() => {
-                            setSelectedBatch({
-                              batchCode: batch.id,
-                              cropType: batch.crop,
-                              farmerName: batch.farmer,
-                              quantity: batch.quantity,
-                            });
-                            setShowProcessingModal(true);
-                          }}
-                          className={`w-full p-4 border rounded-lg transition-all text-left flex items-center justify-between group ${hasSavedProgress
-                            ? 'border-amber-300 bg-amber-50 hover:border-amber-500'
-                            : 'border-purple-200 hover:border-purple-400 hover:bg-purple-50'
-                            }`}
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-mono font-semibold text-purple-700">{batch.id}</p>
-                              {hasSavedProgress && (
-                                <span className="px-2 py-0.5 text-xs bg-amber-200 text-amber-800 rounded-full">
-                                  In Progress
-                                </span>
-                              )}
+                    {allBatches.filter(b => b.current_status === 'at_warehouse' || b.current_status === 'harvested').length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">No batches ready for processing yet.</p>
+                    ) : (
+                      allBatches.filter(b => b.current_status === 'at_warehouse' || b.current_status === 'harvested').map((batch) => {
+                        const hasSavedProgress = !!savedProcessingData[batch.batch_code];
+                        return (
+                          <button
+                            key={batch.id || batch.batch_code}
+                            onClick={() => {
+                              setSelectedBatch({
+                                batchCode: batch.batch_code,
+                                cropType: batch.crop_type,
+                                farmerName: batch.farmer_name || 'Unknown',
+                                quantity: `${batch.total_quantity || 0} ${batch.unit || 'kg'}`,
+                              });
+                              setShowProcessingModal(true);
+                            }}
+                            className={`w-full p-4 border rounded-lg transition-all text-left flex items-center justify-between group ${hasSavedProgress
+                              ? 'border-amber-300 bg-amber-50 hover:border-amber-500'
+                              : 'border-purple-200 hover:border-purple-400 hover:bg-purple-50'
+                              }`}
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-mono font-semibold text-purple-700">{batch.batch_code}</p>
+                                {hasSavedProgress && (
+                                  <span className="px-2 py-0.5 text-xs bg-amber-200 text-amber-800 rounded-full">
+                                    In Progress
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">{batch.farmer_name} • {batch.crop_type} • {batch.total_quantity || 0} {batch.unit || 'kg'}</p>
                             </div>
-                            <p className="text-sm text-gray-600">{batch.farmer} • {batch.crop} • {batch.quantity}</p>
-                          </div>
-                          <div className={`px-3 py-1.5 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity ${hasSavedProgress ? 'bg-amber-600' : 'bg-purple-600'
-                            }`}>
-                            {hasSavedProgress ? 'Continue Processing' : 'Start Processing'}
-                          </div>
-                        </button>
-                      );
-                    })}
+                            <div className={`px-3 py-1.5 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity ${hasSavedProgress ? 'bg-amber-600' : 'bg-purple-600'
+                              }`}>
+                              {hasSavedProgress ? 'Continue Processing' : 'Start Processing'}
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </div>
@@ -2401,11 +2426,21 @@ export default function AdminDashboard() {
               // Reject milestone
               try {
                 if (supabase) {
+                  // Fetch existing metadata to preserve officer evidence
+                  const { data: existingMilestone } = await supabase
+                    .from('milestones')
+                    .select('metadata')
+                    .eq('id', selectedVerification.milestone_id)
+                    .single();
+
+                  const existingMetadata = existingMilestone?.metadata || {};
+
                   await supabase
                     .from('milestones')
                     .update({
                       status: 'rejected',
                       metadata: {
+                        ...existingMetadata,
                         admin_rejection_notes: adminNotes,
                         rejected_at: new Date().toISOString(),
                       },

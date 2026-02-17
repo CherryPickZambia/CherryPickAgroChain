@@ -685,3 +685,36 @@ export async function logProcessingEvent(
   });
 }
 
+// Get all batches (for admin traceability dashboard)
+export async function getAllBatches(): Promise<(Batch & { farmer_name?: string })[]> {
+  const client = checkSupabase();
+  const { data, error } = await client
+    .from('batches')
+    .select('*, farmer:farmers(name)')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((b: any) => ({
+    ...b,
+    farmer_name: b.farmer?.name || 'Unknown',
+  }));
+}
+
+// Get recent traceability events across all batches (for admin dashboard timeline)
+export async function getRecentTraceabilityEvents(limit: number = 20): Promise<(TraceabilityEvent & { batch_code?: string })[]> {
+  const client = checkSupabase();
+  const { data, error } = await client
+    .from('traceability_events')
+    .select('*, batch:batches(batch_code)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return (data || []).map((e: any) => ({
+    ...e,
+    batch_code: e.batch?.batch_code || e.batch_id,
+  }));
+}
+

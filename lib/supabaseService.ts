@@ -635,12 +635,28 @@ export async function approveMilestone(
   releasePayment: boolean = false
 ) {
   const client = checkSupabase();
-  // Update milestone status to verified
+
+  // Fetch existing metadata to preserve officer evidence
+  const { data: existingMilestone, error: fetchError } = await client
+    .from('milestones')
+    .select('metadata')
+    .eq('id', milestoneId)
+    .single();
+
+  if (fetchError) {
+    console.error('Error fetching milestone for approval:', fetchError);
+    throw fetchError;
+  }
+
+  const existingMetadata = (existingMilestone?.metadata as Record<string, any>) || {};
+
+  // Update milestone status to verified, merging metadata
   const { data: milestoneData, error: milestoneError } = await client
     .from('milestones')
     .update({
       status: 'verified',
       metadata: {
+        ...existingMetadata,
         admin_notes: adminNotes,
         approved_at: new Date().toISOString(),
         payment_released: releasePayment,
@@ -670,11 +686,27 @@ export async function rejectMilestone(
   adminNotes: string
 ) {
   const client = checkSupabase();
+
+  // Fetch existing metadata to preserve officer evidence
+  const { data: existingMilestone, error: fetchError } = await client
+    .from('milestones')
+    .select('metadata')
+    .eq('id', milestoneId)
+    .single();
+
+  if (fetchError) {
+    console.error('Error fetching milestone for rejection:', fetchError);
+    throw fetchError;
+  }
+
+  const existingMetadata = (existingMilestone?.metadata as Record<string, any>) || {};
+
   const { data, error } = await client
     .from('milestones')
     .update({
       status: 'rejected',
       metadata: {
+        ...existingMetadata,
         admin_notes: adminNotes,
         rejected_at: new Date().toISOString(),
       },

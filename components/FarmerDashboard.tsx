@@ -167,7 +167,7 @@ export default function FarmerDashboard() {
 
       setContracts(transformedContracts);
     } catch (error: any) {
-      console.error("Error loading contracts:", error);
+      console.error("Error loading contracts:", error?.message || JSON.stringify(error));
       toast.error("Failed to load contracts");
     }
   };

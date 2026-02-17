@@ -44,8 +44,8 @@ export default function AdminBiddingPanel() {
         try {
             const data = await getAllSupplyDemands();
             setDemands(data);
-        } catch (error) {
-            console.error("Error loading demands:", error);
+        } catch (error: any) {
+            console.error("Error loading demands:", error?.message || JSON.stringify(error));
             toast.error("Failed to load supply demands");
         } finally {
             setLoading(false);
