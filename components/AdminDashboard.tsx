@@ -3,13 +3,12 @@
 import { useState, useEffect } from "react";
 import {
   Users, FileText, TrendingUp, DollarSign, Activity, ArrowUp, ArrowDown,
-  MapPin, Clock, CheckCircle2, Settings, Package, Search, Plus, Sun, Menu,
+  MapPin, Clock, CheckCircle, CheckCircle2, Settings, Package, Search, Plus, Sun, Menu,
   ShoppingBag, User, UserPlus, Shield, XCircle, AlertCircle, Eye,
   MoreVertical, Filter, Download, Calendar, Leaf, Globe, Phone, Mail,
   ChevronRight, ExternalLink, Landmark, Award, BarChart3, PieChart,
   Wallet, Zap, Target, RefreshCw, QrCode, Truck, Loader2
 } from "lucide-react";
-import { promoteToOfficer, demoteOfficer, isOfficer } from "./Dashboard";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import { getUsersByRole, getFarmers, getAllContracts } from "@/lib/supabaseService";
@@ -25,7 +24,8 @@ import AdminCreateContractModal from "./AdminCreateContractModal";
 import AdminBiddingPanel from "./AdminBiddingPanel";
 import WarehouseProcessingModal from "./WarehouseProcessingModal";
 import UniversalQRCode from "./UniversalQRCode";
-import { logProcessingEvent, getAllBatches, getRecentTraceabilityEvents, type Batch, type TraceabilityEvent } from "@/lib/traceabilityService";
+import AdminContractDetailModal from "./AdminContractDetailModal";
+import { logProcessingEvent, getAllBatches, getRecentTraceabilityEvents, logMilestoneEvent, getBatchesByContract, type Batch, type TraceabilityEvent } from "@/lib/traceabilityService";
 
 // Sample jobs data
 const SAMPLE_JOBS: JobData[] = [
@@ -208,6 +208,7 @@ interface PendingVerification {
   milestone_id: string;
   milestone_name: string;
   farmer_name: string;
+  farmer_id: string;
   farmer_wallet: string;
   crop_type: string;
   payment_amount: number; // USDC amount for farmer
@@ -217,6 +218,7 @@ interface PendingVerification {
   evidence_images: string[];
   officer_notes: string;
   contract_id: string;
+  contract?: any;
   blockchain_contract_id?: number;
   // For verifier fee calculation
   total_contract_value: number;
@@ -237,6 +239,8 @@ export default function AdminDashboard() {
   const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [jobs, setJobs] = useState<JobData[]>(SAMPLE_JOBS);
   const [showContractModal, setShowContractModal] = useState(false);
+  const [showContractDetailModal, setShowContractDetailModal] = useState(false);
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
 
   // Real farmers state (empty until loaded from Supabase)
   const [farmersList, setFarmersList] = useState<any[]>([]);
@@ -274,6 +278,9 @@ export default function AdminDashboard() {
   const [allBatches, setAllBatches] = useState<(Batch & { farmer_name?: string })[]>([]);
   const [recentEvents, setRecentEvents] = useState<(TraceabilityEvent & { batch_code?: string })[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
+  const [processingBatches, setProcessingBatches] = useState<Batch[]>([]);
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
+
 
   // Load verified products (batches with NFTs)
   const loadVerifiedProducts = async () => {
@@ -323,6 +330,7 @@ export default function AdminDashboard() {
       ]);
       setAllBatches(batchesData);
       setRecentEvents(eventsData);
+      setProcessingBatches(batchesData.filter(b => b.current_status === 'at_warehouse' || b.current_status === 'harvested' || b.current_status === 'in_transit' || b.current_status === 'processing'));
     } catch (error: any) {
       console.error('Error loading traceability data:', error?.message || JSON.stringify(error));
     } finally {
@@ -400,12 +408,14 @@ export default function AdminDashboard() {
 
       if (data && data.length > 0) {
         const mappedContracts = data.map((c: any) => ({
-          id: c.contract_code || c.id,
+          id: c.id, // Store real UUID
+          contract_code: c.contract_code,
           farmer: c.farmer?.name || 'Unknown Farmer',
           crop: c.crop_type,
           amount: `K${Number(c.total_value || 0).toLocaleString()}`,
           status: c.status,
           date: new Date(c.created_at).toISOString().split('T')[0],
+          blockchain_tx: c.blockchain_tx, // Add this
         }));
         setContracts(mappedContracts);
       } else {
@@ -452,7 +462,8 @@ export default function AdminDashboard() {
             farmer:farmers(
               id,
               name,
-              wallet_address
+              wallet_address,
+              user_id
             )
           )
         `)
@@ -495,6 +506,7 @@ export default function AdminDashboard() {
           milestone_id: milestone.id,
           milestone_name: milestone.name,
           farmer_name: farmer?.name || 'Unknown Farmer',
+          farmer_id: farmer?.id || '',
           farmer_wallet: farmer?.wallet_address || '',
           crop_type: contract?.crop_type || 'Unknown',
           payment_amount: milestone.payment_amount || 0,
@@ -504,6 +516,7 @@ export default function AdminDashboard() {
           evidence_images: metadata.officer_images || metadata.images || [],
           officer_notes: metadata.officer_notes || metadata.notes || '',
           contract_id: milestone.contract_id,
+          contract: contract,
           blockchain_contract_id: undefined,
           total_contract_value: contract?.total_value || 5000,
           total_milestones: countByContract[milestone.contract_id] || 4,
@@ -563,6 +576,7 @@ export default function AdminDashboard() {
     if (selectedView === 'traceability') {
       loadVerifiedProducts();
       loadTraceabilityData();
+      loadContracts();
     }
     if (selectedView === 'farmers') {
       loadFarmers();
@@ -581,6 +595,7 @@ export default function AdminDashboard() {
   const handleCreateContract = (contract: any) => {
     const newContract = {
       id: `C00${contracts.length + 1}`,
+      contract_code: contract.contractCode,
       farmer: contract.farmerName || "New Farmer",
       crop: contract.cropType,
       amount: `K${Number(contract.totalValue || 0).toLocaleString()}`,
@@ -641,9 +656,11 @@ export default function AdminDashboard() {
   ];
 
   // Handle promoting a user to officer
-  const handlePromoteToOfficer = (user: typeof SAMPLE_USERS[0]) => {
+  const handlePromoteToOfficer = async (user: typeof SAMPLE_USERS[0]) => {
     try {
-      promoteToOfficer(user.wallet);
+      if (supabase) {
+        await supabase.from('users').update({ role: 'officer' }).eq('id', user.id);
+      }
       setUsers(prev => prev.map(u =>
         u.id === user.id ? { ...u, role: "officer" } : u
       ));
@@ -656,9 +673,11 @@ export default function AdminDashboard() {
   };
 
   // Handle demoting an officer
-  const handleDemoteOfficer = (user: typeof SAMPLE_USERS[0]) => {
+  const handleDemoteOfficer = async (user: typeof SAMPLE_USERS[0]) => {
     try {
-      demoteOfficer(user.wallet);
+      if (supabase) {
+        await supabase.from('users').update({ role: 'farmer' }).eq('id', user.id);
+      }
       setUsers(prev => prev.map(u =>
         u.id === user.id ? { ...u, role: "farmer" } : u
       ));
@@ -1200,13 +1219,22 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   contracts.map((contract) => (
-                    <div key={contract.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-green-500 transition-colors cursor-pointer bg-white hover:shadow-md">
+                    <div
+                      key={contract.id}
+                      onClick={() => {
+                        setSelectedContractId(contract.id);
+                        setShowContractDetailModal(true);
+                      }}
+                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-green-500 transition-colors cursor-pointer bg-white hover:shadow-md group"
+                    >
                       <div className="flex items-center space-x-4">
-                        <div className="p-3 bg-green-50 rounded-lg">
+                        <div className="p-3 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
                           <FileText className="h-6 w-6 text-green-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900">{contract.id} - {contract.crop}</h3>
+                          <h3 className="font-semibold text-gray-900">
+                            {contract.contract_code || contract.id.slice(0, 8)} - {contract.crop}
+                          </h3>
                           <p className="text-sm text-gray-600">{contract.farmer} • {contract.date}</p>
                         </div>
                       </div>
@@ -1255,87 +1283,26 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
-                <div className="relative h-80 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
-                  {/* Zambia Map SVG Background */}
-                  <svg className="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    {/* Grid lines */}
-                    {[...Array(10)].map((_, i) => (
-                      <g key={i}>
-                        <line x1="0" y1={i * 10} x2="100" y2={i * 10} stroke="#059669" strokeWidth="0.1" />
-                        <line x1={i * 10} y1="0" x2={i * 10} y2="100" stroke="#059669" strokeWidth="0.1" />
-                      </g>
-                    ))}
-                    {/* Zambia shape approximation */}
-                    <path d="M30,25 L70,20 L85,45 L80,70 L55,85 L35,80 L20,55 L30,25"
-                      fill="none" stroke="#059669" strokeWidth="0.5" strokeDasharray="2,2" />
-                  </svg>
-
-                  {/* Farmer Markers */}
-                  {SAMPLE_FARMERS.map((farmer) => {
-                    const pos = MAP_POSITIONS[farmer.location as keyof typeof MAP_POSITIONS] || { x: 50, y: 50 };
-                    return (
-                      <motion.div
-                        key={farmer.id}
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        whileHover={{ scale: 1.2 }}
-                        onHoverStart={() => setHoveredMarker(farmer.id)}
-                        onHoverEnd={() => setHoveredMarker(null)}
-                        onClick={() => handleFarmerClick(farmer)}
-                        className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2"
-                        style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                      >
-                        <div className={`relative w-10 h-10 rounded-full flex items-center justify-center border-3 border-white shadow-lg transition-all ${farmer.verified ? 'bg-emerald-500' : 'bg-amber-500'
-                          }`}>
-                          <span className="text-white font-bold text-sm">{farmer.name.charAt(0)}</span>
-                          {/* Pulse effect */}
-                          <div className={`absolute inset-0 rounded-full animate-ping opacity-30 ${farmer.verified ? 'bg-emerald-500' : 'bg-amber-500'
-                            }`} style={{ animationDuration: '2s' }} />
-                        </div>
-
-                        {/* Tooltip */}
-                        <AnimatePresence>
-                          {hoveredMarker === farmer.id && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 10 }}
-                              className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-10"
-                            >
-                              <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-3 min-w-48">
-                                <p className="font-semibold text-gray-900">{farmer.name}</p>
-                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                  <MapPin className="h-3 w-3" />{farmer.location}
-                                </p>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
-                                    {farmer.farmSize} ha
-                                  </span>
-                                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                                    {farmer.contracts.length} contracts
-                                  </span>
-                                </div>
-                                <p className="text-xs text-emerald-600 mt-2 font-medium">Click to view details →</p>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </motion.div>
-                    );
-                  })}
-
-                  {/* Map Legend */}
-                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur rounded-xl p-3 shadow-lg">
-                    <p className="text-xs font-semibold text-gray-700 mb-2">Zambia Regions</p>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
-                      <span>• Lusaka</span>
-                      <span>• Kabwe</span>
-                      <span>• Kitwe</span>
-                      <span>• Chipata</span>
-                      <span>• Ndola</span>
-                      <span>• Livingstone</span>
-                    </div>
-                  </div>
+                <div className="relative h-96 bg-white overflow-hidden p-0 rounded-xl">
+                  <FarmMap
+                    farms={farmersList.map(f => ({
+                      id: f.id,
+                      name: `${f.name}'s Farm`,
+                      farmer: f.name,
+                      phone: f.phone || "Unknown",
+                      location: f.location || "Zambia",
+                      lat: f.locationLat || -15.4,
+                      lng: f.locationLng || 28.3,
+                      crops: f.crops || [],
+                      hectares: f.farmSize || 0,
+                      status: f.verified ? "active" : "pending",
+                      color: f.verified ? "#10b981" : "#f59e0b"
+                    }))}
+                    onFarmClick={(farm) => {
+                      const farmer = farmersList.find(f => f.id === farm.id);
+                      if (farmer) handleFarmerClick(farmer);
+                    }}
+                  />
                 </div>
               </motion.div>
 
@@ -1728,57 +1695,65 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Real Batches List */}
+              {/* Recent Contracts List */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Batches{loadingBatches && <Loader2 className="inline h-4 w-4 ml-2 animate-spin" />}</h3>
-                {allBatches.length === 0 && !loadingBatches ? (
-                  <p className="text-sm text-gray-500 text-center py-8">No batches created yet. Batches are auto-created when contracts are set up.</p>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Contracts{loadingContracts && <Loader2 className="inline h-4 w-4 ml-2 animate-spin" />}</h3>
+                {contracts.length === 0 && !loadingContracts ? (
+                  <p className="text-sm text-gray-500 text-center py-8">No contracts created yet.</p>
                 ) : (
                   <div className="space-y-4">
-                    {allBatches.slice(0, 10).map((batch, index) => (
+                    {contracts.slice(0, 5).map((contract, index) => (
                       <motion.div
-                        key={batch.id || batch.batch_code}
+                        key={contract.id || contract.contract_code}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
                         className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group"
+                        onClick={() => {
+                          setSelectedContractId(contract.id);
+                          setShowContractDetailModal(true);
+                        }}
                       >
                         <div className="flex items-center gap-4">
                           <div className="p-3 bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl group-hover:from-teal-100 group-hover:to-emerald-100 transition-colors">
-                            <QrCode className="h-6 w-6 text-teal-600" />
+                            <FileText className="h-6 w-6 text-teal-600" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
-                              <h4 className="font-semibold text-gray-900 font-mono">{batch.batch_code}</h4>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${batch.current_status === 'growing' ? 'bg-green-100 text-green-700' :
-                                batch.current_status === 'harvested' ? 'bg-yellow-100 text-yellow-700' :
-                                  batch.current_status === 'in_transit' ? 'bg-blue-100 text-blue-700' :
-                                    batch.current_status === 'at_warehouse' ? 'bg-purple-100 text-purple-700' :
-                                      batch.current_status === 'distributed' ? 'bg-emerald-100 text-emerald-700' :
-                                        'bg-gray-100 text-gray-700'
+                              <h4 className="font-semibold text-gray-900 font-mono">{contract.contract_code}</h4>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${contract.status === 'active' ? 'bg-green-100 text-green-700' :
+                                contract.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                  contract.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                    contract.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                      'bg-gray-100 text-gray-700'
                                 }`}>
-                                {(batch.current_status || 'unknown').replace(/_/g, ' ')}
+                                {(contract.status || 'unknown')}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600">{batch.farmer_name} • {batch.crop_type} • {batch.total_quantity || ''} {batch.unit || 'kg'}</p>
-                            {batch.current_location && (
-                              <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                                <MapPin className="h-3 w-3" />
-                                {batch.current_location}
-                              </p>
+                            <p className="text-sm text-gray-600">{contract.farmer} • {contract.crop} • {contract.amount}</p>
+                            <p className="text-xs text-gray-400 mt-1">Created: {contract.date}</p>
+                            {contract.blockchain_tx && (
+                              <a
+                                href={`https://basescan.org/tx/${contract.blockchain_tx}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-mono text-purple-600 hover:text-purple-800 flex items-center gap-1 mt-1 bg-purple-50 px-2 py-0.5 rounded w-fit"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Activity className="h-3 w-3" />
+                                {contract.blockchain_tx.slice(0, 10)}...
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <a
-                            href={`/trace/${batch.batch_code}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+                          <button
+                            className="px-4 py-2 border border-teal-600 text-teal-600 rounded-lg hover:bg-teal-50 transition-colors flex items-center gap-2"
                           >
                             <Eye className="h-4 w-4" />
-                            View
-                          </a>
+                            Details
+                          </button>
                         </div>
                       </motion.div>
                     ))}
@@ -1786,38 +1761,6 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* Recent Events Timeline */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Supply Chain Events</h3>
-                {recentEvents.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-8">No supply chain events recorded yet.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {recentEvents.slice(0, 10).map((event, index) => (
-                      <div key={event.id || index} className="flex items-start gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
-                        <div className="p-2 bg-teal-50 rounded-lg">
-                          <Activity className="h-5 w-5 text-teal-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium text-gray-900">{event.event_title}</h4>
-                            <span className="text-xs text-gray-500">
-                              {event.created_at ? new Date(event.created_at).toLocaleDateString() : ''}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            <span className="font-mono text-teal-600">{event.batch_code}</span>
-                            {event.actor_name && ` • ${event.actor_name}`}
-                          </p>
-                          {event.event_description && (
-                            <p className="text-xs text-gray-400 mt-1">{event.event_description}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               {/* Universal QR Code Section */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1838,47 +1781,93 @@ export default function AdminDashboard() {
                     Select a batch that has arrived at the warehouse to begin processing (quality checks, sorting, processing, packaging).
                   </p>
                   <div className="space-y-3">
-                    {allBatches.filter(b => b.current_status === 'at_warehouse' || b.current_status === 'harvested').length === 0 ? (
-                      <p className="text-sm text-gray-500 text-center py-4">No batches ready for processing yet.</p>
-                    ) : (
-                      allBatches.filter(b => b.current_status === 'at_warehouse' || b.current_status === 'harvested').map((batch) => {
-                        const hasSavedProgress = !!savedProcessingData[batch.batch_code];
-                        return (
-                          <button
-                            key={batch.id || batch.batch_code}
-                            onClick={() => {
-                              setSelectedBatch({
-                                batchCode: batch.batch_code,
-                                cropType: batch.crop_type,
-                                farmerName: batch.farmer_name || 'Unknown',
-                                quantity: `${batch.total_quantity || 0} ${batch.unit || 'kg'}`,
-                              });
-                              setShowProcessingModal(true);
-                            }}
-                            className={`w-full p-4 border rounded-lg transition-all text-left flex items-center justify-between group ${hasSavedProgress
-                              ? 'border-amber-300 bg-amber-50 hover:border-amber-500'
-                              : 'border-purple-200 hover:border-purple-400 hover:bg-purple-50'
-                              }`}
-                          >
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-mono font-semibold text-purple-700">{batch.batch_code}</p>
-                                {hasSavedProgress && (
-                                  <span className="px-2 py-0.5 text-xs bg-amber-200 text-amber-800 rounded-full">
-                                    In Progress
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-gray-600">{batch.farmer_name} • {batch.crop_type} • {batch.total_quantity || 0} {batch.unit || 'kg'}</p>
-                            </div>
-                            <div className={`px-3 py-1.5 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity ${hasSavedProgress ? 'bg-amber-600' : 'bg-purple-600'
-                              }`}>
-                              {hasSavedProgress ? 'Continue Processing' : 'Start Processing'}
-                            </div>
-                          </button>
-                        );
-                      })
-                    )}
+                    {(() => {
+                      const activeBatches = allBatches.filter(b => b.current_status === 'at_warehouse' || b.current_status === 'harvested' || b.current_status === 'in_transit' || b.current_status === 'processing');
+                      const completedContracts = contracts.filter(c => c.status === 'completed');
+
+                      if (activeBatches.length === 0 && completedContracts.length === 0) {
+                        return <p className="text-sm text-gray-500 text-center py-4">No tasks ready for processing yet.</p>;
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          {/* Render Batches */}
+                          {activeBatches.map((batch) => {
+                            const hasSavedProgress = !!savedProcessingData[batch.batch_code];
+                            return (
+                              <button
+                                key={batch.id || batch.batch_code}
+                                onClick={() => {
+                                  setSelectedBatch({
+                                    batchCode: batch.batch_code,
+                                    cropType: batch.crop_type,
+                                    farmerName: batch.farmer_name || 'Unknown',
+                                    quantity: `${batch.total_quantity || 0} ${batch.unit || 'kg'}`,
+                                  });
+                                  setShowProcessingModal(true);
+                                }}
+                                className={`w-full p-4 border rounded-lg transition-all text-left flex items-center justify-between group ${hasSavedProgress
+                                  ? 'border-amber-300 bg-amber-50 hover:border-amber-500'
+                                  : 'border-purple-200 hover:border-purple-400 hover:bg-purple-50'
+                                  }`}
+                              >
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-mono font-semibold text-purple-700">{batch.batch_code}</p>
+                                    {hasSavedProgress && (
+                                      <span className="px-2 py-0.5 text-xs bg-amber-200 text-amber-800 rounded-full">
+                                        In Progress
+                                      </span>
+                                    )}
+                                    <span className="px-2 py-0.5 text-[10px] border border-purple-200 text-purple-600 rounded-full uppercase font-bold">Batch</span>
+                                  </div>
+                                  <p className="text-sm text-gray-600">{batch.farmer_name} • {batch.crop_type} • {batch.total_quantity || 0} {batch.unit || 'kg'}</p>
+                                </div>
+                                <div className={`px-3 py-1.5 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity ${hasSavedProgress ? 'bg-amber-600' : 'bg-purple-600'
+                                  }`}>
+                                  {hasSavedProgress ? 'Continue Processing' : 'Start Processing'}
+                                </div>
+                              </button>
+                            );
+                          })}
+
+                          {/* Render Completed Contracts */}
+                          {completedContracts.map((contract) => {
+                            const contractBatchCode = contract.contract_code; // Use contract code as batch code for processing
+                            const hasSavedProgress = !!savedProcessingData[contractBatchCode];
+                            return (
+                              <button
+                                key={contract.id}
+                                onClick={() => {
+                                  setSelectedBatch({
+                                    batchCode: contract.contract_code,
+                                    cropType: contract.crop,
+                                    farmerName: contract.farmer,
+                                    quantity: contract.amount, // Using amount string for contracts
+                                  });
+                                  setShowProcessingModal(true);
+                                }}
+                                className={`w-full p-4 border rounded-lg transition-all text-left flex items-center justify-between group ${hasSavedProgress
+                                  ? 'border-amber-300 bg-amber-50 hover:border-amber-500'
+                                  : 'border-green-200 hover:border-green-400 hover:bg-green-50'
+                                  }`}
+                              >
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-mono font-semibold text-green-700">{contract.contract_code}</p>
+                                    <span className="px-2 py-0.5 text-[10px] bg-green-100 text-green-700 rounded-full uppercase font-bold">Delivery Done</span>
+                                  </div>
+                                  <p className="text-sm text-gray-600">{contract.farmer} • {contract.crop} • {contract.amount}</p>
+                                </div>
+                                <div className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                                  Start Processing
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -2010,6 +1999,27 @@ export default function AdminDashboard() {
                   nftTxHash: processingData.nftTxHash,
                   verifiedAt: new Date().toISOString().split('T')[0]
                 }]);
+
+                // --- TRACEABILITY LOGGING ---
+                try {
+                  const { addTraceabilityEvent, getTraceabilityByBatchCode } = await import('@/lib/traceabilityService');
+                  const traceData = await getTraceabilityByBatchCode(processingData.batchCode);
+                  if (traceData?.batch?.id) {
+                    await addTraceabilityEvent({
+                      batch_id: traceData.batch.id,
+                      event_type: 'processing',
+                      event_title: 'Warehouse Processing Complete',
+                      event_description: `Batch ${processingData.batchCode} processed, quality graded as ${processingData.qualityCheck.grade}, and NFT minted.`,
+                      actor_name: 'Warehouse Admin',
+                      actor_type: 'admin',
+                      blockchain_tx: processingData.nftTxHash,
+                    });
+                  }
+                  // Refresh the events list
+                  loadTraceabilityData();
+                } catch (err) {
+                  console.error('Error logging warehouse event:', err);
+                }
 
                 // Clear saved data for this batch
                 setSavedProcessingData(prev => {
@@ -2283,6 +2293,20 @@ export default function AdminDashboard() {
         )
       }
 
+      {/* Contract Detail Modal */}
+      {
+        showContractDetailModal && selectedContractId && (
+          <AdminContractDetailModal
+            isOpen={showContractDetailModal}
+            onCloseAction={() => {
+              setShowContractDetailModal(false);
+              setSelectedContractId(null);
+            }}
+            contractId={selectedContractId}
+          />
+        )
+      }
+
       {/* Admin Approval Modal for Verifications */}
       {
         showApprovalModal && selectedVerification && (
@@ -2379,7 +2403,65 @@ export default function AdminDashboard() {
 
                       toast.success('🎉 All milestones completed! Contract marked as completed.', { duration: 5000 });
                     }
+
+                    // --- NEW: Traceability Integration ---
+                    // Log the milestone event in traceability system
+                    // This will also update the batch status (e.g., to 'at_warehouse' or 'harvested')
+                    try {
+                      console.log('Syncing milestone to traceability...');
+                      // Find associated batch
+                      const { data: batchData } = await supabase
+                        .from('batches')
+                        .select('id')
+                        .eq('contract_id', selectedVerification.contract_id)
+                        .single();
+
+                      if (batchData) {
+                        await logMilestoneEvent(
+                          batchData.id,
+                          selectedVerification.milestone_name,
+                          selectedVerification.farmer_id,
+                          selectedVerification.farmer_name,
+                          adminNotes,
+                          selectedVerification.evidence_images
+                        );
+                        console.log('Traceability event logged and batch status updated.');
+                      } else {
+                        console.warn('No batch found for contract', selectedVerification.contract_id);
+                      }
+                    } catch (traceError) {
+                      console.error('Failed to log traceability event:', traceError);
+                      // Don't throw, just log. We don't want to break the main approval flow
+                    }
+                    // --- END Traceability Integration ---
                   }
+
+
+                  // --- TRACEABILITY LOGGING ---
+                  try {
+                    console.log('Logging milestone to traceability...');
+                    const batches = await getBatchesByContract(selectedVerification.contract_id);
+                    if (batches && batches.length > 0) {
+                      // Use the most recent batch
+                      const batch = batches[0];
+                      await logMilestoneEvent(
+                        batch.id!,
+                        selectedVerification.milestone_name,
+                        selectedVerification.farmer_id,
+                        selectedVerification.farmer_name,
+                        adminNotes,
+                        selectedVerification.evidence_images,
+                        selectedVerification.contract?.farmer?.user_id
+                      );
+                      console.log('Traceability event logged successfully');
+                    } else {
+                      console.warn('No batch found for contract, skipping traceability log');
+                    }
+                  } catch (traceError) {
+                    console.error('Error logging traceability event:', traceError);
+                    // Don't fail the whole approval if traceability logging fails
+                  }
+                  // --- END TRACEABILITY LOGGING ---
 
                   // Record payments in database for dashboard display
                   await supabase.from('payments').insert([
