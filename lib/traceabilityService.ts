@@ -319,10 +319,82 @@ export async function getTraceabilityByBatchCode(batchCodeOrContractId: string):
     }
   }
 
+  if (!batch) {
+    // 4. If still no batch, check if we found a contract in step 3
+    // We'll create a "virtual" batch from the contract info so the UI doesn't fail
+    const { data: contract } = await client
+      .from('contracts')
+      .select('*, farmer:farmers!farmer_id(name, location_address, farm_size, verified)')
+      .eq('contract_code', batchCodeOrContractId)
+      .single();
+
+    if (contract) {
+      batch = {
+        batch_code: contract.contract_code,
+        crop_type: contract.crop_type,
+        variety: contract.variety,
+        current_status: 'growing', // Default for contract-only view
+        farmer_id: contract.farmer_id,
+        contract_id: contract.id,
+        created_at: contract.created_at
+      } as Batch;
+
+      return {
+        batch,
+        events: [], // No batch events yet
+        farmer: contract.farmer,
+        contract: {
+          contract_code: contract.contract_code,
+          crop_type: contract.crop_type,
+          variety: contract.variety,
+          status: contract.status
+        }
+      };
+    }
+  }
+
   if (!batch) return null;
 
   // Get events
-  const events = await getBatchTraceability(batch.id!);
+  let events = await getBatchTraceability(batch.id!);
+
+  // If we have a contract_id, also get growth_activities
+  if (batch.contract_id) {
+    const { data: growthActivities } = await client
+      .from('growth_activities')
+      .select('*')
+      .eq('contract_id', batch.contract_id)
+      .order('date', { ascending: true });
+
+    if (growthActivities && growthActivities.length > 0) {
+      // Map growth activities to TraceabilityEvent format
+      const mappedGrowthEvents: TraceabilityEvent[] = growthActivities.map((activity: any) => ({
+        id: activity.id,
+        batch_id: batch!.id!,
+        contract_id: batch!.contract_id,
+        farmer_id: activity.farmer_id,
+        event_type: activity.activity_type as TraceabilityEventType,
+        event_title: activity.title,
+        event_description: activity.description,
+        created_at: activity.date || activity.created_at,
+        actor_type: 'farmer',
+        location_lat: activity.location_lat,
+        location_lng: activity.location_lng,
+        location_address: activity.location_address,
+        photos: activity.photos,
+        quantity: activity.quantity,
+        unit: activity.unit,
+        iot_readings: activity.iot_readings,
+      }));
+
+      // Combine and sort by date
+      events = [...mappedGrowthEvents, ...events].sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateA - dateB;
+      });
+    }
+  }
 
   // Get farmer info if available
   let farmer = null;
@@ -562,6 +634,7 @@ const MILESTONE_EVENT_MAP: Record<string, { eventType: TraceabilityEventType; ti
   'Packaging': { eventType: 'packaging', title: 'Packaging completed', status: 'packaged' },
   'Distribution': { eventType: 'distribution', title: 'Shipped for distribution', status: 'distributed' },
   'Retail Ready': { eventType: 'retail_arrival', title: 'Available at retail location', status: 'at_retail' },
+  'Delivery': { eventType: 'transport_start', title: 'Product dispatched for delivery', status: 'in_transit' },
 };
 
 // Create traceability event from milestone status change
@@ -571,7 +644,8 @@ export async function logMilestoneEvent(
   farmerId: string,
   farmerName: string,
   notes?: string,
-  images?: string[]
+  images?: string[],
+  actorId?: string
 ): Promise<TraceabilityEvent | null> {
   const mapping = MILESTONE_EVENT_MAP[milestoneName];
   if (!mapping) {
@@ -593,7 +667,7 @@ export async function logMilestoneEvent(
     event_type: mapping.eventType,
     event_title: mapping.title,
     event_description: notes || `${milestoneName} milestone verified for batch`,
-    actor_id: farmerId,
+    actor_id: actorId || farmerId,
     actor_type: 'farmer',
     actor_name: farmerName,
     photos: images,
@@ -690,7 +764,7 @@ export async function getAllBatches(): Promise<(Batch & { farmer_name?: string }
   const client = checkSupabase();
   const { data, error } = await client
     .from('batches')
-    .select('*, farmer:farmers(name)')
+    .select('*, farmer:farmers!farmer_id(name)')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -706,7 +780,7 @@ export async function getRecentTraceabilityEvents(limit: number = 20): Promise<(
   const client = checkSupabase();
   const { data, error } = await client
     .from('traceability_events')
-    .select('*, batch:batches(batch_code)')
+    .select('*, batch:batches!batch_id(batch_code)')
     .order('created_at', { ascending: false })
     .limit(limit);
 
