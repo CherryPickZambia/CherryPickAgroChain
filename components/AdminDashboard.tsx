@@ -2625,6 +2625,40 @@ export default function AdminDashboard() {
               try {
                 const farmerPayment = selectedVerification.payment_amount;
 
+                // Resolve verifier wallet - look up from DB if not in metadata
+                let resolvedOfficerWallet = selectedVerification.officer_wallet;
+                if (!resolvedOfficerWallet && supabase) {
+                  const officerName = selectedVerification.officer_name;
+                  if (officerName && officerName !== 'Verifier') {
+                    const { data: officerUser } = await supabase
+                      .from('users')
+                      .select('wallet_address')
+                      .eq('name', officerName)
+                      .eq('role', 'officer')
+                      .single();
+                    if (officerUser?.wallet_address) {
+                      resolvedOfficerWallet = officerUser.wallet_address;
+                      console.log('Resolved officer wallet from DB:', resolvedOfficerWallet);
+                    }
+                  }
+                  // Fallback: try officer_id from metadata
+                  if (!resolvedOfficerWallet) {
+                    const metadata = (await supabase.from('milestones').select('metadata').eq('id', selectedVerification.milestone_id).single()).data?.metadata || {};
+                    const officerId = metadata.officer_id || metadata.officer_user_id;
+                    if (officerId) {
+                      const { data: officerById } = await supabase
+                        .from('users')
+                        .select('wallet_address')
+                        .eq('id', officerId)
+                        .single();
+                      if (officerById?.wallet_address) {
+                        resolvedOfficerWallet = officerById.wallet_address;
+                        console.log('Resolved officer wallet from DB by ID:', resolvedOfficerWallet);
+                      }
+                    }
+                  }
+                }
+
                 // Calculate verifier fee based on contract value and milestone count
                 const feeBreakdown = getVerifierFeeBreakdown(
                   selectedVerification.total_contract_value,
@@ -2801,9 +2835,9 @@ export default function AdminDashboard() {
                   ];
 
                   // Only add verifier payment if we have a wallet address and fee > 0
-                  if (selectedVerification.officer_wallet && verifierFee > 0) {
+                  if (resolvedOfficerWallet && verifierFee > 0) {
                     paymentInserts.push({
-                      to_address: selectedVerification.officer_wallet,
+                      to_address: resolvedOfficerWallet,
                       from_address: evmAddress || 'platform',
                       amount: verifierFee,
                       currency: 'ZMW',

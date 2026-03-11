@@ -426,11 +426,14 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
 
       } else if (withdrawMethod === 'mobile-money') {
         // ── Fiat: Mobile Money via Lenco ──
+        const WITHDRAW_FEE = 8;
         if (amount > fiatBalance) { toast.error('Insufficient Kwacha balance'); setWithdrawing(false); return; }
+        if (amount <= WITHDRAW_FEE) { toast.error(`Minimum withdrawal must be more than K${WITHDRAW_FEE}`); setWithdrawing(false); return; }
         if (!momoPhone) { toast.error('Please enter a phone number'); setWithdrawing(false); return; }
 
+        const netAmount = amount - WITHDRAW_FEE;
         const result = await lencoService.sendMobileMoneyTransfer({
-          amount,
+          amount: netAmount,
           phone: momoPhone,
           network: momoOperator,
           accountName: userName || 'Withdrawal',
@@ -438,26 +441,41 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         });
 
         if (supabase) {
-          await supabase.from('payments').insert({
-            from_address: walletAddress,
-            to_address: `momo-${momoPhone}`,
-            amount,
-            currency: 'ZMW',
-            transaction_hash: result.reference || `WD-${Date.now()}`,
-            status: result.success ? 'confirmed' : 'pending',
-            confirmed_at: result.success ? new Date().toISOString() : null,
-          });
+          await supabase.from('payments').insert([
+            {
+              from_address: walletAddress,
+              to_address: `momo-${momoPhone}`,
+              amount,
+              currency: 'ZMW',
+              transaction_hash: result.reference || `WD-${Date.now()}`,
+              status: result.success ? 'confirmed' : 'pending',
+              confirmed_at: result.success ? new Date().toISOString() : null,
+            },
+            {
+              from_address: walletAddress,
+              to_address: 'platform-fee',
+              amount: WITHDRAW_FEE,
+              currency: 'ZMW',
+              payment_type: 'platform_fee',
+              transaction_hash: `FEE-WD-${Date.now()}`,
+              status: 'confirmed',
+              confirmed_at: new Date().toISOString(),
+            },
+          ]);
         }
-        toast.success(`📱 K${amount} sent to ${momoPhone} via ${momoOperator.toUpperCase()}`, { duration: 5000 });
+        toast.success(`📱 K${netAmount} sent to ${momoPhone} (K${WITHDRAW_FEE} fee deducted)`, { duration: 5000 });
 
       } else if (withdrawMethod === 'bank') {
         // ── Fiat: Bank Transfer via Lenco ──
+        const WITHDRAW_FEE = 8;
         if (amount > fiatBalance) { toast.error('Insufficient Kwacha balance'); setWithdrawing(false); return; }
+        if (amount <= WITHDRAW_FEE) { toast.error(`Minimum withdrawal must be more than K${WITHDRAW_FEE}`); setWithdrawing(false); return; }
         if (!bankAccountNumber || !selectedBankId) { toast.error('Please fill in bank details'); setWithdrawing(false); return; }
 
+        const netAmount = amount - WITHDRAW_FEE;
         const reference = `BANK-${Date.now()}`;
         const result = await lencoService.sendBankTransfer({
-          amount,
+          amount: netAmount,
           accountNumber: bankAccountNumber,
           bankId: selectedBankId,
           narration: `Withdrawal - ${userName || 'User'}`,
@@ -466,18 +484,30 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         });
 
         if (supabase) {
-          await supabase.from('payments').insert({
-            from_address: walletAddress,
-            to_address: `bank-${bankAccountNumber}`,
-            amount,
-            currency: 'ZMW',
-            transaction_hash: result.reference || reference,
-            status: result.success ? 'confirmed' : 'pending',
-            confirmed_at: result.success ? new Date().toISOString() : null,
-          });
+          await supabase.from('payments').insert([
+            {
+              from_address: walletAddress,
+              to_address: `bank-${bankAccountNumber}`,
+              amount,
+              currency: 'ZMW',
+              transaction_hash: result.reference || reference,
+              status: result.success ? 'confirmed' : 'pending',
+              confirmed_at: result.success ? new Date().toISOString() : null,
+            },
+            {
+              from_address: walletAddress,
+              to_address: 'platform-fee',
+              amount: WITHDRAW_FEE,
+              currency: 'ZMW',
+              payment_type: 'platform_fee',
+              transaction_hash: `FEE-BANK-${Date.now()}`,
+              status: 'confirmed',
+              confirmed_at: new Date().toISOString(),
+            },
+          ]);
         }
         const bankName = bankList.find(b => b.id === selectedBankId)?.name || selectedBankId;
-        toast.success(`🏦 K${amount} sent to ${bankName} account`, { duration: 5000 });
+        toast.success(`🏦 K${netAmount} sent to ${bankName} account (K${WITHDRAW_FEE} fee deducted)`, { duration: 5000 });
       }
 
       setShowWithdrawModal(false);
@@ -905,6 +935,26 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                   </div>
                 )}
 
+                {/* Fee breakdown for mobile money / bank */}
+                {withdrawMethod !== 'base' && withdrawAmount && parseFloat(withdrawAmount) > 8 && (
+                  <div className="p-3 rounded-xl" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.08)' }}>
+                    <div className="flex items-center justify-between text-sm" style={{ color: '#0C2D3A' }}>
+                      <span>Withdrawal amount</span>
+                      <span className="font-semibold">K{parseFloat(withdrawAmount).toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm mt-1" style={{ color: '#DC2626' }}>
+                      <span>Service fee</span>
+                      <span className="font-semibold">- K8.00</span>
+                    </div>
+                    <div className="border-t mt-2 pt-2" style={{ borderColor: 'rgba(12,45,58,0.1)' }}>
+                      <div className="flex items-center justify-between text-sm font-bold" style={{ color: '#0C2D3A' }}>
+                        <span>You receive</span>
+                        <span>K{(parseFloat(withdrawAmount) - 8).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Submit Button */}
                 <button
                   onClick={handleWithdraw}
@@ -921,9 +971,9 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
 
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-xs text-blue-700 text-center">
-                    {withdrawMethod === 'base' ? '💡 USDC withdrawn directly from your Base wallet.' :
-                      withdrawMethod === 'mobile-money' ? '💡 Kwacha sent to your mobile money account via Lenco.' :
-                        '💡 Kwacha sent to your bank account via Lenco.'}
+                    {withdrawMethod === 'base' ? '💡 USDC withdrawn directly from your Base wallet. No fees.' :
+                      withdrawMethod === 'mobile-money' ? '💡 A K8 service fee applies. You will receive K' + (withdrawAmount ? (parseFloat(withdrawAmount) - 8).toFixed(2) : '0.00') + ' on your mobile money.' :
+                        '💡 A K8 service fee applies. You will receive K' + (withdrawAmount ? (parseFloat(withdrawAmount) - 8).toFixed(2) : '0.00') + ' in your bank account.'}
                   </p>
                 </div>
               </div>
