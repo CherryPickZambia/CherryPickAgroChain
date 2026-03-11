@@ -22,7 +22,7 @@ export async function sendMilestonePayment(params: {
         to: params.farmerWalletAddress as `0x${string}`,
         value: BigInt(params.amount * 1e18), // Convert to wei
       },
-      network: "base-sepolia", // Change to "base" for mainnet
+      network: "base", // Mainnet
     });
 
     // Record payment in Supabase
@@ -45,11 +45,12 @@ export async function sendMilestonePayment(params: {
     return {
       success: true,
       transactionHash: result.transactionHash,
-      explorerUrl: `https://sepolia.basescan.org/tx/${result.transactionHash}`,
+      explorerUrl: `https://basescan.org/tx/${result.transactionHash}`,
     };
-  } catch (error: any) {
-    console.error("Milestone payment failed:", error);
-    throw new Error(`Payment failed: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error("Milestone payment failed:", err);
+    throw new Error(`Payment failed: ${err.message || 'Unknown error'}`);
   }
 }
 
@@ -69,7 +70,7 @@ export async function sendVerificationFee(params: {
         to: params.officerWalletAddress as `0x${string}`,
         value: BigInt(params.amount * 1e18),
       },
-      network: "base-sepolia",
+      network: "base",
     });
 
     // Record payment in Supabase
@@ -87,11 +88,12 @@ export async function sendVerificationFee(params: {
     return {
       success: true,
       transactionHash: result.transactionHash,
-      explorerUrl: `https://sepolia.basescan.org/tx/${result.transactionHash}`,
+      explorerUrl: `https://basescan.org/tx/${result.transactionHash}`,
     };
-  } catch (error: any) {
-    console.error("Verification fee payment failed:", error);
-    throw new Error(`Payment failed: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error("Verification fee payment failed:", err);
+    throw new Error(`Payment failed: ${err.message || 'Unknown error'}`);
   }
 }
 
@@ -114,8 +116,9 @@ export async function sendBulkPayments(
     try {
       const result = await sendMilestonePayment(payment);
       results.push({ ...payment, ...result });
-    } catch (error: any) {
-      errors.push({ ...payment, error: error.message });
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      errors.push({ ...payment, error: err.message || 'Unknown error' });
     }
   }
 
@@ -136,9 +139,9 @@ export async function getPlatformWalletBalance() {
     // For now, return placeholder
     return {
       balance: "0",
-      network: "base-sepolia",
+      network: "base",
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to get wallet balance:", error);
     throw error;
   }
@@ -153,9 +156,9 @@ export async function getTransactionStatus(transactionHash: string) {
     return {
       hash: transactionHash,
       status: "completed",
-      explorerUrl: `https://sepolia.basescan.org/tx/${transactionHash}`,
+      explorerUrl: `https://basescan.org/tx/${transactionHash}`,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Failed to get transaction status:", error);
     throw error;
   }

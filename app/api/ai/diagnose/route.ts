@@ -29,18 +29,43 @@ Consider:
 
 Provide practical, actionable recommendations suitable for smallholder farmers in Zambia.`;
 
+function normalizeImageUrl(imageBase64: unknown): string {
+  if (typeof imageBase64 !== 'string' || !imageBase64.trim()) {
+    throw new Error('Crop image is required for analysis');
+  }
+
+  const trimmed = imageBase64.trim();
+  const dataUrlMatch = trimmed.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
+
+  if (dataUrlMatch) {
+    const [, mimeType, base64Data] = dataUrlMatch;
+    return `data:${mimeType};base64,${base64Data.replace(/\s+/g, '')}`;
+  }
+
+  const cleaned = trimmed
+    .replace(/^data:[^;]+;base64,/, '')
+    .replace(/\s+/g, '');
+
+  return `data:image/jpeg;base64,${cleaned}`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { imageBase64, cropType, additionalContext } = await request.json();
+    const normalizedImageUrl = normalizeImageUrl(imageBase64);
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const rawApiKey = process.env.OPENAI_API_KEY;
 
-    if (!apiKey) {
+    if (!rawApiKey) {
+      console.error('AI Diagnosis: OPENAI_API_KEY environment variable is not set');
       return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
-        { status: 500 }
+        { error: 'AI diagnostics service is not configured. Please contact the administrator to set up the OPENAI_API_KEY.' },
+        { status: 503 }
       );
     }
+
+    // Sanitize API key: strip newlines, carriage returns, tabs, and control characters
+    const apiKey = rawApiKey.replace(/[\r\n\t\x00-\x1f\x7f-\x9f]/g, '').trim();
 
     const contextMessage = cropType
       ? `This is a ${cropType} crop. ${additionalContext || ''}`
@@ -53,7 +78,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -69,9 +94,8 @@ export async function POST(request: NextRequest) {
               {
                 type: 'image_url',
                 image_url: {
-                  url: imageBase64.startsWith('data:')
-                    ? imageBase64
-                    : `data:image/jpeg;base64,${imageBase64}`,
+                  url: normalizedImageUrl,
+                  detail: 'high',
                 },
               },
             ],
@@ -79,6 +103,7 @@ export async function POST(request: NextRequest) {
         ],
         max_tokens: 1000,
         temperature: 0.3,
+        response_format: { type: 'json_object' },
       }),
     });
 

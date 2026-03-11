@@ -93,7 +93,7 @@ export default function SignInScreen() {
       <div className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-[#1a1a1a] mb-4">Why Choose AgroChain360?</h2>
+            <h2 className="text-4xl font-bold text-[#1a1a1a] mb-4">Why Choose AgroChain 360?</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Empowering farmers with blockchain technology for transparent and profitable farming
             </p>
@@ -202,7 +202,7 @@ export default function SignInScreen() {
             Ready to Transform Your Farming Business?
           </h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Join hundreds of farmers already using AgroChain360 to secure better prices and guaranteed payments
+            Join hundreds of farmers already using AgroChain 360 to secure better prices and guaranteed payments
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <AuthButton />

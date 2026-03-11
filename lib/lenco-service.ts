@@ -4,7 +4,7 @@
  * Mobile Money, Bank Transfers, and Collections via Lenco API.
  */
 
-const VPS_API_URL = process.env.NEXT_PUBLIC_VPS_API_URL || 'http://localhost:3001';
+const VPS_API_URL = '/api/lenco';
 
 // ─── TYPES ───────────────────────────────────────────────────
 
@@ -39,6 +39,32 @@ export interface MobileMoneyCollectionParams {
     reference: string;
     country?: string;
     bearer?: 'merchant' | 'customer';
+}
+
+export interface CardCollectionParams {
+    email: string;
+    reference: string;
+    amount: number;
+    currency: string;
+    bearer?: 'merchant' | 'customer';
+    customer: {
+        firstName: string;
+        lastName: string;
+    };
+    billing: {
+        streetAddress: string;
+        city: string;
+        state?: string;
+        postalCode: string;
+        country: string;
+    };
+    card: {
+        number: string;
+        expiryMonth: string;
+        expiryYear: string;
+        cvv: string;
+    };
+    redirectUrl?: string;
 }
 
 export interface Bank {
@@ -99,6 +125,11 @@ export const lencoService = {
     /** Request Mobile Money payment from a customer */
     async collectMobileMoney(params: MobileMoneyCollectionParams) {
         return vpsRequest('/api/collections/mobile-money', 'POST', params);
+    },
+
+    /** Request Card payment from a customer */
+    async collectCard(params: CardCollectionParams) {
+        return vpsRequest('/api/collections/card', 'POST', params);
     },
 
     // ─── BANKS ─────────────────────────────────────────────

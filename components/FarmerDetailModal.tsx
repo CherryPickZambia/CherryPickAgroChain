@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  X, MapPin, Phone, Mail, Calendar, FileText, CheckCircle2, 
-  Clock, DollarSign, TrendingUp, Leaf, Package, Award, 
+import {
+  X, MapPin, Phone, Mail, Calendar, FileText, CheckCircle2,
+  Clock, DollarSign, TrendingUp, Leaf, Package, Award,
   ChevronRight, ExternalLink, User, Landmark
 } from "lucide-react";
 
@@ -71,9 +71,9 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onCloseAction}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999]"
           />
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 flex items-center justify-center z-[10000] p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -81,7 +81,7 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
               className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
             >
               {/* Header */}
-              <div className="relative bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 p-6 text-white">
+              <div className="relative p-6 text-white" style={{ background: 'linear-gradient(135deg, #0C2D3A 0%, #1a4050 50%, #0C2D3A 100%)' }}>
                 <button
                   onClick={onCloseAction}
                   className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-xl transition-colors"
@@ -94,39 +94,39 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h2 className="text-2xl font-bold">{farmer.name}</h2>
+                      <h2 className="text-2xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>{farmer.name}</h2>
                       {farmer.verified && (
-                        <div className="flex items-center gap-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'rgba(191,255,0,0.2)', color: '#BFFF00' }}>
                           <CheckCircle2 className="h-3 w-3" />
                           Verified
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 mt-2 text-emerald-100">
+                    <div className="flex items-center gap-4 mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>
                       <span className="flex items-center gap-1 text-sm">
                         <MapPin className="h-4 w-4" />
-                        {farmer.location}
+                        {farmer.location || "Location not specified"}
                       </span>
                       <span className="flex items-center gap-1 text-sm">
                         <Landmark className="h-4 w-4" />
-                        {farmer.farmSize} hectares
+                        {farmer.farmSize > 0 ? `${farmer.farmSize} hectares` : "Size not specified"}
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Quick Stats */}
                 <div className="grid grid-cols-4 gap-4 mt-6">
                   {[
-                    { label: "Total Earnings", value: `K${farmer.totalEarnings.toLocaleString()}`, icon: DollarSign },
+                    { label: "Total Earnings", value: `ZK ${farmer.totalEarnings.toLocaleString()}`, icon: Landmark },
                     { label: "Contracts", value: farmer.contracts.length, icon: FileText },
                     { label: "Completed", value: farmer.completedMilestones, icon: CheckCircle2 },
                     { label: "Pending", value: farmer.pendingMilestones, icon: Clock },
                   ].map((stat, i) => (
-                    <div key={i} className="bg-white/10 backdrop-blur rounded-xl p-3 text-center">
-                      <stat.icon className="h-5 w-5 mx-auto mb-1 opacity-80" />
-                      <p className="text-xl font-bold">{stat.value}</p>
-                      <p className="text-xs opacity-80">{stat.label}</p>
+                    <div key={i} className="backdrop-blur rounded-xl p-3 text-center" style={{ background: 'rgba(191,255,0,0.1)', border: '1px solid rgba(191,255,0,0.15)' }}>
+                      <stat.icon className="h-5 w-5 mx-auto mb-1" style={{ color: '#BFFF00' }} />
+                      <p className="text-xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>{stat.value}</p>
+                      <p className="text-xs" style={{ fontFamily: "'Manrope', sans-serif", opacity: 0.7 }}>{stat.label}</p>
                     </div>
                   ))}
                 </div>
@@ -139,17 +139,14 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`px-4 py-3 font-medium text-sm relative transition-colors ${
-                        activeTab === tab.id
-                          ? "text-emerald-600"
-                          : "text-gray-500 hover:text-gray-700"
-                      }`}
+                      className={`px-4 py-3 font-medium text-sm relative transition-colors`}
+                      style={{ fontFamily: "'Manrope', sans-serif", color: activeTab === tab.id ? '#0C2D3A' : '#5A7684' }}
                     >
                       {tab.label}
                       {activeTab === tab.id && (
                         <motion.div
                           layoutId="activeTabIndicator"
-                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600"
+                          className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: '#0C2D3A' }}
                         />
                       )}
                     </button>
@@ -163,8 +160,8 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                   <div className="space-y-6">
                     {/* Contact Info */}
                     <div className="grid md:grid-cols-2 gap-4">
-                      <div className="p-4 bg-gray-50 rounded-xl">
-                        <h4 className="font-semibold text-gray-900 mb-3">Contact Information</h4>
+                      <div className="p-4 rounded-xl" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.06)' }}>
+                        <h4 className="mb-3" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Contact Information</h4>
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
                             <Mail className="h-4 w-4 text-gray-400" />
@@ -180,16 +177,16 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                           </div>
                         </div>
                       </div>
-                      <div className="p-4 bg-gray-50 rounded-xl">
-                        <h4 className="font-semibold text-gray-900 mb-3">Wallet Address</h4>
+                      <div className="p-4 rounded-xl" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.06)' }}>
+                        <h4 className="mb-3" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Wallet Address</h4>
                         <p className="text-xs font-mono text-gray-600 break-all bg-white p-2 rounded-lg border">
                           {farmer.wallet}
                         </p>
                         <div className="mt-3">
-                          <h4 className="font-semibold text-gray-900 mb-2">Crops Grown</h4>
+                          <h4 className="mb-2" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Crops Grown</h4>
                           <div className="flex flex-wrap gap-2">
                             {farmer.crops.map((crop, i) => (
-                              <span key={i} className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                              <span key={i} className="px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(191,255,0,0.15)', color: '#0C2D3A' }}>
                                 {crop}
                               </span>
                             ))}
@@ -200,13 +197,13 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
 
                     {/* Recent Activity */}
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3">Recent Contracts</h4>
+                      <h4 className="mb-3" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Recent Contracts</h4>
                       <div className="space-y-3">
                         {farmer.contracts.slice(0, 3).map((contract) => (
                           <div key={contract.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                                <Leaf className="h-5 w-5 text-emerald-600" />
+                              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: '#0C2D3A' }}>
+                                <Leaf className="h-5 w-5" style={{ color: '#BFFF00' }} />
                               </div>
                               <div>
                                 <p className="font-medium text-gray-900">{contract.cropType}</p>
@@ -214,12 +211,11 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-gray-900">K{contract.value.toLocaleString()}</p>
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                contract.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
-                                contract.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                                'bg-amber-100 text-amber-700'
-                              }`}>
+                              <p className="font-semibold text-gray-900">ZK {contract.value.toLocaleString()}</p>
+                              <span className="text-xs px-2 py-0.5 rounded-full" style={{
+                                  background: contract.status === 'active' ? 'rgba(191,255,0,0.15)' : contract.status === 'completed' ? 'rgba(12,45,58,0.08)' : 'rgba(90,118,132,0.1)',
+                                  color: '#0C2D3A', fontFamily: "'Manrope', sans-serif"
+                                }}>
                                 {contract.status}
                               </span>
                             </div>
@@ -236,41 +232,38 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                       <div key={contract.id} className="border border-gray-200 rounded-xl overflow-hidden">
                         <div className="p-4 bg-gray-50 flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <Package className="h-5 w-5 text-emerald-600" />
+                            <Package className="h-5 w-5" style={{ color: '#0C2D3A' }} />
                             <div>
                               <p className="font-semibold text-gray-900">{contract.cropType}</p>
                               <p className="text-sm text-gray-500">Created {contract.createdAt}</p>
                             </div>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            contract.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
-                            contract.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                            'bg-amber-100 text-amber-700'
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${contract.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                              contract.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+                                'bg-amber-100 text-amber-700'
+                            }`}>
                             {contract.status}
                           </span>
                         </div>
                         <div className="p-4">
                           <div className="mb-3 flex items-center justify-between text-sm">
                             <span className="text-gray-500">Contract Value</span>
-                            <span className="font-bold text-gray-900">K{contract.value.toLocaleString()}</span>
+                            <span className="font-bold text-gray-900">ZK {contract.value.toLocaleString()}</span>
                           </div>
                           <div className="space-y-2">
                             {contract.milestones.map((milestone, i) => (
                               <div key={milestone.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                  milestone.status === 'verified' ? 'bg-emerald-500 text-white' :
-                                  milestone.status === 'submitted' ? 'bg-amber-500 text-white' :
-                                  milestone.status === 'rejected' ? 'bg-red-500 text-white' :
-                                  'bg-gray-200 text-gray-600'
-                                }`}>
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{
+                                    background: milestone.status === 'verified' ? '#0C2D3A' : milestone.status === 'submitted' ? '#BFFF00' : milestone.status === 'rejected' ? '#dc2626' : '#E6E2D6',
+                                    color: milestone.status === 'submitted' ? '#0C2D3A' : '#fff'
+                                  }}>
                                   {i + 1}
                                 </div>
                                 <div className="flex-1">
                                   <p className="text-sm font-medium text-gray-900">{milestone.name}</p>
                                   <p className="text-xs text-gray-500">Due: {milestone.dueDate}</p>
                                 </div>
-                                <span className="text-sm font-semibold text-gray-700">K{milestone.payment}</span>
+                                <span className="text-sm font-semibold text-gray-700">ZK {milestone.payment}</span>
                               </div>
                             ))}
                           </div>
@@ -294,7 +287,7 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                           ))}
                         </svg>
                       </div>
-                      
+
                       {/* Farm area visualization */}
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="relative">
@@ -318,20 +311,22 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
 
                       <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur rounded-lg p-3 shadow-lg">
                         <p className="text-xs text-gray-500">Farm Size</p>
-                        <p className="font-semibold text-gray-900">{farmer.farmSize} hectares</p>
-                        <p className="text-xs text-emerald-600 mt-1">≈ {(farmer.farmSize * 2.47).toFixed(1)} acres</p>
+                        <p className="font-semibold text-gray-900">{farmer.farmSize > 0 ? `${farmer.farmSize} hectares` : "Not specified"}</p>
+                        {farmer.farmSize > 0 && (
+                          <p className="text-xs text-emerald-600 mt-1">≈ {(farmer.farmSize * 2.47).toFixed(1)} acres</p>
+                        )}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-emerald-50 rounded-xl">
-                        <Award className="h-6 w-6 text-emerald-600 mb-2" />
-                        <p className="font-semibold text-gray-900">Land Verified</p>
+                      <div className="p-4 rounded-xl" style={{ background: 'rgba(191,255,0,0.08)', border: '1px solid rgba(191,255,0,0.15)' }}>
+                        <Award className="h-6 w-6 mb-2" style={{ color: '#0C2D3A' }} />
+                        <p style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Land Verified</p>
                         <p className="text-sm text-gray-600">Farm boundaries confirmed by extension officer</p>
                       </div>
-                      <div className="p-4 bg-blue-50 rounded-xl">
-                        <Leaf className="h-6 w-6 text-blue-600 mb-2" />
-                        <p className="font-semibold text-gray-900">Active Crops</p>
+                      <div className="p-4 rounded-xl" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.06)' }}>
+                        <Leaf className="h-6 w-6 mb-2" style={{ color: '#0C2D3A' }} />
+                        <p style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Active Crops</p>
                         <p className="text-sm text-gray-600">{farmer.crops.join(", ")}</p>
                       </div>
                     </div>

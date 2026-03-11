@@ -11,7 +11,7 @@ import {
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import PaymentModal from "./PaymentModal";
 import toast from "react-hot-toast";
-import { getMarketplaceOrders, getBuyerProfile, createOrUpdateBuyerProfile, getMarketplaceListings } from "@/lib/database";
+import { getMarketplaceOrders, getBuyerProfile, createOrUpdateBuyerProfile, getMarketplaceListings, type MarketplaceListing } from "@/lib/database";
 import WalletBalance from "./WalletBalance";
 
 interface Order {
@@ -51,8 +51,8 @@ export default function BuyerDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOrderForPayment, setSelectedOrderForPayment] = useState<Order | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [marketplaceListings, setMarketplaceListings] = useState<any[]>([]);
-  const [selectedListing, setSelectedListing] = useState<any | null>(null);
+  const [marketplaceListings, setMarketplaceListings] = useState<MarketplaceListing[]>([]);
+  const [selectedListing, setSelectedListing] = useState<MarketplaceListing | null>(null);
   const [orderQuantity, setOrderQuantity] = useState(1);
 
   // Load real data from Supabase
@@ -138,7 +138,7 @@ export default function BuyerDashboard() {
       // Load marketplace listings
       const listings = await getMarketplaceListings();
       setMarketplaceListings(listings.filter(l => l.status === 'active'));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading buyer data:', error);
       toast.error('Failed to load buyer data');
     }
@@ -166,7 +166,7 @@ export default function BuyerDashboard() {
       });
       toast.dismiss("save-profile");
       toast.success("Profile saved successfully!");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error saving profile:", error);
       toast.dismiss("save-profile");
       toast.error("Failed to save profile");
@@ -204,7 +204,7 @@ export default function BuyerDashboard() {
       ));
 
       toast.success("Order payment completed!");
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating payment status:', error);
       toast.error('Failed to update payment status');
     }
@@ -217,7 +217,7 @@ export default function BuyerDashboard() {
     toast.success(`Viewing details for Order #${orderId}`);
   };
 
-  const handlePlaceOrder = async (listing: any) => {
+  const handlePlaceOrder = async (listing: MarketplaceListing) => {
     if (!evmAddress) {
       toast.error("Please connect your wallet first");
       return;
@@ -310,25 +310,27 @@ export default function BuyerDashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+    <div className="min-h-screen" style={{ background: "#F7F9FB" }}>
+      {/* Header — ARKTOS */}
+      <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Buyer Dashboard</h1>
-              <p className="text-gray-600 mt-1">Manage your purchases and orders</p>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", marginBottom: 8 }}>Buyer Portal v1.0</div>
+              <h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 4vw, 2.5rem)", lineHeight: 0.95, letterSpacing: "-0.03em", color: "#0C2D3A" }}>
+                BUYER DASHBOARD
+              </h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 px-4 py-2 bg-green-50 rounded-lg border border-green-200">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-sm font-medium text-green-700">Verified Buyer</span>
+            <div className="flex items-center space-x-3 px-4 py-2 rounded-2xl" style={{ background: "#F7F9FB", border: "1px solid rgba(12,45,58,0.08)" }}>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#0C2D3A" }}>
+                <CheckCircle className="h-4 w-4" style={{ color: "#BFFF00" }} />
               </div>
+              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "#0C2D3A" }}>Verified Buyer</span>
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex space-x-1 mt-6 border-b border-gray-200">
+          {/* Tabs — ARKTOS */}
+          <div className="flex space-x-1 mt-6 border-b border-gray-100">
             {[
               { id: "overview", label: "Overview", icon: TrendingUp },
               { id: "marketplace", label: "Marketplace", icon: Store },
@@ -339,18 +341,20 @@ export default function BuyerDashboard() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as "overview" | "marketplace" | "orders" | "profile")}
+                  style={{ fontFamily: "'Manrope', sans-serif" }}
                   className={`flex items-center space-x-2 px-6 py-3 font-medium transition-all relative ${activeTab === tab.id
-                    ? "text-green-600"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "text-[#0C2D3A]"
+                    : "text-[#5A7684] hover:text-[#0C2D3A]"
                     }`}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span>{tab.label}</span>
+                  <Icon className="h-4 w-4" />
+                  <span className="text-sm">{tab.label}</span>
                   {activeTab === tab.id && (
                     <motion.div
                       layoutId="activeTab"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600"
+                      className="absolute bottom-0 left-0 right-0 h-0.5"
+                      style={{ background: "#BFFF00" }}
                     />
                   )}
                 </button>
@@ -364,70 +368,24 @@ export default function BuyerDashboard() {
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <div className="space-y-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <ShoppingBag className="h-6 w-6 text-blue-600" />
+            {/* ARKTOS Stats Swatches */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+              {[
+                { label: "Total Orders", value: String(stats.totalOrders), bg: "#BFFF00", color: "#0C2D3A", sub: "Lifetime" },
+                { label: "Pending Payments", value: String(stats.pendingPayments), bg: "#0C2D3A", color: "#fff", sub: "Awaiting" },
+                { label: "Completed Orders", value: String(stats.completedOrders), bg: "#E6E2D6", color: "#0C2D3A", sub: "Delivered" },
+                { label: "Total Spent", value: `K${stats.totalSpent.toLocaleString()}`, bg: "#fff", color: "#0C2D3A", sub: "Revenue" },
+              ].map((s, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
+                  style={{ background: s.bg, color: s.color, borderRadius: 24, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 160, border: s.bg === "#fff" ? "1px solid rgba(12,45,58,0.06)" : "none", transition: "transform .3s", cursor: "default" }}
+                  onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.02)")} onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>
+                  <span style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, fontSize: "0.8rem", opacity: 0.7 }}>{s.label}</span>
+                  <div>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "1.8rem", marginBottom: 2 }}>{s.value}</div>
+                    <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: "0.7rem", opacity: 0.5 }}>{s.sub}</div>
                   </div>
-                  <span className="text-sm text-gray-500">Total</span>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{stats.totalOrders}</p>
-                <p className="text-sm text-gray-600 mt-1">Total Orders</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-orange-50 rounded-lg">
-                    <Clock className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <span className="text-sm text-gray-500">Pending</span>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{stats.pendingPayments}</p>
-                <p className="text-sm text-gray-600 mt-1">Pending Payments</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  </div>
-                  <span className="text-sm text-gray-500">Completed</span>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{stats.completedOrders}</p>
-                <p className="text-sm text-gray-600 mt-1">Delivered Orders</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-purple-50 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <span className="text-sm text-gray-500">Total</span>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">K{stats.totalSpent.toLocaleString()}</p>
-                <p className="text-sm text-gray-600 mt-1">Total Spent</p>
-              </motion.div>
+                </motion.div>
+              ))}
             </div>
 
             {/* Recent Orders */}
@@ -464,7 +422,7 @@ export default function BuyerDashboard() {
                       </div>
                       <div className="text-right flex items-center space-x-3">
                         <div>
-                          <p className="text-lg font-bold text-gray-900">K{order.total_amount.toLocaleString()}</p>
+                          <p className="text-lg font-bold text-gray-900">ZK {order.total_amount.toLocaleString()}</p>
                           <div className="flex items-center space-x-2 mt-2">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.payment_status === "completed"
                               ? "bg-green-100 text-green-700"
@@ -577,11 +535,11 @@ export default function BuyerDashboard() {
                         <div className="flex items-end justify-between mb-3">
                           <div>
                             <p className="text-xs text-gray-500">Price per kg</p>
-                            <p className="text-2xl font-bold text-green-600">K{listing.price_per_unit}</p>
+                            <p className="text-2xl font-bold text-green-600">ZK {listing.price_per_unit}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-gray-500">Total Value</p>
-                            <p className="text-lg font-bold text-gray-900">K{listing.total_price.toLocaleString()}</p>
+                            <p className="text-lg font-bold text-gray-900">ZK {listing.total_price.toLocaleString()}</p>
                           </div>
                         </div>
 
@@ -668,7 +626,7 @@ export default function BuyerDashboard() {
                         <div>
                           <h3 className="text-xl font-bold text-gray-900">{order.crop_type}</h3>
                           <p className="text-gray-600 mt-1">
-                            {order.quantity} {order.unit} @ K{order.unit_price}/{order.unit}
+                            {order.quantity} {order.unit} @ ZK {order.unit_price}/{order.unit}
                           </p>
                           <div className="flex items-center space-x-2 mt-2">
                             <User className="h-4 w-4 text-gray-400" />
@@ -677,7 +635,7 @@ export default function BuyerDashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold text-gray-900">K{order.total_amount.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-gray-900">ZK {order.total_amount.toLocaleString()}</p>
                         <p className="text-sm text-gray-500 mt-1">Order #{order.id}</p>
                       </div>
                     </div>

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sprout, Loader2, Upload, ImageIcon, Calendar, ChevronRight, ChevronLeft } from "lucide-react";
-import { createBatch, getContractsByFarmer, Contract } from "@/lib/traceabilityService";
+import { createBatch, getContractsByFarmer, type TraceabilityContract } from "@/lib/traceabilityService";
 import { uploadImageToIPFS } from "@/lib/ipfsService";
 import toast from "react-hot-toast";
 
@@ -30,7 +30,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
     const [uploadingImage, setUploadingImage] = useState(false);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [contracts, setContracts] = useState<Contract[]>([]);
+    const [contracts, setContracts] = useState<TraceabilityContract[]>([]);
     const [loadingContracts, setLoadingContracts] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -156,7 +156,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col h-[650px]"
+                        className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col h-[750px] max-h-[90vh]"
                     >
                         {/* Header */}
                         <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">

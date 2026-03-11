@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package, List, Camera } from "lucide-react";
+import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package, Camera, Crosshair, Map as MapIcon } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import MilestoneCard from "./MilestoneCard";
 import WalletBalance from "./WalletBalance";
@@ -16,6 +16,25 @@ import { submitMilestoneEvidence } from "@/lib/supabaseService";
 import toast from "react-hot-toast";
 import FarmerBiddingPanel from "./FarmerBiddingPanel";
 import FarmerGrowthPanel from "./FarmerGrowthPanel";
+import LocationPickerModal from "./LocationPickerModal";
+
+interface FarmerProfile {
+  id: string;
+  wallet_address: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  location_address: string | null;
+  farm_size: number | null;
+  status: string;
+  nrc_id?: string | null;
+  gender?: string | null;
+  rejection_reason?: string | null;
+  created_at?: string;
+  user_id?: string;
+}
 
 export default function FarmerDashboard() {
   const { evmAddress } = useEvmAddress();
@@ -25,7 +44,7 @@ export default function FarmerDashboard() {
   const [expandedContracts, setExpandedContracts] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [farmerId, setFarmerId] = useState<string | null>(null);
-  const [farmerData, setFarmerData] = useState<any>(null);
+  const [farmerData, setFarmerData] = useState<FarmerProfile | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: '',
@@ -50,6 +69,9 @@ export default function FarmerDashboard() {
     batch_id: '',
   });
   const [activeTab, setActiveTab] = useState<'contracts' | 'listings' | 'traceability' | 'bidding' | 'growth'>('contracts');
+
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+
 
   // Evidence Capture State
   const [showEvidenceModal, setShowEvidenceModal] = useState(false);
@@ -108,9 +130,9 @@ export default function FarmerDashboard() {
       await loadContracts(farmer.id);
       await loadMarketplaceListings(farmer.id);
       await loadBatches(farmer.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error loading farmer data:", error);
-      toast.error(`Failed to load data: ${error.message || 'Unknown error'}`);
+      toast.error("Failed to load farmer data. Please check connection.");
     } finally {
       setLoading(false);
     }
@@ -132,7 +154,7 @@ export default function FarmerDashboard() {
     try {
       const data = await getBatchesByFarmer(farmerId);
       setBatches(data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error loading batches:", error);
     }
   };
@@ -141,34 +163,44 @@ export default function FarmerDashboard() {
     try {
       const data = await getContractsByFarmer(farmerId);
 
-      const transformedContracts: SmartContract[] = data.map((contract: any) => ({
-        id: contract.id,
-        farmerId: contract.farmer_id,
-        cropType: contract.crop_type,
-        variety: contract.variety || '',
-        requiredQuantity: contract.required_quantity,
-        discountedPrice: contract.price_per_kg || contract.discounted_price || 0,
-        standardPrice: contract.price_per_kg || contract.standard_price || 0,
-        milestones: (contract.milestones || []).map((m: any) => ({
-          id: m.id,
-          contractId: m.contract_id,
-          name: m.name,
-          description: m.description || '',
-          expectedDate: new Date(m.expected_date),
-          completedDate: m.completed_date ? new Date(m.completed_date) : undefined,
-          status: m.status,
-          paymentAmount: m.payment_amount,
-          paymentStatus: m.payment_status,
-        })),
-        status: contract.status,
-        qrCode: contract.contract_code || contract.qr_code || '',
-        createdAt: new Date(contract.created_at),
-      }));
+      if (!data || !Array.isArray(data)) {
+        setContracts([]);
+        return;
+      }
+
+      const transformedContracts: SmartContract[] = data
+        .filter((contract: any) => contract && contract.id)
+        .map((contract: any) => ({
+          id: contract.id as string,
+          farmerId: (contract.farmer_id as string) || farmerId,
+          cropType: (contract.crop_type as string) || 'Unknown',
+          variety: (contract.variety as string) || '',
+          requiredQuantity: (contract.required_quantity as number) || 0,
+          discountedPrice: (contract.price_per_kg as number) || (contract.discounted_price as number) || 0,
+          standardPrice: (contract.price_per_kg as number) || (contract.standard_price as number) || 0,
+          milestones: (contract.milestones || [])
+            .filter((m: any) => m && m.id)
+            .map((m: any) => ({
+              id: m.id as string,
+              contractId: m.contract_id as string,
+              name: (m.name as string) || 'Unnamed Milestone',
+              description: (m.description as string) || '',
+              expectedDate: m.expected_date ? new Date(m.expected_date) : new Date(),
+              completedDate: m.completed_date ? new Date(m.completed_date) : undefined,
+              status: (m.status as string) || 'pending',
+              paymentAmount: (m.payment_amount as number) || 0,
+              paymentStatus: (m.payment_status as string) || 'pending',
+            })),
+          status: ((contract.status as string) || 'active') as "active" | "completed" | "cancelled",
+          qrCode: (contract.contract_code as string) || (contract.qr_code as string) || '',
+          createdAt: contract.created_at ? new Date(contract.created_at) : new Date(),
+        }));
 
       setContracts(transformedContracts);
-    } catch (error: any) {
-      console.error("Error loading contracts:", error?.message || JSON.stringify(error));
-      toast.error("Failed to load contracts");
+    } catch (error: unknown) {
+      console.error("Error loading contracts:", error instanceof Error ? error.message : JSON.stringify(error));
+      toast.error("Failed to load contracts. Please try refreshing.");
+      setContracts([]);
     }
   };
 
@@ -342,12 +374,13 @@ export default function FarmerDashboard() {
       };
 
       await updateFarmer(farmerId, updateData);
-      setFarmerData({ ...farmerData, ...updateData });
+      setFarmerData({ ...farmerData, ...updateData } as FarmerProfile);
       setIsEditingProfile(false);
       toast.success("Profile updated successfully!");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating profile:", error);
-      toast.error(error.message || "Failed to update profile");
+      const message = error instanceof Error ? error.message : "Failed to update profile";
+      toast.error(message);
     }
   };
 
@@ -395,19 +428,15 @@ export default function FarmerDashboard() {
           total_price: totalPrice,
           description: listingForm.description,
           quality_grade: listingForm.quality_grade,
-          organic: listingForm.organic,
-          harvest_date: listingForm.harvest_date || null,
-          location: farmerData?.location_address || '',
-          status: 'active',
+          harvest_date: listingForm.harvest_date,
+          is_organic: listingForm.organic,
           batch_id: listingForm.batch_id || null,
+          status: 'available'
         });
 
-      if (error) {
-        console.error("Supabase error:", error.message, error.code, error.details);
-        throw new Error(error.message || 'Database error');
-      }
+      if (error) throw error;
 
-      toast.success("Marketplace listing created successfully!");
+      toast.success("Listing created successfully!");
       setShowCreateListing(false);
       setListingForm({
         crop_type: '',
@@ -419,10 +448,10 @@ export default function FarmerDashboard() {
         organic: false,
         batch_id: '',
       });
-      await loadMarketplaceListings();
-    } catch (error: any) {
-      console.error("Error creating listing:", error?.message || error);
-      toast.error(error?.message || "Failed to create listing");
+      loadMarketplaceListings();
+    } catch (error: unknown) {
+      console.error("Error creating listing:", error);
+      toast.error("Failed to create listing");
     }
   };
 
@@ -457,17 +486,12 @@ export default function FarmerDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
+      {/* Header — ARKTOS */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-50 rounded-2xl">
-            <Sprout className="h-8 w-8 text-green-600" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-[#1a1a1a]">Farmer Dashboard</h1>
-            <p className="text-gray-600">Manage your farm and track your progress</p>
-          </div>
-        </div>
+        <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>Farmer Portal v1.0</div>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 4vw, 2.8rem)", lineHeight: 0.95, letterSpacing: "-0.03em", color: "#0C2D3A" }}>
+          MY FARM<br />DASHBOARD
+        </h1>
       </div>
 
       {/* Pending Approval Banner */}
@@ -489,70 +513,23 @@ export default function FarmerDashboard() {
         </div>
       )}
 
-      {/* Premium Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="card-premium group hover:shadow-2xl">
-          <div className="flex items-start justify-between mb-3">
+      {/* ARKTOS Stats Swatches */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        {[
+          { label: "Active Contracts", value: String(stats.activeContracts), bg: "#BFFF00", color: "#0C2D3A", sub: "In progress" },
+          { label: "Completed Milestones", value: String(stats.completedMilestones), bg: "#0C2D3A", color: "#fff", sub: "Verified" },
+          { label: "Pending Payments", value: String(stats.pendingPayments), bg: "#E6E2D6", color: "#0C2D3A", sub: "Awaiting release" },
+          { label: "Total Earnings", value: `K${stats.totalEarnings.toLocaleString()}`, bg: "#fff", color: "#0C2D3A", sub: "Lifetime" },
+        ].map((s, i) => (
+          <div key={i} style={{ background: s.bg, color: s.color, borderRadius: 24, padding: 24, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 160, border: s.bg === "#fff" ? "1px solid rgba(12,45,58,0.06)" : "none", transition: "transform .3s", cursor: "default" }}
+            onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.02)")} onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}>
+            <span style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, fontSize: "0.8rem", opacity: 0.7 }}>{s.label}</span>
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Active Contracts</p>
-              <p className="text-4xl font-bold text-[#1a1a1a]">{stats.activeContracts}</p>
-            </div>
-            <div className="bg-gradient-to-br from-green-100 to-green-50 p-3 rounded-2xl group-hover:scale-110 transition-transform">
-              <FileText className="h-7 w-7 text-green-600" />
+              <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "1.8rem", marginBottom: 2 }}>{s.value}</div>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: "0.7rem", opacity: 0.5 }}>{s.sub}</div>
             </div>
           </div>
-          <div className="flex items-center gap-1 mt-2">
-            <span className="text-xs text-gray-500">View all contracts</span>
-          </div>
-        </div>
-
-        <div className="card-premium group hover:shadow-2xl">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Completed Milestones</p>
-              <p className="text-4xl font-bold text-[#1a1a1a]">{stats.completedMilestones}</p>
-            </div>
-            <div className="bg-gradient-to-br from-blue-100 to-blue-50 p-3 rounded-2xl group-hover:scale-110 transition-transform">
-              <CheckCircle className="h-7 w-7 text-blue-600" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 mt-2">
-            <span className="badge badge-success text-xs">verified</span>
-          </div>
-        </div>
-
-        <div className="card-premium group hover:shadow-2xl">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Pending Payments</p>
-              <p className="text-4xl font-bold text-[#1a1a1a]">{stats.pendingPayments}</p>
-            </div>
-            <div className="bg-gradient-to-br from-yellow-100 to-yellow-50 p-3 rounded-2xl group-hover:scale-110 transition-transform">
-              <Clock className="h-7 w-7 text-yellow-600" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 mt-2">
-            <span className="badge badge-warning text-xs">awaiting</span>
-          </div>
-        </div>
-
-        <div className="card-premium group hover:shadow-2xl">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Total Earnings</p>
-              <p className="text-4xl font-bold text-[#2d5f3f]">
-                K{stats.totalEarnings.toLocaleString()}
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-purple-100 to-purple-50 p-3 rounded-2xl group-hover:scale-110 transition-transform">
-              <DollarSign className="h-7 w-7 text-purple-600" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 mt-2">
-            <TrendingUp className="h-3 w-3 text-green-600" />
-            <span className="text-xs text-green-600 font-semibold">+12% this month</span>
-          </div>
-        </div>
+        ))}
       </div>
 
 
@@ -721,82 +698,82 @@ export default function FarmerDashboard() {
             <div>
               <label className="text-sm font-medium text-gray-600 mb-2 block">Farm Location</label>
               {isEditingProfile ? (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={profileForm.location_address}
-                      onChange={(e) => setProfileForm({ ...profileForm, location_address: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      placeholder="City, District, Zambia"
-                    />
+                    <div className="relative flex-1">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        type="text"
+                        value={profileForm.location_address}
+                        onChange={(e) => setProfileForm({ ...profileForm, location_address: e.target.value })}
+                        className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                        placeholder="City, District, Zambia"
+                      />
+                    </div>
                     <button
-                      onClick={() => {
-                        if (navigator.geolocation) {
-                          const toastId = toast.loading("Getting location...");
-                          navigator.geolocation.getCurrentPosition(
-                            async (position) => {
-                              const lat = position.coords.latitude;
-                              const lng = position.coords.longitude;
-                              setProfileForm(prev => ({
-                                ...prev,
-                                location_lat: lat,
-                                location_lng: lng
-                              }));
-
-                              // Create maps link
-                              const mapsLink = `https://maps.google.com/?q=${lat},${lng}`;
-
-                              // Reverse geocoding (optional/mock)
-                              // For now, we update the lat/lng
-                              toast.success("Location captured!", { id: toastId });
-                              toast(t => (
-                                <div className="flex flex-col gap-1">
-                                  <span>Coordinates updated!</span>
-                                  <span className="text-xs text-gray-500">Lat: {lat.toFixed(6)}, Lng: {lng.toFixed(6)}</span>
-                                </div>
-                              ));
-                            },
-                            (error) => {
-                              console.error(error);
-                              toast.error("Failed to get location. Please enable GPS.", { id: toastId });
-                            }
-                          );
-                        } else {
-                          toast.error("Geolocation not supported by this browser.");
-                        }
-                      }}
-                      className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center"
-                      title="Use My Location"
+                      onClick={() => setIsLocationModalOpen(true)}
+                      className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all flex items-center gap-2 border border-emerald-100 font-semibold text-sm whitespace-nowrap shadow-sm"
+                      title="Set Precise Location"
                       type="button"
                     >
-                      <MapPin className="h-5 w-5" />
+                      <Crosshair className="h-4 w-4" />
+                      Precise Pin
                     </button>
                   </div>
+
                   {profileForm.location_lat !== 0 && (
-                    <p className="text-xs text-green-600 flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      GPS Coordinates captured ({profileForm.location_lat.toFixed(4)}, {profileForm.location_lng.toFixed(4)})
-                    </p>
+                    <div className="bg-green-50/50 border border-green-100 rounded-xl p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-xs text-green-700 font-medium">
+                          GPS Locked: {profileForm.location_lat.toFixed(6)}, {profileForm.location_lng.toFixed(6)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setIsLocationModalOpen(true)}
+                        className="text-[10px] font-bold text-green-700 hover:underline uppercase tracking-wider"
+                      >
+                        Adjust
+                      </button>
+                    </div>
                   )}
+
+                  <LocationPickerModal
+                    isOpen={isLocationModalOpen}
+                    onCloseAction={() => setIsLocationModalOpen(false)}
+                    initialLat={profileForm.location_lat || undefined}
+                    initialLng={profileForm.location_lng || undefined}
+                    initialAddress={profileForm.location_address}
+                    onSelectAction={(data) => {
+                      setProfileForm(prev => ({
+                        ...prev,
+                        location_lat: data.lat,
+                        location_lng: data.lng,
+                        location_address: data.address
+                      }));
+                      toast.success("Location updated accurately!");
+                    }}
+                  />
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-gray-900">
+                <div className="flex items-center gap-2 text-gray-900 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                   <MapPin className="h-4 w-4 text-gray-400" />
-                  <span>{farmerData?.location_address || 'Not set'}</span>
+                  <span className="text-sm">{farmerData?.location_address || 'Not set'}</span>
                   {farmerData?.location_lat && farmerData?.location_lat !== 0 && (
                     <a
                       href={`https://maps.google.com/?q=${farmerData.location_lat},${farmerData.location_lng}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+                      className="ml-auto text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1.5 rounded-lg hover:bg-blue-100 transition-colors uppercase tracking-wider flex items-center gap-1"
                     >
-                      View on Map
+                      <MapIcon className="h-3 w-3" />
+                      Maps
                     </a>
                   )}
                 </div>
               )}
             </div>
+
           </div>
         </div>
 
@@ -927,23 +904,41 @@ export default function FarmerDashboard() {
         </button>
 
         <button
-          onClick={() => setActiveTab('growth')}
-          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'growth' ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'
+          onClick={() => {
+            if (isPending) {
+              toast.error('Account pending approval. Growth tracking unlocks after verification.');
+              return;
+            }
+            setActiveTab('growth');
+          }}
+          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'growth' ? 'text-green-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'
             }`}
         >
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Growth & Development
+            <Sprout className="w-5 h-5" />
+            Growth Log
+            {isPending && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Locked</span>}
           </div>
           {activeTab === 'growth' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />
           )}
         </button>
+
       </div>
+
+      {/* Growth Tab */}
+      {activeTab === 'growth' && (
+        <FarmerGrowthPanel
+          farmerId={farmerId || ''}
+          contracts={contracts.map(c => ({ id: c.id, cropType: c.cropType, variety: c.variety, status: c.status }))}
+          batches={batches.map(b => ({ id: b.id || '', batch_code: b.batch_code, crop_type: b.crop_type, current_status: b.current_status || 'growing' }))}
+          isPending={isPending}
+        />
+      )}
 
       {/* Traceability Tab */}
       {activeTab === 'traceability' && (
-        <BatchList farmerId={farmerId || ''} />
+        <BatchList farmerId={farmerId || ''} userId={farmerData?.user_id} />
       )}
 
       {/* Marketplace Listings Tab */}
@@ -1254,86 +1249,148 @@ export default function FarmerDashboard() {
 
               return (
                 <div key={contract.id} className="card-premium hover:shadow-2xl transition-all">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-2xl font-bold text-[#1a1a1a]">
-                          {contract.cropType} - {contract.variety}
-                        </h3>
-                        <span className={`badge ${contract.status === "active" ? "badge-success" :
-                          contract.status === "completed" ? "badge-info" :
-                            "badge-error"
-                          }`}>
-                          {contract.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-6 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>Required: {contract.requiredQuantity} kg</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" />
-                          <span>K{contract.discountedPrice}/kg</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>Created: {new Date(contract.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleShowQR(contract)}
-                      className="p-2.5 hover:bg-[#f0f7f4] rounded-xl transition-colors"
-                      title="View QR Code"
-                    >
-                      <QrCode className="h-5 w-5 text-[#2d5f3f]" />
-                    </button>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        Progress: {completedCount} of {totalMilestones} milestones
-                      </span>
-                      <span className="text-sm font-bold text-[#2d5f3f]">
-                        {Math.round(progressPercentage)}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
-                        style={{ width: `${progressPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Expand/Collapse Button */}
-                  <button
+                  <div
                     onClick={() => toggleContract(contract.id)}
-                    className="w-full border-t border-gray-100 pt-4 flex items-center justify-between hover:bg-gray-50 transition-colors rounded-lg p-3"
+                    className="cursor-pointer hover:bg-gray-50/50 transition-colors p-2 -m-2 rounded-xl mb-2"
                   >
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-semibold text-gray-700">
-                        {isExpanded ? "Hide" : "View"} Milestones
-                      </h4>
-                      {!isExpanded && nextMilestoneIndex >= 0 && (
-                        <span className="badge badge-warning text-xs">
-                          Next: {contract.milestones[nextMilestoneIndex].name}
-                        </span>
-                      )}
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-2xl font-bold text-[#1a1a1a]">
+                            {contract.cropType} - {contract.variety}
+                          </h3>
+                          <span className={`px-2 py-1 rounded-lg text-xs font-mono font-bold bg-gray-100 text-gray-600 border border-gray-200`}>
+                            {contract.qrCode || 'NO-CODE'}
+                          </span>
+                          <span className={`badge ${contract.status === "active" ? "badge-success" :
+                            contract.status === "completed" ? "badge-info" :
+                              "badge-error"
+                            }`}>
+                            {contract.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-6 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span>Required: {contract.requiredQuantity} kg</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            <span>K{contract.discountedPrice}/kg</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>Created: {new Date(contract.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShowQR(contract);
+                          }}
+                          className="p-2.5 hover:bg-[#f0f7f4] rounded-xl transition-colors"
+                          title="View QR Code"
+                        >
+                          <QrCode className="h-5 w-5 text-[#2d5f3f]" />
+                        </button>
+                        <div className="p-2 text-gray-400 group-hover:text-gray-600">
+                          {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                        </div>
+                      </div>
                     </div>
-                    {isExpanded ? (
-                      <ChevronUp className="h-5 w-5 text-gray-600" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-600" />
+
+                    {/* Progress Bar */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Progress: {completedCount} of {totalMilestones} milestones
+                        </span>
+                        <span className="text-sm font-bold text-[#2d5f3f]">
+                          {Math.round(progressPercentage)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${progressPercentage}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {!isExpanded && nextMilestoneIndex >= 0 && (
+                      <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mt-2">
+                        <Clock className="h-4 w-4 text-amber-600" />
+                        <span className="text-xs font-semibold text-amber-800">
+                          Next Action Required: {contract.milestones[nextMilestoneIndex].name}
+                        </span>
+                      </div>
                     )}
-                  </button>
+                  </div>
 
                   {/* Milestones List */}
                   {isExpanded && (
                     <div className="border-t border-gray-100 pt-6 mt-4">
+                      {/* Contract Details Card */}
+                      <div className="bg-emerald-50 rounded-xl p-6 mb-6 border border-emerald-100 grid grid-cols-2 md:grid-cols-4 gap-6">
+                        <div>
+                          <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">Contract Value</p>
+                          <p className="text-xl font-bold text-gray-900">
+                            K{(contract.requiredQuantity * contract.discountedPrice).toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">Total ZMW agreement</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">Target Volume</p>
+                          <p className="text-xl font-bold text-gray-900">{contract.requiredQuantity.toLocaleString()} kg</p>
+                          <p className="text-xs text-gray-500 mt-1">K{contract.discountedPrice} per kg</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">Final Delivery</p>
+                          <p className="text-xl font-bold text-gray-900">
+                            {contract.milestones.length > 0 && contract.milestones[contract.milestones.length - 1].expectedDate
+                              ? new Date(contract.milestones[contract.milestones.length - 1].expectedDate).toLocaleDateString()
+                              : 'TBD'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">Completion target</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">Current Status</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xl font-bold text-gray-900">{Math.round(progressPercentage)}%</p>
+                            <span className="text-xs bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Verified</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{completedCount} of {totalMilestones} done</p>
+                        </div>
+
+                        <div className="col-span-2 md:col-span-2 pt-4 border-t border-emerald-100">
+                          <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">Farmer Information</p>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-lg border border-emerald-100">
+                              <User className="h-4 w-4 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-gray-900">{farmerData?.name || 'Farmer Profile'}</p>
+                              <p className="text-xs text-gray-500">{farmerData?.location_address || 'Location registered'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="col-span-2 md:col-span-2 pt-4 border-t border-emerald-100">
+                          <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">Contract Code</p>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-lg border border-emerald-100">
+                              <FileText className="h-4 w-4 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-gray-900 font-mono">{contract.qrCode || 'N/A'}</p>
+                              <p className="text-xs text-gray-500">Universal Reference ID</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {contract.milestones.map((milestone, index) => {
                           const canSubmit = canSubmitMilestone(contract, index);
@@ -1390,14 +1447,6 @@ export default function FarmerDashboard() {
         <FarmerBiddingPanel farmerId={farmerId} isPending={isPending} />
       )}
 
-      {/* Growth Tab */}
-      {activeTab === 'growth' && farmerId && (
-        <FarmerGrowthPanel
-          farmerId={farmerId}
-          contracts={contracts.map(c => ({ id: c.id, cropType: c.cropType, variety: c.variety, status: c.status }))}
-          isPending={isPending}
-        />
-      )}
       {/* Milestone Selector Modal */}
       {showMilestoneSelector && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">

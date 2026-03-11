@@ -2,8 +2,8 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Camera, Upload, Loader2, AlertTriangle, CheckCircle, 
+import {
+  Camera, Upload, Loader2, AlertTriangle, CheckCircle,
   Leaf, ThermometerSun, Droplets, Bug, Sparkles, X,
   ChevronDown, ChevronUp, RefreshCw
 } from "lucide-react";
@@ -15,18 +15,20 @@ interface CropDiagnosticsProps {
   contractId?: string;
   cropType?: string;
   onDiagnosisComplete?: (result: CropDiagnosisResult, imageUrl: string) => void;
+  onResult?: (result: { disease: string; confidence: number; healthScore: number; treatmentRec: string }) => void;
 }
 
 const CROP_TYPES = [
-  "Mango", "Pineapple", "Cashew", "Tomato", "Onion", 
+  "Mango", "Pineapple", "Cashew", "Tomato", "Onion",
   "Potato", "Maize", "Soybean", "Groundnut", "Other"
 ];
 
-export default function CropDiagnostics({ 
-  farmerId, 
-  contractId, 
+export default function CropDiagnostics({
+  farmerId,
+  contractId,
   cropType: initialCropType,
-  onDiagnosisComplete 
+  onDiagnosisComplete,
+  onResult
 }: CropDiagnosticsProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -78,6 +80,15 @@ export default function CropDiagnostics({
 
       if (onDiagnosisComplete) {
         onDiagnosisComplete(diagnosis, selectedImage);
+      }
+
+      if (onResult) {
+        onResult({
+          disease: diagnosis.diagnosis,
+          confidence: diagnosis.confidenceScore / 100, // Normalize to 0-1 if it's 0-100
+          healthScore: diagnosis.healthScore,
+          treatmentRec: diagnosis.recommendations.length > 0 ? diagnosis.recommendations[0] : "",
+        });
       }
     } catch (error: any) {
       console.error('Diagnosis error:', error);
@@ -255,12 +266,11 @@ export default function CropDiagnostics({
               <div className="bg-gray-50 rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-gray-900">Health Assessment</h3>
-                  <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                    result.healthScore >= 80 ? 'bg-green-100 text-green-700' :
-                    result.healthScore >= 60 ? 'bg-yellow-100 text-yellow-700' :
-                    result.healthScore >= 40 ? 'bg-orange-100 text-orange-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
+                  <span className={`text-sm font-semibold px-3 py-1 rounded-full ${result.healthScore >= 80 ? 'bg-green-100 text-green-700' :
+                      result.healthScore >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                        result.healthScore >= 40 ? 'bg-orange-100 text-orange-700' :
+                          'bg-red-100 text-red-700'
+                    }`}>
                     {getHealthLabel(result.healthScore)}
                   </span>
                 </div>

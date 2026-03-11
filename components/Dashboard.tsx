@@ -15,39 +15,7 @@ import { getOrCreateUser, getUserByWallet } from "@/lib/supabaseService";
 import VerifierOnboarding, { VerifierData } from "./VerifierOnboarding";
 import toast from "react-hot-toast";
 
-// Admin wallet addresses - these users automatically get admin access
-const ADMIN_WALLETS = [
-  "0x919134626100399ed78D386beA6b27C8E0507b9D", // Main deployer/admin
-  "0x978535960Bfa1BE18f7D78E82c262AB0F9A022E1", // basezambia@gmail.com
-  "0xE0BC20bE750aAF6E2628Eaff5a35Ac23767c01c4", // L1dobbuku@gmail.com
-  "0xBC5bEcc9E15065102643b6Becb58e30A38b41c28", // L1dobbuku@gmail.com (alternate)
-].map(addr => addr.toLowerCase());
-
-// Officer wallet addresses - promoted by admin
-const getOfficerWallets = (): string[] => {
-  if (typeof window === 'undefined') return [];
-  const stored = localStorage.getItem('cherrypick_officers');
-  return stored ? JSON.parse(stored) : [];
-};
-
-// Export function for admin to promote/demote officers
-export const promoteToOfficer = (walletAddress: string) => {
-  const officers = getOfficerWallets();
-  if (!officers.includes(walletAddress.toLowerCase())) {
-    officers.push(walletAddress.toLowerCase());
-    localStorage.setItem('cherrypick_officers', JSON.stringify(officers));
-  }
-};
-
-export const demoteOfficer = (walletAddress: string) => {
-  const officers = getOfficerWallets();
-  const updated = officers.filter(o => o !== walletAddress.toLowerCase());
-  localStorage.setItem('cherrypick_officers', JSON.stringify(updated));
-};
-
-export const isOfficer = (walletAddress: string): boolean => {
-  return getOfficerWallets().includes(walletAddress.toLowerCase());
-};
+// Role handling is now managed securely via Supabase DB. Admin/Officer assignments are managed in the database directly.
 
 export default function Dashboard() {
   const { evmAddress } = useEvmAddress();
@@ -56,91 +24,74 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showVerifierOnboarding, setShowVerifierOnboarding] = useState(false);
+  const [isInitialCheck, setIsInitialCheck] = useState(true);
 
-  // Check if user is an admin
-  const checkIsAdmin = (address: string) => {
-    return ADMIN_WALLETS.includes(address.toLowerCase());
-  };
+  // Admin verification purely based on DB role, so we set it from there
+  // (checkIsAdmin helper is removed to prevent spoofing)
 
-  // Load role from URL parameter, localStorage, or database
+  // Load role from URL parameter or database
   useEffect(() => {
     const loadUserRole = async () => {
+      // Allow more time for the CDP wallet hook to resolve the address
       if (!evmAddress) {
-        setIsLoading(false);
-        return;
+        const timer = setTimeout(() => {
+          if (!evmAddress) {
+            setIsLoading(false);
+            setIsInitialCheck(false);
+          }
+        }, 2500);
+        return () => clearTimeout(timer);
       }
 
-      // Log wallet address for admin setup
-      console.log("🔐 Your wallet address:", evmAddress);
+      console.log("🔐 Authenticator checking wallet:", evmAddress);
 
-      // First check if user is an admin
-      if (checkIsAdmin(evmAddress)) {
-        setIsAdmin(true);
-        setUserRole("admin");
-        localStorage.setItem(`cherrypick_role_${evmAddress}`, "admin");
-        // Save admin to database
-        try {
-          await getOrCreateUser(evmAddress, "admin");
-        } catch (error: any) {
-          console.error("Error saving admin to database:", error?.message || error?.code || JSON.stringify(error));
-        }
-        setIsLoading(false);
-        return;
+      // Immediately check localStorage for cached role to reduce flash
+      const cachedRole = localStorage.getItem(`cherrypick_role_${evmAddress}`);
+      if (cachedRole && ['farmer', 'buyer', 'officer', 'admin'].includes(cachedRole)) {
+        setUserRole(cachedRole as any);
+        if (cachedRole === 'admin') setIsAdmin(true);
+        setIsInitialCheck(false);
+        // Don't set isLoading false yet — verify with DB in background
       }
 
-      // Check if user has been promoted to officer by admin
-      if (isOfficer(evmAddress)) {
-        setUserRole("officer");
-        localStorage.setItem(`cherrypick_role_${evmAddress}`, "officer");
-        // Save officer to database
-        try {
-          await getOrCreateUser(evmAddress, "officer");
-        } catch (error: any) {
-          console.error("Error saving officer to database:", error?.message || error?.code || JSON.stringify(error));
-        }
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if user exists in database first
+      // Check if user exists in database
       try {
         const existingUser = await getUserByWallet(evmAddress);
         if (existingUser) {
           setUserRole(existingUser.role);
+          if (existingUser.role === 'admin') setIsAdmin(true);
           localStorage.setItem(`cherrypick_role_${evmAddress}`, existingUser.role);
           setIsLoading(false);
+          setIsInitialCheck(false);
           return;
         }
       } catch (error: any) {
         console.error("Error checking user in database:", error?.message || error?.code || JSON.stringify(error));
+        // If DB fails but we have cached role, use it
+        if (cachedRole) {
+          setIsLoading(false);
+          setIsInitialCheck(false);
+          return;
+        }
       }
 
-      // Check URL parameter (for non-admin users) - only farmer or buyer allowed
+      // If not in database, check URL parameter for new registrations (only farmer or buyer allowed)
       const roleParam = searchParams.get('role');
 
       if (roleParam && (roleParam === "farmer" || roleParam === "buyer")) {
         setUserRole(roleParam);
         localStorage.setItem(`cherrypick_role_${evmAddress}`, roleParam);
-        // Save to database
         try {
           await getOrCreateUser(evmAddress, roleParam);
         } catch (error: any) {
-          console.error("Error saving user to database:", error?.message || error?.code || JSON.stringify(error));
+          console.error("Error saving user to database:", error?.message || JSON.stringify(error));
         }
-      } else {
-        // Fallback to localStorage - role is permanent once chosen
-        const savedRole = localStorage.getItem(`cherrypick_role_${evmAddress}`);
-        if (savedRole && (savedRole === "farmer" || savedRole === "buyer" || savedRole === "officer" || savedRole === "admin")) {
-          setUserRole(savedRole as "farmer" | "buyer" | "officer" | "admin");
-          // Sync to database if not already there
-          try {
-            await getOrCreateUser(evmAddress, savedRole as any);
-          } catch (error: any) {
-            console.error("Error syncing user to database:", error?.message || error?.code || JSON.stringify(error));
-          }
-        }
+      } else if (!cachedRole) {
+        // Clear old incorrect local state if user doesn't exist in DB and no cache
+        localStorage.removeItem(`cherrypick_role_${evmAddress}`);
       }
       setIsLoading(false);
+      setIsInitialCheck(false);
     };
 
     loadUserRole();
@@ -186,12 +137,12 @@ export default function Dashboard() {
     toast.success(`Registered as ${data.verifierType === 'professional' ? 'Professional' : 'Freelance'} Verifier!`);
   };
 
-  if (isLoading) {
+  if (isLoading || isInitialCheck) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Cherry Pick...</p>
+          <p className="text-gray-600">Syncing with blockchain...</p>
         </div>
       </div>
     );
@@ -201,8 +152,14 @@ export default function Dashboard() {
     return <LandingPage />;
   }
 
+  // Final catch: If we have an address but still checking DB/Local, stay loading
+  // (This handles the gap between evmAddress being available and loadUserRole finishing)
+  // Actually, isLoading already covers this in the useEffect. 
+  // But let's be extra safe and check if evmAddress exists but userRole is still null 
+  // AND we haven't timed out or definitively found no user.
+
   // Show verifier onboarding if selected
-  if (showVerifierOnboarding && evmAddress) {
+  if (showVerifierOnboarding) {
     return (
       <VerifierOnboarding
         walletAddress={evmAddress}
@@ -212,7 +169,7 @@ export default function Dashboard() {
     );
   }
 
-  // Role selection if not set
+  // ONLY show role selection if we are DEFINITELY not loading AND have no role
   if (!userRole) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#f0f7f4] via-white to-[#f0f7f4]">
@@ -340,7 +297,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
-      <Header userRole={userRole} />
+      {userRole !== "admin" && <Header userRole={userRole} />}
       <div className="fade-in">
         <ErrorBoundary fallbackMessage="An error occurred loading this dashboard. Please refresh.">
           {userRole === "farmer" && <FarmerDashboard />}

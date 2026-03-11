@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2, Sparkles, Plus, Trash2, Check, AlertCircle } from "lucide-react";
+import { X, Loader2, Sparkles, Plus, Trash2, Check, AlertCircle, ChevronUp, ChevronDown } from "lucide-react";
 import { SUPPORTED_CROPS } from "@/lib/config";
 import { generateContractId, generateQRCode, calculateMilestonePayment } from "@/lib/utils";
 import { type SmartContract } from "@/lib/types";
@@ -98,14 +98,14 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
           { name: "First Growth Check", description: "95% seedling survival rate confirmed", paymentPercentage: 15, daysFromStart: 30 },
           { name: "Flowering Stage", description: "Trees flowering, fruit set beginning", paymentPercentage: 15, daysFromStart: 60 },
           { name: "Pre-Harvest Inspection", description: "Quality check, pest control verified", paymentPercentage: 20, daysFromStart: 85 },
-          { name: "Harvest & Delivery", description: "Crop harvested and delivered to collection point", paymentPercentage: 25, daysFromStart: 90 },
+          { name: "Delivery", description: "Final delivery of crop with logistics details", paymentPercentage: 25, daysFromStart: 90 },
         ],
         "Tomato": [
           { name: "Nursery Establishment", description: "Seedlings germinated in nursery", paymentPercentage: 15, daysFromStart: 0 },
           { name: "Transplanting Complete", description: "Seedlings transplanted to main field", paymentPercentage: 15, daysFromStart: 21 },
           { name: "First Flowering", description: "Plants flowering, fruit setting begins", paymentPercentage: 20, daysFromStart: 35 },
           { name: "First Harvest", description: "Initial harvest of ripe tomatoes", paymentPercentage: 25, daysFromStart: 60 },
-          { name: "Final Harvest", description: "Complete harvest and delivery", paymentPercentage: 25, daysFromStart: 75 },
+          { name: "Delivery", description: "Final harvest and delivery with logistics details", paymentPercentage: 25, daysFromStart: 75 },
         ],
         "Pineapple": [
           { name: "Land Preparation", description: "Land prepared with proper drainage", paymentPercentage: 10, daysFromStart: 0 },
@@ -113,7 +113,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
           { name: "6-Month Growth Check", description: "Plant establishment verified", paymentPercentage: 15, daysFromStart: 180 },
           { name: "Flowering Induced", description: "Flowering treatment applied", paymentPercentage: 15, daysFromStart: 365 },
           { name: "Fruit Development", description: "Fruits developing properly", paymentPercentage: 20, daysFromStart: 450 },
-          { name: "Harvest & Delivery", description: "Ripe pineapples harvested", paymentPercentage: 25, daysFromStart: 540 },
+          { name: "Delivery", description: "Final delivery of pineapples with logistics details", paymentPercentage: 25, daysFromStart: 540 },
         ],
       };
 
@@ -121,7 +121,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
         { name: "Planting Complete", description: "Successfully planted crop", paymentPercentage: 20, daysFromStart: 0 },
         { name: "Mid-Season Check", description: "Crop health verified", paymentPercentage: 30, daysFromStart: 45 },
         { name: "Pre-Harvest Inspection", description: "Quality assessment", paymentPercentage: 25, daysFromStart: 75 },
-        { name: "Harvest & Delivery", description: "Crop harvested and delivered", paymentPercentage: 25, daysFromStart: 90 },
+        { name: "Delivery", description: "Final delivery with logistics details", paymentPercentage: 25, daysFromStart: 90 },
       ];
 
       setAiSuggestions(cropSuggestions);
@@ -136,10 +136,25 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
   };
 
   const addCustomMilestone = () => {
-    setMilestones([
-      ...milestones,
-      { name: "", description: "", paymentPercentage: 0, daysFromStart: 0, isKey: false, requiresProfessionalVerifier: false }
-    ]);
+    if (milestones.length === 0) {
+      // Auto-seed with a default Delivery final milestone
+      setMilestones([
+        { name: "", description: "", paymentPercentage: 0, daysFromStart: 0, isKey: false, requiresProfessionalVerifier: false },
+        { name: "Delivery", description: "Final delivery of crop with logistics and transport details", paymentPercentage: 25, daysFromStart: 90, isKey: true, requiresProfessionalVerifier: true },
+      ]);
+      toast.success("Added milestone + default Delivery milestone");
+    } else {
+      // Insert before the last milestone if it's named Delivery, otherwise append
+      const lastM = milestones[milestones.length - 1];
+      const newM: Milestone = { name: "", description: "", paymentPercentage: 0, daysFromStart: 0, isKey: false, requiresProfessionalVerifier: false };
+      if (lastM.name.toLowerCase().includes('delivery')) {
+        const updated = [...milestones];
+        updated.splice(milestones.length - 1, 0, newM);
+        setMilestones(updated);
+      } else {
+        setMilestones([...milestones, newM]);
+      }
+    }
   };
 
   const updateMilestone = (index: number, field: keyof Milestone, value: string | number) => {
@@ -150,6 +165,14 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
 
   const removeMilestone = (index: number) => {
     setMilestones(milestones.filter((_, i) => i !== index));
+  };
+
+  const moveMilestone = (index: number, direction: 'up' | 'down') => {
+    const target = direction === 'up' ? index - 1 : index + 1;
+    if (target < 0 || target >= milestones.length) return;
+    const updated = [...milestones];
+    [updated[index], updated[target]] = [updated[target], updated[index]];
+    setMilestones(updated);
   };
 
   const getTotalPercentage = () => {
@@ -168,6 +191,12 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
 
     if (milestones.some(m => !m.name || !m.description)) {
       setError("All milestones must have a name and description");
+      return;
+    }
+
+    const lastMilestone = milestones[milestones.length - 1];
+    if (!lastMilestone.name.toLowerCase().includes('delivery')) {
+      setError('The final milestone must be named "Delivery" to ensure logistics and transport tracking is enforced.');
       return;
     }
 
@@ -218,9 +247,10 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
           status: "pending",
           payment_amount: paymentAmount,
           payment_status: "pending",
-          is_key: milestone.isKey,
-          requires_professional_verifier: milestone.requiresProfessionalVerifier,
-          sequence_order: index + 1,
+          metadata: {
+            is_key: milestone.isKey,
+            requires_professional_verifier: milestone.requiresProfessionalVerifier,
+          },
         });
       });
 
@@ -434,7 +464,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-700 mb-1">Total Contract Value</p>
                   <p className="text-2xl font-bold text-green-600">
-                    K{(parseFloat(formData.requiredQuantity) * parseFloat(formData.discountedPrice)).toLocaleString()}
+                    ZK {(parseFloat(formData.requiredQuantity) * parseFloat(formData.discountedPrice)).toLocaleString()}
                   </p>
                 </div>
               )}
@@ -494,13 +524,17 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                   <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <span className="text-sm font-semibold text-gray-700">Milestone {index + 1}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeMilestone(index)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => moveMilestone(index, 'up')} disabled={index === 0} className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed" title="Move up">
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                        <button type="button" onClick={() => moveMilestone(index, 'down')} disabled={index === milestones.length - 1} className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed" title="Move down">
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                        <button type="button" onClick={() => removeMilestone(index)} className="p-1 text-red-500 hover:bg-red-50 rounded">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

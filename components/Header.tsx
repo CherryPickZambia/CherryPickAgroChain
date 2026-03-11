@@ -2,7 +2,7 @@
 
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { AuthButton } from "@coinbase/cdp-react";
-import { Cherry, Shield, Wallet, Sparkles, Leaf } from "lucide-react";
+import { Shield, Wallet, Sparkles, Leaf } from "lucide-react";
 
 interface HeaderProps {
   userRole?: "farmer" | "buyer" | "officer" | "admin" | null;
@@ -59,49 +59,40 @@ export default function Header({ userRole }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50">
-      {/* Gradient line accent at top */}
-      <div className="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
-
-      <div className="bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+      <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+      <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-14">
             {/* Logo Section */}
             <div className="flex items-center space-x-3">
-              <div className="relative h-6 w-auto">
-                <img
-                  src="/cherrypick-logo.png"
-                  alt="Cherry Pick Logo"
-                  className="h-6 w-auto object-contain"
-                />
-              </div>
+              <span className="text-xl" role="img" aria-label="cherry">🍒</span>
               <div>
+                <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "1rem", color: "#0C2D3A" }}>Cherry Pick</span>
                 {roleDisplay && (
-                  <p className={`text-xs font-medium ${roleDisplay.color} flex items-center gap-1`}>
-                    <roleDisplay.icon className="h-3 w-3" />
+                  <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: "0.65rem", color: "#5A7684", letterSpacing: "0.05em", textTransform: "uppercase" }} className="flex items-center gap-1">
+                    <roleDisplay.icon className="h-3 w-3" style={{ color: "#BFFF00" }} />
                     {roleDisplay.label} Dashboard
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Right Section - Only Role Badge and Auth Button */}
+            {/* Right Section */}
             <div className="flex items-center space-x-3">
-              {/* Role Badge - Only show when logged in */}
               {evmAddress && roleDisplay && (
-                <div className={`hidden sm:flex px-4 py-2 rounded-xl ${roleDisplay.bg} border ${roleDisplay.border} shadow-sm`}>
+                <div className="hidden sm:flex px-4 py-2 rounded-2xl border border-gray-200" style={{ background: "#F7F9FB" }}>
                   <div className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${roleDisplay.gradient} flex items-center justify-center shadow-sm`}>
-                      <roleDisplay.icon className="h-3.5 w-3.5 text-white" />
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "#0C2D3A" }}>
+                      <roleDisplay.icon className="h-3.5 w-3.5" style={{ color: "#BFFF00" }} />
                     </div>
-                    <span className={`text-sm font-semibold ${roleDisplay.color}`}>
+                    <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "#0C2D3A" }}>
                       {roleDisplay.label}
                     </span>
                   </div>
                 </div>
               )}
 
-              {/* Auth Button */}
-              <div className="[&>button]:!rounded-xl [&>button]:!font-semibold [&>button]:!shadow-sm [&>button]:!border-gray-200 hover:[&>button]:!border-emerald-300 [&>button]:!transition-all [&>button]:!px-5">
+              <div className="[&>button]:!rounded-xl [&>button]:!font-semibold [&>button]:!shadow-sm [&>button]:!border-[#0C2D3A] [&>button]:!bg-[#0C2D3A] [&>button]:!text-white hover:[&>button]:!bg-[#1a4050] [&>button]:!transition-all [&>button]:!px-5 [&>button]:!py-2 [&>button]:!text-sm">
                 <AuthButton />
               </div>
             </div>

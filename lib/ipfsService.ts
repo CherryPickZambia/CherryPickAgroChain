@@ -74,20 +74,21 @@ export async function uploadToIPFS(file: File): Promise<UploadResult> {
       url,
       size: response.data.PinSize,
     };
-  } catch (error: any) {
-    console.error('Pinata upload failed:', error);
+  } catch (error: unknown) {
+    const err = error as { response?: { status: number; data?: { message: string } }; code?: string; message: string };
+    console.error('Pinata upload failed:', err);
 
     // If it's an auth error, provide clear message
-    if (error.response?.status === 401) {
+    if (err.response?.status === 401) {
       throw new Error('Pinata authentication failed. Please check your PINATA_JWT in environment variables.');
     }
 
     // If it's a network error or timeout
-    if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+    if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
       throw new Error('Could not connect to Pinata. Please check your internet connection.');
     }
 
-    throw new Error(`Failed to upload to IPFS: ${error.response?.data?.message || error.message}`);
+    throw new Error(`Failed to upload to IPFS: ${err.response?.data?.message || err.message}`);
   }
 }
 
@@ -107,9 +108,10 @@ export async function uploadImageToIPFS(file: File, maxWidth: number = 1920): Pr
     // Compress image before upload
     const compressedFile = await compressImage(file, maxWidth);
     return uploadToIPFS(compressedFile);
-  } catch (error: any) {
-    console.error('Image upload failed:', error);
-    throw new Error(`Failed to upload image: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error as { message: string };
+    console.error('Image upload failed:', err);
+    throw new Error(`Failed to upload image: ${err.message}`);
   }
 }
 
@@ -173,9 +175,10 @@ export async function uploadEvidencePhotos(photos: File[]): Promise<string[]> {
   try {
     const results = await uploadMultipleToIPFS(photos);
     return results.map(r => r.url);
-  } catch (error: any) {
-    console.error('Evidence upload failed:', error);
-    throw new Error(`Failed to upload evidence: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error as { message: string };
+    console.error('Evidence upload failed:', err);
+    throw new Error(`Failed to upload evidence: ${err.message}`);
   }
 }
 
@@ -256,9 +259,10 @@ export async function listPinnedFiles(options?: {
     );
 
     return response.data;
-  } catch (error: any) {
-    console.error('Failed to list Pinata files:', error);
-    throw new Error(`Failed to list pinned files: ${error.message}`);
+  } catch (error: unknown) {
+    const err = error as { message: string };
+    console.error('Failed to list Pinata files:', err);
+    throw new Error(`Failed to list pinned files: ${err.message}`);
   }
 }
 
@@ -287,7 +291,7 @@ export async function getVerificationEvidence(): Promise<{
       size: file.size,
       metadata: file.metadata?.keyvalues || {},
     }));
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to get verification evidence:', error);
     return [];
   }

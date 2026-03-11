@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Shield, Users, Award, MapPin, Phone, Mail, FileText, 
+import {
+  Shield, Users, Award, MapPin, Phone, Mail, FileText,
   CheckCircle, ArrowRight, ArrowLeft, Building2, User,
   Briefcase, GraduationCap, Clock, DollarSign
 } from "lucide-react";
@@ -38,7 +38,7 @@ export interface VerifierData {
 
 const SPECIALIZATIONS = [
   "Mangoes",
-  "Pineapples", 
+  "Pineapples",
   "Cashews",
   "Tomatoes",
   "Onions",
@@ -63,10 +63,11 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const updateField = (field: string, value: any) => {
+  const updateField = <K extends keyof VerifierData>(field: K, value: VerifierData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    const fieldKey = field as string;
+    if (errors[fieldKey]) {
+      setErrors(prev => ({ ...prev, [fieldKey]: '' }));
     }
   };
 
@@ -130,10 +131,10 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
   };
 
   const handleSubmit = () => {
-    if (validateStep()) {
+    if (validateStep() && verifierType) {
       onCompleteAction({
         ...formData,
-        verifierType: verifierType!,
+        verifierType,
       } as VerifierData);
     }
   };
@@ -147,13 +148,12 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
             {[1, 2, 3, 4, 5].map((s) => (
               <div
                 key={s}
-                className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm transition-all ${
-                  s === step
+                className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm transition-all ${s === step
                     ? 'bg-green-600 text-white scale-110'
                     : s < step
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 text-gray-500'
-                }`}
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}
               >
                 {s < step ? <CheckCircle className="w-5 h-5" /> : s}
               </div>
@@ -198,19 +198,16 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setVerifierType('professional')}
-                    className={`p-6 rounded-2xl border-2 text-left transition-all ${
-                      verifierType === 'professional'
+                    className={`p-6 rounded-2xl border-2 text-left transition-all ${verifierType === 'professional'
                         ? 'border-green-500 bg-green-50 shadow-lg'
                         : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3 mb-4">
-                      <div className={`p-3 rounded-xl ${
-                        verifierType === 'professional' ? 'bg-green-500' : 'bg-gray-100'
-                      }`}>
-                        <Building2 className={`w-6 h-6 ${
-                          verifierType === 'professional' ? 'text-white' : 'text-gray-600'
-                        }`} />
+                      <div className={`p-3 rounded-xl ${verifierType === 'professional' ? 'bg-green-500' : 'bg-gray-100'
+                        }`}>
+                        <Building2 className={`w-6 h-6 ${verifierType === 'professional' ? 'text-white' : 'text-gray-600'
+                          }`} />
                       </div>
                       <div>
                         <h3 className="font-bold text-lg text-gray-900">Professional</h3>
@@ -242,19 +239,16 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setVerifierType('freelance')}
-                    className={`p-6 rounded-2xl border-2 text-left transition-all ${
-                      verifierType === 'freelance'
+                    className={`p-6 rounded-2xl border-2 text-left transition-all ${verifierType === 'freelance'
                         ? 'border-green-500 bg-green-50 shadow-lg'
                         : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3 mb-4">
-                      <div className={`p-3 rounded-xl ${
-                        verifierType === 'freelance' ? 'bg-green-500' : 'bg-gray-100'
-                      }`}>
-                        <User className={`w-6 h-6 ${
-                          verifierType === 'freelance' ? 'text-white' : 'text-gray-600'
-                        }`} />
+                      <div className={`p-3 rounded-xl ${verifierType === 'freelance' ? 'bg-green-500' : 'bg-gray-100'
+                        }`}>
+                        <User className={`w-6 h-6 ${verifierType === 'freelance' ? 'text-white' : 'text-gray-600'
+                          }`} />
                       </div>
                       <div>
                         <h3 className="font-bold text-lg text-gray-900">Freelance</h3>
@@ -312,9 +306,8 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                         type="text"
                         value={formData.name || ''}
                         onChange={(e) => updateField('name', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
-                          errors.name ? 'border-red-300' : 'border-gray-200'
-                        }`}
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${errors.name ? 'border-red-300' : 'border-gray-200'
+                          }`}
                         placeholder="Enter your full name"
                       />
                     </div>
@@ -331,9 +324,8 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                         type="email"
                         value={formData.email || ''}
                         onChange={(e) => updateField('email', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
-                          errors.email ? 'border-red-300' : 'border-gray-200'
-                        }`}
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${errors.email ? 'border-red-300' : 'border-gray-200'
+                          }`}
                         placeholder="your@email.com"
                       />
                     </div>
@@ -350,9 +342,8 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                         type="tel"
                         value={formData.phone || ''}
                         onChange={(e) => updateField('phone', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
-                          errors.phone ? 'border-red-300' : 'border-gray-200'
-                        }`}
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${errors.phone ? 'border-red-300' : 'border-gray-200'
+                          }`}
                         placeholder="+260 XXX XXX XXX"
                       />
                     </div>
@@ -369,9 +360,8 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                         type="text"
                         value={formData.location || ''}
                         onChange={(e) => updateField('location', e.target.value)}
-                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
-                          errors.location ? 'border-red-300' : 'border-gray-200'
-                        }`}
+                        className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${errors.location ? 'border-red-300' : 'border-gray-200'
+                          }`}
                         placeholder="e.g., Lusaka, Chipata, Ndola"
                       />
                     </div>
@@ -394,7 +384,7 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                     {verifierType === 'professional' ? 'Professional Credentials' : 'Identity Verification'}
                   </h2>
                   <p className="text-gray-600">
-                    {verifierType === 'professional' 
+                    {verifierType === 'professional'
                       ? 'Provide your Ministry of Agriculture details'
                       : 'Verify your identity to become a community verifier'}
                   </p>
@@ -413,9 +403,8 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                             type="text"
                             value={formData.ministryId || ''}
                             onChange={(e) => updateField('ministryId', e.target.value)}
-                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
-                              errors.ministryId ? 'border-red-300' : 'border-gray-200'
-                            }`}
+                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${errors.ministryId ? 'border-red-300' : 'border-gray-200'
+                              }`}
                             placeholder="Enter your Ministry ID"
                           />
                         </div>
@@ -432,9 +421,8 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                             type="text"
                             value={formData.certificationNumber || ''}
                             onChange={(e) => updateField('certificationNumber', e.target.value)}
-                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
-                              errors.certificationNumber ? 'border-red-300' : 'border-gray-200'
-                            }`}
+                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${errors.certificationNumber ? 'border-red-300' : 'border-gray-200'
+                              }`}
                             placeholder="Extension Officer Certificate Number"
                           />
                         </div>
@@ -466,7 +454,7 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                           <input
                             type="number"
                             value={formData.yearsOfExperience || ''}
-                            onChange={(e) => updateField('yearsOfExperience', parseInt(e.target.value))}
+                            onChange={(e) => updateField('yearsOfExperience', e.target.value ? parseInt(e.target.value) : undefined)}
                             className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
                             placeholder="Years in agricultural extension"
                             min="0"
@@ -486,9 +474,8 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                             type="text"
                             value={formData.nationalId || ''}
                             onChange={(e) => updateField('nationalId', e.target.value)}
-                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${
-                              errors.nationalId ? 'border-red-300' : 'border-gray-200'
-                            }`}
+                            className={`w-full pl-12 pr-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all ${errors.nationalId ? 'border-red-300' : 'border-gray-200'
+                              }`}
                             placeholder="XXX/XXX/XXX/XXX"
                           />
                         </div>
@@ -559,11 +546,10 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                           key={spec}
                           type="button"
                           onClick={() => toggleSpecialization(spec)}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                            formData.specializations?.includes(spec)
+                          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${formData.specializations?.includes(spec)
                               ? 'bg-green-500 text-white'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
+                            }`}
                         >
                           {spec}
                         </button>
@@ -605,7 +591,7 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
                       <input
                         type="number"
                         value={formData.hourlyRate || ''}
-                        onChange={(e) => updateField('hourlyRate', parseFloat(e.target.value))}
+                        onChange={(e) => updateField('hourlyRate', e.target.value ? parseFloat(e.target.value) : undefined)}
                         className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
                         placeholder="Your expected hourly rate"
                         min="0"
@@ -672,7 +658,7 @@ export default function VerifierOnboarding({ walletAddress, onCompleteAction, on
 
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                     <p className="text-sm text-green-800">
-                      <strong>Note:</strong> {verifierType === 'professional' 
+                      <strong>Note:</strong> {verifierType === 'professional'
                         ? 'Your Ministry credentials will be verified before you can start accepting high-value verification tasks.'
                         : 'Your identity will be verified before you can start accepting verification tasks in your community.'}
                     </p>

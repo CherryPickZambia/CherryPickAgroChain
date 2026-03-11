@@ -13,6 +13,7 @@ import {
     type SupplyDemand,
     type FarmerBid,
 } from "@/lib/biddingService";
+import { Farmer } from "@/lib/supabase";
 import { SUPPORTED_CROPS } from "@/lib/config";
 
 export default function AdminBiddingPanel() {
@@ -20,7 +21,7 @@ export default function AdminBiddingPanel() {
     const [loading, setLoading] = useState(true);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [expandedDemand, setExpandedDemand] = useState<string | null>(null);
-    const [demandBids, setDemandBids] = useState<Record<string, (FarmerBid & { farmer?: any })[]>>({});
+    const [demandBids, setDemandBids] = useState<Record<string, (FarmerBid & { farmer?: Farmer })[]>>({});
     const [loadingBids, setLoadingBids] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
 
@@ -44,8 +45,8 @@ export default function AdminBiddingPanel() {
         try {
             const data = await getAllSupplyDemands();
             setDemands(data);
-        } catch (error: any) {
-            console.error("Error loading demands:", error?.message || JSON.stringify(error));
+        } catch (error: unknown) {
+            console.error("Error loading demands:", error instanceof Error ? error.message : JSON.stringify(error));
             toast.error("Failed to load supply demands");
         } finally {
             setLoading(false);
@@ -75,9 +76,9 @@ export default function AdminBiddingPanel() {
             setShowCreateForm(false);
             setForm({ title: "", crop_type: "", variety: "", required_quantity: "", unit: "kg", max_price_per_unit: "", delivery_deadline: "", quality_requirements: "", description: "" });
             loadDemands();
-        } catch (error) {
-            console.error("Error creating demand:", error);
-            toast.error("Failed to post demand");
+        } catch (error: unknown) {
+            console.error("Error creating demand:", error instanceof Error ? error.message : JSON.stringify(error));
+            toast.error("Failed to post demand: " + (error instanceof Error ? error.message : "Unknown error"));
         } finally {
             setCreating(false);
         }
@@ -178,6 +179,8 @@ export default function AdminBiddingPanel() {
                                             <option value="tonnes">tonnes</option>
                                             <option value="crates">crates</option>
                                             <option value="bags">bags</option>
+                                            <option value="pieces">pieces</option>
+                                            <option value="units">units</option>
                                         </select>
                                     </div>
                                 </div>

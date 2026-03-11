@@ -8,6 +8,7 @@ import type {
   Evidence,
   Payment
 } from './supabase';
+import type { EvidenceAIAnalysis } from '@/components/EvidenceUploadModal';
 
 // Helper to check if Supabase is configured
 function checkSupabase() {
@@ -214,6 +215,10 @@ export async function createContract(contract: Omit<Contract, 'id' | 'created_at
 }
 
 export async function getContractsByFarmer(farmerId: string) {
+  if (!farmerId) {
+    console.warn('getContractsByFarmer called with empty farmerId');
+    return [];
+  }
   const client = checkSupabase();
   const { data, error } = await client
     .from('contracts')
@@ -221,27 +226,30 @@ export async function getContractsByFarmer(farmerId: string) {
     .eq('farmer_id', farmerId)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.error('getContractsByFarmer error:', error.message || error.code);
+    throw error;
+  }
 
   // Sort milestones by milestone_number within each contract
   if (data) {
-    data.forEach((contract: any) => {
+    (data as (Contract & { milestones: Milestone[] })[]).forEach((contract) => {
       if (contract.milestones && Array.isArray(contract.milestones)) {
-        contract.milestones.sort((a: any, b: any) =>
+        contract.milestones.sort((a: Milestone, b: Milestone) =>
           (a.milestone_number || 0) - (b.milestone_number || 0)
         );
       }
     });
   }
 
-  return data;
+  return data || [];
 }
 
 export async function getAllContracts() {
   const client = checkSupabase();
   const { data, error } = await client
     .from('contracts')
-    .select('*, milestones(*), farmer:farmers(id, name, wallet_address)')
+    .select('*, farmer:farmers(id, name, wallet_address)')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -275,7 +283,7 @@ export async function updateContract(id: string, updates: Partial<Contract>) {
 
 // ==================== MILESTONES ====================
 
-export async function createMilestone(milestone: Record<string, any>) {
+export async function createMilestone(milestone: Omit<Milestone, 'id' | 'created_at'>) {
   const client = checkSupabase();
   const { data, error } = await client
     .from('milestones')
@@ -316,7 +324,7 @@ export async function submitMilestoneEvidence(
   milestoneId: string,
   evidence: {
     images: string[];
-    iot_readings: any[];
+    iot_readings: Record<string, unknown>[];
     notes: string;
   }
 ) {
@@ -353,6 +361,25 @@ export async function submitMilestoneEvidence(
 
   if (milestoneError) throw milestoneError;
 
+  // --- TRACEABILITY LOGGING ---
+  try {
+    const { getBatchesByContract, addTraceabilityEvent } = await import('./traceabilityService');
+    const batches = await getBatchesByContract(milestoneData.contract_id);
+    if (batches && batches.length > 0) {
+      await addTraceabilityEvent({
+        batch_id: batches[0].id!,
+        event_type: 'post_harvest_handling',
+        event_title: `Milestone Evidence Submitted: ${milestoneData.name}`,
+        event_description: evidence.notes || `Evidence submitted for milestone ${milestoneData.name}.`,
+        actor_name: 'Farmer',
+        actor_type: 'farmer',
+        photos: evidence.images,
+      });
+    }
+  } catch (err) {
+    console.error('Error logging traceability event for milestone submission:', err);
+  }
+
   return { evidence: evidenceData, milestone: milestoneData };
 }
 
@@ -365,15 +392,16 @@ export async function officerVerifyMilestone(
   milestoneId: string,
   evidence: {
     images: string[];
-    iot_readings: any[];
+    iot_readings: Record<string, unknown>[];
     notes: string;
+    ai_analysis?: EvidenceAIAnalysis | null;
   },
   officerId?: string
 ) {
   const client = checkSupabase();
 
   // Try to create evidence record (graceful degradation if table doesn't exist yet)
-  let evidenceData: any = null;
+  let evidenceData: Evidence | null = null;
   try {
     const { data, error: evidenceError } = await client
       .from('evidence')
@@ -385,6 +413,7 @@ export async function officerVerifyMilestone(
           images: evidence.images,
           iot_readings: evidence.iot_readings,
           notes: evidence.notes,
+          ai_analysis: evidence.ai_analysis || null,
           officer_id: officerId,
           verified_at: new Date().toISOString(),
         },
@@ -422,6 +451,7 @@ export async function officerVerifyMilestone(
     officer_notes: evidence.notes,
     officer_images: evidence.images,
     officer_iot_readings: evidence.iot_readings,
+    officer_ai_analysis: evidence.ai_analysis || null,
     verified_at: new Date().toISOString(),
     evidence_id: evidenceData?.id || null,
   };
@@ -442,6 +472,25 @@ export async function officerVerifyMilestone(
   if (milestoneError) {
     console.error('Error updating milestone status:', milestoneError);
     throw milestoneError;
+  }
+
+  // --- TRACEABILITY LOGGING ---
+  try {
+    const { getBatchesByContract, addTraceabilityEvent } = await import('./traceabilityService');
+    const batches = await getBatchesByContract(milestoneData.contract_id);
+    if (batches && batches.length > 0) {
+      await addTraceabilityEvent({
+        batch_id: batches[0].id!,
+        event_type: 'verification',
+        event_title: `Milestone Verified by Officer: ${milestoneData.name}`,
+        event_description: evidence.notes || `Officer verified milestone ${milestoneData.name}.`,
+        actor_name: 'Extension Officer',
+        actor_type: 'admin',
+        photos: evidence.images,
+      });
+    }
+  } catch (err) {
+    console.error('Error logging traceability event for officer verification:', err);
   }
 
   return { evidence: evidenceData, milestone: milestoneData };
@@ -755,7 +804,7 @@ export async function getPlatformStats() {
     client.from('payments').select('amount').eq('status', 'completed'),
   ]);
 
-  const totalRevenue = payments.data?.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0) || 0;
+  const totalRevenue = payments.data?.reduce((sum: number, p: Payment) => sum + p.amount, 0) || 0;
 
   return {
     totalFarmers: farmers.count || 0,

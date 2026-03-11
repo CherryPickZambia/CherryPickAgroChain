@@ -2,9 +2,82 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, AlertCircle, Sprout } from "lucide-react";
+import Link from "next/link";
 import TraceabilityView from "@/components/TraceabilityView";
 import { getTraceabilityByBatchCode } from "@/lib/traceabilityService";
+
+const C = {
+  deep: "#020503",
+  surface: "#07120a",
+  white: "#ffffff",
+  primary: "#e0e7e3",
+  secondary: "#9aa89d",
+  muted: "#5b6b5e",
+  accent: "#4ade80",
+  border: "rgba(255,255,255,0.08)",
+  borderG: "rgba(74,222,128,0.15)",
+};
+const FD = "'Playfair Display', serif";
+const FS = "'Inter', sans-serif";
+const FM = "'Space Mono', monospace";
+
+const injectStyles = () => {
+  if (typeof window === "undefined") return;
+  if (document.getElementById("cp-trace-v2")) return;
+  const s = document.createElement("style");
+  s.id = "cp-trace-v2";
+  s.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,900;1,400&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
+    @keyframes pulseDot{0%,100%{opacity:.3}50%{opacity:1}}
+    @keyframes traceSpinner{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    @keyframes tracePulse{0%,100%{opacity:0.4}50%{opacity:1}}
+    .cp-trace-dot{width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;animation:pulseDot 2s infinite}
+    .cp-trace-spinner{width:40px;height:40px;border:2px solid rgba(74,222,128,0.15);border-top:2px solid #4ade80;border-radius:50%;animation:traceSpinner 1s linear infinite}
+    .cp-trace-pulse{animation:tracePulse 2s ease-in-out infinite}
+    .cp-trace-btn{display:inline-flex;align-items:center;justify-content:center;padding:14px 32px;background:transparent;color:#fff;font-family:'Inter',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;text-decoration:none;border:1px solid #fff;cursor:pointer;position:relative;overflow:hidden;transition:color .4s cubic-bezier(.19,1,.22,1)}
+    .cp-trace-btn::before{content:'';position:absolute;inset:0;background:#fff;transform:scaleY(0);transform-origin:bottom;transition:transform .4s cubic-bezier(.19,1,.22,1);z-index:0}
+    .cp-trace-btn:hover{color:#020503}
+    .cp-trace-btn:hover::before{transform:scaleY(1)}
+    .cp-trace-btn span{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px}
+  `;
+  document.head.appendChild(s);
+};
+
+function TraceShell({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    injectStyles();
+    return () => { const el = document.getElementById("cp-trace-v2"); if (el) el.remove(); };
+  }, []);
+
+  return (
+    <div style={{ background: C.deep, minHeight: "100vh", color: C.white, fontFamily: FS, position: "relative", overflow: "hidden" }}>
+      {/* Subtle bg */}
+      <div style={{ position: "fixed", inset: 0, backgroundImage: "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=2000&q=40')", backgroundSize: "cover", backgroundPosition: "center", opacity: 0.03, pointerEvents: "none" }} />
+
+      {/* Nav */}
+      <nav style={{ position: "relative", zIndex: 50, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🍒</div>
+            <span style={{ fontFamily: FD, fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.white }}>CHERRY PICK</span>
+          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+            <Link href="/lookup" style={{ fontFamily: FS, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", color: C.secondary, textDecoration: "none", fontWeight: 500 }}>Lookup</Link>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(74,222,128,0.08)", border: `1px solid ${C.borderG}`, borderRadius: 20, padding: "6px 14px" }}>
+              <div className="cp-trace-dot" />
+              <span style={{ fontFamily: FM, fontSize: 10, letterSpacing: 2, color: C.accent }}>VERIFIED</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Content */}
+      <div style={{ position: "relative", zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "calc(100vh - 80px)", padding: "48px 32px" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function PublicTraceabilityPage() {
   const params = useParams();
@@ -47,46 +120,68 @@ export default function PublicTraceabilityPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading traceability data...</p>
-          <p className="text-sm text-gray-400 mt-1">Batch: {batchCode}</p>
+      <TraceShell>
+        <div style={{ textAlign: "center" }}>
+          <div className="cp-trace-spinner" style={{ margin: "0 auto 32px" }} />
+          <p style={{ fontFamily: FD, fontSize: 24, fontWeight: 500, color: C.white, marginBottom: 8 }}>
+            Tracing <span style={{ fontStyle: "italic", color: C.accent }}>Journey</span>
+          </p>
+          <p style={{ fontFamily: FS, fontSize: 14, color: C.secondary, fontWeight: 300, marginBottom: 16 }}>
+            Fetching blockchain-verified traceability data...
+          </p>
+          <span style={{ fontFamily: FM, fontSize: 12, color: C.muted, letterSpacing: "0.05em", background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, padding: "8px 16px" }}>{batchCode}</span>
         </div>
-      </div>
+      </TraceShell>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-red-500" />
+      <TraceShell>
+        <div style={{ maxWidth: 480, textAlign: "center" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px", fontSize: 28 }}>
+            ⚠️
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Batch Not Found</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <p className="text-sm text-gray-400">Batch Code: {batchCode}</p>
-          <a
-            href="/"
-            className="inline-block mt-6 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
-          >
-            Go to Homepage
-          </a>
+          <h1 style={{ fontFamily: FD, fontSize: 32, fontWeight: 500, color: C.white, marginBottom: 12 }}>
+            Batch <span style={{ fontStyle: "italic", color: "#f87171" }}>Not Found</span>
+          </h1>
+          <p style={{ fontFamily: FS, fontSize: 15, color: C.secondary, fontWeight: 300, lineHeight: 1.7, marginBottom: 24 }}>
+            {error}
+          </p>
+          <div style={{ fontFamily: FM, fontSize: 12, color: C.muted, letterSpacing: "0.05em", background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, padding: "10px 20px", marginBottom: 40, display: "inline-block" }}>
+            {batchCode}
+          </div>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
+            <Link href="/lookup" className="cp-trace-btn" style={{ borderColor: C.accent, color: C.accent }}>
+              <span>Try Another</span>
+            </Link>
+            <Link href="/" className="cp-trace-btn">
+              <span>Homepage</span>
+            </Link>
+          </div>
         </div>
-      </div>
+      </TraceShell>
     );
   }
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <Sprout className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">No Data Available</h1>
-          <p className="text-gray-600">This batch has no traceability data yet.</p>
+      <TraceShell>
+        <div style={{ maxWidth: 480, textAlign: "center" }}>
+          <div style={{ width: 64, height: 64, borderRadius: "50%", background: "rgba(74,222,128,0.08)", border: `1px solid ${C.borderG}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 32px", fontSize: 28 }}>
+            🌱
+          </div>
+          <h1 style={{ fontFamily: FD, fontSize: 32, fontWeight: 500, color: C.white, marginBottom: 12 }}>
+            Journey <span style={{ fontStyle: "italic", color: C.accent }}>Pending</span>
+          </h1>
+          <p style={{ fontFamily: FS, fontSize: 15, color: C.secondary, fontWeight: 300, lineHeight: 1.7, marginBottom: 32 }}>
+            This batch has no traceability data yet. The journey tracking will begin once the farmer starts logging activities.
+          </p>
+          <Link href="/lookup" className="cp-trace-btn" style={{ borderColor: C.accent, color: C.accent }}>
+            <span>Try Another Batch</span>
+          </Link>
         </div>
-      </div>
+      </TraceShell>
     );
   }
 

@@ -60,6 +60,7 @@ export interface Milestone {
   paymentStatus: "pending" | "processing" | "completed";
   farmerEvidence?: Evidence;
   verificationTask?: VerificationTask;
+  batchId?: string;
 }
 
 export interface Evidence {
@@ -161,4 +162,21 @@ export interface TraceabilityRecord {
     retailerName: string;
     shelfDate: Date;
   };
+}
+export interface CropDiagnostic {
+  id: string;
+  farmer_id: string;
+  contract_id?: string;
+  photo_url: string;
+  crop_type?: string;
+  health_score: number;
+  diagnosis: string;
+  identified_issues: string[];
+  recommendations: string[];
+  confidence_score: number;
+  ai_provider?: string;
+  raw_response?: Record<string, unknown>;
+  location_lat?: number;
+  location_lng?: number;
+  created_at: string;
 }

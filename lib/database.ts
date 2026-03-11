@@ -121,7 +121,7 @@ const SAMPLE_LISTINGS: MarketplaceListing[] = [
   },
 ];
 
-const SAMPLE_ORDERS: MarketplaceOrder[] = [];
+// const SAMPLE_ORDERS: MarketplaceOrder[] = [];
 
 // ============================================
 // MARKETPLACE TYPES
@@ -146,6 +146,9 @@ export interface MarketplaceListing {
   quality_grade?: 'A' | 'B' | 'C' | 'Premium';
   organic: boolean;
   batch_id?: string;
+  ai_health_score?: number;
+  ai_diagnosis?: string;
+  ai_verified?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -268,12 +271,13 @@ export async function getMarketplaceListings(filters?: {
     }
 
     // Map the result to include farmer_name from joined table
-    return data.map((listing: any) => ({
+    return (data || []).map((listing: any) => ({
       ...listing,
       farmer_name: listing.farmers?.name || 'Unknown Farmer'
     })) as MarketplaceListing[];
-  } catch (error: any) {
-    console.error('Error fetching marketplace listings:', error?.message || error);
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error('Error fetching marketplace listings:', err.message || err);
     console.log('Falling back to sample data');
     return filterSampleListings(SAMPLE_LISTINGS, filters);
   }
@@ -360,11 +364,11 @@ export async function getMarketplaceOrders(buyerAddress?: string) {
     if (error) throw error;
 
     // Map the result to include farmer_address from listing if missing in order
-    return data.map((order: any) => ({
+    return (data || []).map((order: any) => ({
       ...order,
       farmer_address: order.farmer_address || order.marketplace_listings?.farmer_address
     })) as MarketplaceOrder[];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching marketplace orders:', error);
     return [];
   }
@@ -538,6 +542,12 @@ export async function getMarketplaceAnalytics() {
   }
 }
 
+interface CropStats {
+  prices: number[];
+  count: number;
+  total: number;
+}
+
 export async function getCropPriceAnalytics(cropType?: string) {
   try {
     let query = supabase
@@ -553,21 +563,22 @@ export async function getCropPriceAnalytics(cropType?: string) {
     if (error) throw error;
 
     // Group by crop type and calculate average prices
-    const pricesByType = (data || []).reduce((acc: any, listing: any) => {
-      if (!acc[listing.crop_type]) {
-        acc[listing.crop_type] = {
+    const pricesByType = (data || []).reduce((acc: Record<string, CropStats>, listing: any) => {
+      const crop = listing.crop_type;
+      if (!acc[crop]) {
+        acc[crop] = {
           prices: [],
           count: 0,
           total: 0
         };
       }
-      acc[listing.crop_type].prices.push(listing.price_per_unit);
-      acc[listing.crop_type].count++;
-      acc[listing.crop_type].total += listing.price_per_unit;
+      acc[crop].prices.push(listing.price_per_unit);
+      acc[crop].count++;
+      acc[crop].total += listing.price_per_unit;
       return acc;
     }, {});
 
-    return Object.entries(pricesByType).map(([crop, stats]: [string, any]) => ({
+    return (Object.entries(pricesByType) as [string, CropStats][]).map(([crop, stats]) => ({
       crop,
       averagePrice: stats.total / stats.count,
       minPrice: Math.min(...stats.prices),

@@ -1,7 +1,7 @@
 // Traceability Ledger Service
 // Handles blockchain logging and QR code generation for farm-to-shelf tracking
 
-import { supabase } from './supabase';
+import { supabase, type Farmer, type Contract as DBContract, type Milestone } from './supabase';
 
 // Check if Supabase is configured
 function checkSupabase() {
@@ -40,9 +40,16 @@ export interface TraceabilityEvent {
   quality_grade?: string;
   quantity?: number;
   unit?: string;
+
+  // AI Diagnostics Fields
+  ai_disease?: string;
+  ai_confidence?: number;
+  ai_health_score?: number;
+  ai_treatment_rec?: string;
+
   photos?: string[];
   documents?: string[];
-  iot_readings?: any;
+  iot_readings?: Record<string, unknown>[];
   diagnostic_id?: string;
   blockchain_tx?: string;
   ipfs_hash?: string;
@@ -82,17 +89,11 @@ export interface BatchMetadata {
   planting_date?: string;
 }
 
-export interface Contract {
-  id: string;
-  contract_code: string;
-  crop_type: string;
-  variety?: string;
-  status: string;
-  required_quantity: number;
-}
+// Use a subset of DBContract for local needs if necessary, or just use DBContract
+export type TraceabilityContract = Pick<DBContract, 'id' | 'contract_code' | 'crop_type' | 'variety' | 'status' | 'required_quantity'>;
 
 // Get contracts by farmer (for batch creation dropdown)
-export async function getContractsByFarmer(farmerId: string): Promise<Contract[]> {
+export async function getContractsByFarmer(farmerId: string): Promise<TraceabilityContract[]> {
   const client = checkSupabase();
   const { data, error } = await client
     .from('contracts')
@@ -142,7 +143,7 @@ export type BatchStatus =
   | 'sold';
 
 // Generate unique batch code (short format for printing on packaging)
-export function generateBatchCode(cropType: string, farmerId: string): string {
+export function generateBatchCode(_cropType: string, _farmerId: string): string {
   const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ';
   let code = '';
   for (let i = 0; i < 8; i++) {
@@ -161,7 +162,7 @@ export async function createBatch(batch: Omit<Batch, 'id' | 'batch_code'> & { me
   if (batch.metadata) {
     try {
       ipfsMetadata = JSON.stringify(batch.metadata);
-    } catch (e) {
+    } catch (e: unknown) {
       console.warn('Failed to stringify batch metadata', e);
     }
   }
@@ -219,6 +220,29 @@ export async function updateBatchStatus(
   lng?: number
 ): Promise<Batch> {
   const client = checkSupabase();
+
+  // Get current status to prevent downgrades
+  const { data: currentBatch } = await client
+    .from('batches')
+    .select('current_status')
+    .eq('id', batchId)
+    .single();
+
+  const statusOrder: BatchStatus[] = [
+    'growing', 'harvested', 'stored', 'in_transit', 'at_warehouse',
+    'processing', 'packaged', 'distributed', 'at_retail', 'sold'
+  ];
+
+  if (currentBatch) {
+    const currentIndex = statusOrder.indexOf(currentBatch.current_status || 'growing');
+    const newIndex = statusOrder.indexOf(status);
+
+    // If the new status is "earlier" in the chain, don't update (prevents syncing milestones from resetting status)
+    if (newIndex <= currentIndex && currentBatch.current_status !== 'growing') {
+      return currentBatch;
+    }
+  }
+
   const { data, error } = await client
     .from('batches')
     .update({
@@ -235,7 +259,6 @@ export async function updateBatchStatus(
   if (error) throw error;
   return data;
 }
-
 // Add traceability event
 export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' | 'created_at'>): Promise<TraceabilityEvent> {
   const client = checkSupabase();
@@ -253,6 +276,46 @@ export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' |
     .single();
 
   if (error) throw error;
+
+  // Automated Yield Prediction Logic
+  // @ts-ignore - ai_health_score exists on TraceabilityEvent
+  if (data.ai_health_score !== undefined && data.ai_health_score < 90) {
+    const health = data.ai_health_score;
+    const lossPercent = 100 - health;
+    const disease = data.ai_disease || 'General Health Issue';
+    const warningDescription = `Yield Warning: ${lossPercent}% Potential Loss detected by AI analysis (${disease}).`;
+
+    // Log automated warning event
+    await client
+      .from('traceability_events')
+      .insert({
+        batch_id: data.batch_id,
+        event_type: 'quality_check',
+        event_title: 'AI Yield Warning',
+        event_description: warningDescription,
+        location: data.location,
+        timestamp: new Date().toISOString(),
+        actor_id: data.actor_id || 'AI_ENGINE'
+      });
+
+    // Adjust batch quantity if applicable
+    if (data.batch_id) {
+      const { data: batch } = await client
+        .from('batches')
+        .select('total_quantity')
+        .eq('id', data.batch_id)
+        .single();
+
+      if (batch && batch.total_quantity) {
+        const adjustedQuantity = batch.total_quantity * (health / 100);
+        await client
+          .from('batches')
+          .update({ total_quantity: adjustedQuantity })
+          .eq('id', data.batch_id);
+      }
+    }
+  }
+
   return data;
 }
 
@@ -273,8 +336,8 @@ export async function getBatchTraceability(batchId: string): Promise<Traceabilit
 export async function getTraceabilityByBatchCode(batchCodeOrContractId: string): Promise<{
   batch: Batch;
   events: TraceabilityEvent[];
-  farmer?: any;
-  contract?: any;
+  farmer?: Farmer | null;
+  contract?: TraceabilityContract | null;
 } | null> {
   const client = checkSupabase();
 
@@ -344,10 +407,12 @@ export async function getTraceabilityByBatchCode(batchCodeOrContractId: string):
         events: [], // No batch events yet
         farmer: contract.farmer,
         contract: {
+          id: contract.id,
           contract_code: contract.contract_code,
           crop_type: contract.crop_type,
           variety: contract.variety,
-          status: contract.status
+          status: contract.status,
+          required_quantity: contract.required_quantity || 0
         }
       };
     }
@@ -368,7 +433,7 @@ export async function getTraceabilityByBatchCode(batchCodeOrContractId: string):
 
     if (growthActivities && growthActivities.length > 0) {
       // Map growth activities to TraceabilityEvent format
-      const mappedGrowthEvents: TraceabilityEvent[] = growthActivities.map((activity: any) => ({
+      const mappedGrowthEvents: TraceabilityEvent[] = growthActivities.map((activity: Record<string, any>) => ({
         id: activity.id,
         batch_id: batch!.id!,
         contract_id: batch!.contract_id,
@@ -394,6 +459,46 @@ export async function getTraceabilityByBatchCode(batchCodeOrContractId: string):
         return dateA - dateB;
       });
     }
+
+    // NEW: ALSO GET MILESTONES (Verified contract milestones are the source of truth for "the journey")
+    const { data: milestones } = await client
+      .from('milestones')
+      .select('*')
+      .eq('contract_id', batch.contract_id)
+      .eq('status', 'verified')
+      .order('completed_date', { ascending: true });
+
+    if (milestones && milestones.length > 0) {
+      const mappedMilestoneEvents: TraceabilityEvent[] = milestones.map((m: Milestone) => {
+        const mapping = MILESTONE_EVENT_MAP[m.name] || {
+          eventType: 'growth_update',
+          title: m.name
+        };
+        return {
+          id: m.id,
+          batch_id: batch!.id!,
+          contract_id: batch!.contract_id,
+          event_type: mapping.eventType,
+          event_title: mapping.title,
+          event_description: m.description || `${m.name} milestone verified`,
+          created_at: m.completed_date || m.created_at,
+          actor_type: 'farmer',
+          photos: m.metadata?.images || [],
+        };
+      });
+
+      // Filter out duplicates (if we already have an event for this milestone)
+      const existingTitles = new Set(events.map(e => e.event_title));
+      const uniqueMilestones = mappedMilestoneEvents.filter(m => !existingTitles.has(m.event_title));
+
+      // Combine and re-sort
+      events = [...events, ...uniqueMilestones].sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateA - dateB;
+      });
+    }
+
   }
 
   // Get farmer info if available
@@ -412,17 +517,40 @@ export async function getTraceabilityByBatchCode(batchCodeOrContractId: string):
   if (batch.contract_id) {
     const { data } = await client
       .from('contracts')
-      .select('contract_code, crop_type, variety, status')
+      .select('contract_code, crop_type, variety, status, created_at')
       .eq('id', batch.contract_id)
       .single();
     contract = data;
+
+    // 3. ADD CONTRACT INITIATED EVENT
+    if (contract) {
+      const contractCreatedEvent: TraceabilityEvent = {
+        batch_id: batch.id!,
+        contract_id: batch.contract_id,
+        event_type: 'planting',
+        event_title: `Contract Initiated: ${contract.contract_code}`,
+        event_description: `Production contract started for ${contract.crop_type}. Journey tracking initiated.`,
+        created_at: contract.created_at || batch.created_at,
+        actor_type: 'admin',
+        actor_name: 'AgroChain System'
+      };
+
+      // Only add if not already there
+      if (!events.some(e => e.event_title.includes('Contract Initiated'))) {
+        events = [contractCreatedEvent, ...events].sort((a, b) => {
+          const dateA = new Date(a.created_at || 0).getTime();
+          const dateB = new Date(b.created_at || 0).getTime();
+          return dateA - dateB;
+        });
+      }
+    }
   }
 
   return { batch, events, farmer, contract };
 }
 
 // Generate hash for event verification
-async function generateEventHash(event: any): Promise<string> {
+async function generateEventHash(event: Partial<TraceabilityEvent>): Promise<string> {
   const eventString = JSON.stringify({
     batch_id: event.batch_id,
     event_type: event.event_type,
@@ -452,7 +580,8 @@ export async function logFarmerUpdate(
   title: string,
   description?: string,
   photos?: string[],
-  location?: { lat: number; lng: number; address?: string }
+  location?: { lat: number; lng: number; address?: string },
+  aiDiagnosis?: { disease: string; confidence: number; healthScore: number; treatmentRec?: string }
 ): Promise<TraceabilityEvent> {
   const eventType = updateType === 'input_application' ? 'input_application' : 'growth_update';
 
@@ -620,10 +749,13 @@ export async function getBatchesByContract(contractId: string): Promise<Batch[]>
 // Milestone to traceability event type mapping
 const MILESTONE_EVENT_MAP: Record<string, { eventType: TraceabilityEventType; title: string; status: BatchStatus }> = {
   'Land Preparation': { eventType: 'planting', title: 'Land prepared for planting', status: 'growing' },
+  'Planting': { eventType: 'planting', title: 'Planting started', status: 'growing' },
   'Planting Complete': { eventType: 'germination', title: 'Planting completed', status: 'growing' },
   'Seedling Stage': { eventType: 'growth_update', title: 'Seedling stage reached', status: 'growing' },
   'Growth Stage': { eventType: 'growth_update', title: 'Growth milestone achieved', status: 'growing' },
+  'Flowering': { eventType: 'flowering', title: 'Flowering Stage', status: 'growing' },
   'Flowering Stage': { eventType: 'flowering', title: 'Flowering stage reached', status: 'growing' },
+  'Fruiting': { eventType: 'growth_update', title: 'Fruiting started', status: 'growing' },
   'Harvest Ready': { eventType: 'harvest', title: 'Harvest completed', status: 'harvested' },
   'Harvest Complete': { eventType: 'harvest', title: 'Harvest completed', status: 'harvested' },
   'Quality Check': { eventType: 'quality_check', title: 'Quality inspection passed', status: 'harvested' },
@@ -769,7 +901,7 @@ export async function getAllBatches(): Promise<(Batch & { farmer_name?: string }
 
   if (error) throw error;
 
-  return (data || []).map((b: any) => ({
+  return (data || []).map((b: Batch & { farmer?: { name: string } }) => ({
     ...b,
     farmer_name: b.farmer?.name || 'Unknown',
   }));
@@ -786,9 +918,36 @@ export async function getRecentTraceabilityEvents(limit: number = 20): Promise<(
 
   if (error) throw error;
 
-  return (data || []).map((e: any) => ({
+  return (data || []).map((e: TraceabilityEvent & { batch?: { batch_code: string } }) => ({
     ...e,
     batch_code: e.batch?.batch_code || e.batch_id,
   }));
 }
+
+/**
+ * Get the latest AI diagnostic for a batch
+ */
+export async function getLatestAIDiagnostic(batchId: string): Promise<{ disease?: string, health_score?: number, treatment_rec?: string } | null> {
+  const client = checkSupabase();
+  try {
+    const { data, error } = await client
+      .from('traceability_events')
+      .select('ai_disease, ai_health_score, ai_treatment_rec')
+      .eq('batch_id', batchId)
+      .not('ai_disease', 'is', null)
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) return null;
+    return {
+      disease: data.ai_disease,
+      health_score: data.ai_health_score,
+      treatment_rec: data.ai_treatment_rec
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
 

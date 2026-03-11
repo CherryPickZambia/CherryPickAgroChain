@@ -36,7 +36,7 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
     const payment = await pay({
       amount: request.amount,
       to: request.to,
-      testnet: request.testnet ?? true, // Default to testnet
+      testnet: request.testnet ?? false, // Default to mainnet
       payerInfo: request.payerInfo,
     });
 
@@ -58,7 +58,7 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
  */
 export async function checkPaymentStatus(
   paymentId: string,
-  testnet: boolean = true
+  testnet: boolean = false
 ): Promise<{ status: 'pending' | 'completed' | 'failed' }> {
   try {
     const result = await getPaymentStatus({
@@ -80,29 +80,29 @@ export async function checkPaymentStatus(
  */
 export async function pollPaymentStatus(
   paymentId: string,
-  testnet: boolean = true,
+  testnet: boolean = false,
   maxAttempts: number = 30,
   intervalMs: number = 2000
 ): Promise<'completed' | 'failed' | 'timeout'> {
   for (let i = 0; i < maxAttempts; i++) {
     try {
       const { status } = await checkPaymentStatus(paymentId, testnet);
-      
+
       if (status === 'completed') {
         return 'completed';
       }
-      
+
       if (status === 'failed') {
         return 'failed';
       }
-      
+
       // Wait before next poll
       await new Promise(resolve => setTimeout(resolve, intervalMs));
     } catch (error) {
       console.error(`Poll attempt ${i + 1} failed:`, error);
     }
   }
-  
+
   return 'timeout';
 }
 
@@ -113,7 +113,7 @@ export async function processMilestonePayment(
   milestoneId: string,
   amount: string,
   farmerAddress: string,
-  testnet: boolean = true
+  testnet: boolean = false
 ): Promise<PaymentResponse> {
   return processPayment({
     amount,
@@ -136,7 +136,7 @@ export async function processVerificationFee(
   taskId: string,
   amount: string,
   officerAddress: string,
-  testnet: boolean = true
+  testnet: boolean = false
 ): Promise<PaymentResponse> {
   return processPayment({
     amount,

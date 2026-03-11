@@ -16,7 +16,12 @@ export const USDC_CONTRACT_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 // Extend Window interface for ethereum
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: {
+      isMetaMask?: boolean;
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+      on?: (eventName: string, handler: (params: unknown) => void) => void;
+      removeListener?: (eventName: string, handler: (params: unknown) => void) => void;
+    };
   }
 }
 
@@ -114,17 +119,18 @@ export async function sendPayment(
       success: true,
       transactionHash: hash,
     };
-  } catch (error: any) {
-    console.error('Payment error:', error);
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error('Payment error:', err);
 
     // Provide user-friendly error messages
     let errorMessage = 'Payment failed';
-    if (error.message?.includes('insufficient funds')) {
+    if (err.message?.includes('insufficient funds')) {
       errorMessage = 'Insufficient USDC balance';
-    } else if (error.message?.includes('user rejected')) {
+    } else if (err.message?.includes('user rejected')) {
       errorMessage = 'Transaction was rejected';
-    } else if (error.message) {
-      errorMessage = error.message;
+    } else if (err.message) {
+      errorMessage = err.message;
     }
 
     return {
@@ -332,11 +338,12 @@ export async function purchaseViaContract(
       transactionHash: hash,
     };
 
-  } catch (error: any) {
-    console.error('Marketplace Purchase Error:', error);
+  } catch (error: unknown) {
+    const err = error as { message?: string };
+    console.error('Marketplace Purchase Error:', err);
     return {
       success: false,
-      error: error.message || 'Purchase failed',
+      error: err.message || 'Purchase failed',
     };
   }
 }

@@ -3,103 +3,52 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { QrCode, Search, Leaf, Shield, MapPin, ArrowRight, Package, Grid, CheckCircle, ChevronLeft } from "lucide-react";
+import { Search, Shield, ArrowRight, Package, MapPin, Scan, Leaf, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-/* ─────────────────────────────── STYLES (Copied from LandingPage for consistency) ─────────────────────────────── */
+/* ── palette + fonts (matches LandingPage) ── */
+const C = {
+    deep: "#020503",
+    surface: "#07120a",
+    white: "#ffffff",
+    primary: "#e0e7e3",
+    secondary: "#9aa89d",
+    muted: "#5b6b5e",
+    accent: "#4ade80",
+    accentDim: "#7a9c7b",
+    border: "rgba(255,255,255,0.08)",
+    borderG: "rgba(74,222,128,0.15)",
+};
+const FD = "'Playfair Display', serif";
+const FS = "'Inter', sans-serif";
+const FM = "'Space Mono', monospace";
+
 const injectStyles = () => {
     if (typeof window === "undefined") return;
-    if (document.getElementById("cp-lookup-styles")) return;
-    const style = document.createElement("style");
-    style.id = "cp-lookup-styles";
-    style.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-
-    @keyframes aurora {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
+    if (document.getElementById("cp-lookup-v2")) return;
+    const s = document.createElement("style");
+    s.id = "cp-lookup-v2";
+    s.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
+    .cp-lookup *{box-sizing:border-box}
+    @keyframes pulseDot{0%,100%{opacity:.3}50%{opacity:1}}
+    @keyframes slowPan{0%{transform:scale(1.05) translate(0,0)}100%{transform:scale(1.12) translate(-1%,2%)}}
+    .cp-lookup .cp-dot{width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;animation:pulseDot 2s infinite}
+    .cp-lookup .cp-btn{display:inline-flex;align-items:center;justify-content:center;padding:1rem 2.5rem;background:transparent;color:#fff;font-family:'Inter',sans-serif;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;text-decoration:none;border:1px solid #fff;cursor:pointer;position:relative;overflow:hidden;transition:color .4s cubic-bezier(.19,1,.22,1)}
+    .cp-lookup .cp-btn::before{content:'';position:absolute;inset:0;background:#fff;transform:scaleY(0);transform-origin:bottom;transition:transform .4s cubic-bezier(.19,1,.22,1);z-index:0}
+    .cp-lookup .cp-btn:hover{color:#020503}
+    .cp-lookup .cp-btn:hover::before{transform:scaleY(1)}
+    .cp-lookup .cp-btn span{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px}
+    .cp-lookup .cp-btn-accent{border-color:#4ade80;color:#4ade80}
+    .cp-lookup .cp-btn-accent::before{background:#4ade80}
+    .cp-lookup .cp-btn-accent:hover{color:#020503}
+    .cp-lookup input::placeholder{color:#5b6b5e}
+    .cp-lookup input:focus{outline:none}
+    @media(max-width:768px){
+      .cp-lookup .cp-demo-grid{grid-template-columns:1fr !important}
     }
-    @keyframes grain {
-      0%, 100% { transform: translate(0, 0); }
-      10% { transform: translate(-5%, -10%); }
-      30% { transform: translate(3%, -5%); }
-      50% { transform: translate(-5%, 5%); }
-      70% { transform: translate(5%, 5%); }
-      90% { transform: translate(-3%, 3%); }
-    }
-    @keyframes gradient-text {
-      0%, 100% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-    }
-
-    .cp-landing * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-    .cp-landing h1, .cp-landing h2, .cp-landing h3 { font-family: 'Space Grotesk', 'Inter', sans-serif; }
-    
-    html, body {
-      background-color: #0d1910;
-      margin: 0; padding: 0; min-height: 100vh;
-    }
-
-    .cp-aurora-bg {
-      background: linear-gradient(135deg, #0f1f15 0%, #132b1c 20%, #0e2218 40%, #153524 60%, #0d1e13 80%, #0f1f15 100%);
-      background-size: 300% 300%;
-      animation: aurora 60s ease infinite;
-    }
-
-    .cp-grain::after {
-      content: '';
-      position: absolute;
-      inset: -200%;
-      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
-      animation: grain 8s steps(10) infinite;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    .cp-glass-card {
-      background: rgba(255, 255, 255, 0.02);
-      backdrop-filter: blur(40px) saturate(180%);
-      -webkit-backdrop-filter: blur(40px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-    }
-    .cp-glass-card:hover {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: rgba(16, 185, 129, 0.2);
-    }
-
-    .cp-input {
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: white;
-      transition: all 0.3s ease;
-    }
-    .cp-input:focus {
-      background: rgba(0, 0, 0, 0.3);
-      border-color: rgba(16, 185, 129, 0.5);
-      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
-    }
-
-    .cp-gradient-text {
-      background: linear-gradient(135deg, #6ee7b7 0%, #34d399 25%, #10b981 50%, #059669 75%, #6ee7b7 100%);
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: gradient-text 4s linear infinite;
-    }
-
-    .cp-btn-primary {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
-      transition: all 0.3s ease;
-    }
-    .cp-btn-primary:hover {
-      box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
-      transform: translateY(-2px);
-    }
-  `;
-    document.head.appendChild(style);
+    `;
+    document.head.appendChild(s);
 };
 
 export default function LookupPage() {
@@ -110,6 +59,7 @@ export default function LookupPage() {
 
     useEffect(() => {
         injectStyles();
+        return () => { const el = document.getElementById("cp-lookup-v2"); if (el) el.remove(); };
     }, []);
 
     const handleSearch = async (e: React.FormEvent) => {
@@ -118,153 +68,186 @@ export default function LookupPage() {
             setError("Please enter a batch code");
             return;
         }
-
         setIsSearching(true);
         setError("");
-
-        // Navigate to the traceability page
         setTimeout(() => {
             router.push(`/trace/${batchCode.trim().toUpperCase()}`);
         }, 500);
     };
 
-    const recentBatches = [
-        { code: "CP-A3K9M2", crop: "Mangoes", farmer: "John Mwale" },
-        { code: "B-M4R9P7Q3", crop: "Tomatoes", farmer: "Mary Banda" },
-        { code: "CP-P7Q3N8", crop: "Pineapples", farmer: "Peter Phiri" },
+    const demoBatches = [
+        { code: "CP-A3K9M2", crop: "Mangoes", farmer: "John Mwale", region: "Eastern Province" },
+        { code: "B-M4R9P7Q3", crop: "Tomatoes", farmer: "Mary Banda", region: "Lusaka Province" },
+        { code: "CP-P7Q3N8", crop: "Pineapples", farmer: "Peter Phiri", region: "Northern Province" },
+    ];
+
+    const features = [
+        { icon: "🌿", label: "Farm Origin", desc: "See exactly where your food was grown" },
+        { icon: "🔬", label: "Quality Data", desc: "AI-verified crop health diagnostics" },
+        { icon: "⛓️", label: "Blockchain", desc: "Immutable records on Base L2" },
+        { icon: "🚛", label: "Full Journey", desc: "Track every step to your table" },
     ];
 
     return (
-        <div className="cp-landing flex flex-col min-h-screen bg-[#0d1910] text-white">
-            {/* Background Effects */}
-            <div className="fixed inset-0 overflow-hidden cp-aurora-bg cp-grain pointer-events-none" />
-            <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute w-[600px] h-[600px] rounded-full bg-emerald-500/20 blur-[120px] -top-20 -left-20" />
-                <div className="absolute w-[500px] h-[500px] rounded-full bg-teal-500/20 blur-[100px] bottom-0 right-0" />
-                <div className="absolute w-[400px] h-[400px] rounded-full bg-emerald-400/10 blur-[80px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-            </div>
+        <div className="cp-lookup" style={{ background: C.deep, minHeight: "100vh", color: C.white, fontFamily: FS, position: "relative", overflow: "hidden" }}>
+            {/* Subtle background image */}
+            <div style={{ position: "fixed", inset: 0, backgroundImage: "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=2000&q=40')", backgroundSize: "cover", backgroundPosition: "center", opacity: 0.04, pointerEvents: "none" }} />
+            <div style={{ position: "fixed", inset: 0, background: `linear-gradient(180deg, ${C.deep} 0%, transparent 40%, transparent 60%, ${C.deep} 100%)`, pointerEvents: "none" }} />
 
-            {/* Header */}
-            <header className="relative z-50 border-b border-white/5 bg-black/20 backdrop-blur-md">
-                <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-3 group">
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-emerald-500/20 blur-md rounded-full group-hover:bg-emerald-500/30 transition-all" />
-                            <img src="/logo-new.png" alt="Cherry Pick" className="h-10 w-auto relative z-10" />
-                        </div>
+            {/* Navigation */}
+            <nav style={{ position: "relative", zIndex: 50, borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🍒</div>
+                        <span style={{ fontFamily: FD, fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.white }}>CHERRY PICK</span>
                     </Link>
-                    <div className="flex items-center space-x-2 text-sm text-white/50 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
-                        <Shield className="h-3.5 w-3.5 text-emerald-500" />
-                        <span>Blockchain Verified</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                        <Link href="/" style={{ fontFamily: FS, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", color: C.secondary, textDecoration: "none", fontWeight: 500 }}>Home</Link>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(74,222,128,0.08)", border: `1px solid ${C.borderG}`, borderRadius: 20, padding: "6px 14px" }}>
+                            <div className="cp-dot" />
+                            <span style={{ fontFamily: FM, fontSize: 10, letterSpacing: 2, color: C.accent }}>VERIFIED</span>
+                        </div>
                     </div>
                 </div>
-            </header>
+            </nav>
 
-            {/* Main Content */}
-            <main className="relative z-10 flex-grow flex flex-col items-center justify-center p-6 md:p-12">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="w-full max-w-3xl mx-auto text-center"
-                >
-                    {/* Icon */}
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/20 mb-8 backdrop-blur-xl shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)]">
-                        <QrCode className="h-10 w-10 text-emerald-400" />
+            {/* Hero Section */}
+            <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>
+                <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
+                    {/* Label */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
+                        <div style={{ width: 40, height: 1, background: C.accent }} />
+                        <span style={{ fontFamily: FM, fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: C.accent }}>Traceability Portal</span>
                     </div>
 
-                    <h1 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
-                        <span className="text-white">Trace Your</span> <span className="text-white font-extrabold">Product</span>
+                    {/* Title */}
+                    <h1 style={{ fontFamily: FD, fontSize: "clamp(42px, 6vw, 72px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.02em", color: C.white, margin: "0 0 24px", maxWidth: 700 }}>
+                        Trace Your<br />
+                        <span style={{ fontStyle: "italic", color: C.accent }}>Product Journey</span>
                     </h1>
-                    <p className="text-lg text-white/60 max-w-xl mx-auto mb-12 leading-relaxed">
-                        Enter the batch code from your product packaging to see its complete journey from farm to your table.
-                    </p>
 
-                    {/* Search Form */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.1 }}
-                        className="cp-glass-card rounded-3xl p-2 md:p-3 mb-10 max-w-2xl mx-auto shadow-2xl"
-                    >
-                        <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-2">
-                            <div className="flex-1 relative group">
-                                <Package className="absolute left-5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/30 group-focus-within:text-emerald-400 transition-colors" />
+                    <p style={{ fontFamily: FS, fontSize: 17, lineHeight: 1.7, color: C.secondary, fontWeight: 300, maxWidth: 520, margin: "0 0 48px" }}>
+                        Enter the batch code from your product packaging to reveal its complete farm-to-shelf story, verified on blockchain.
+                    </p>
+                </motion.div>
+
+                {/* Search Form */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.7 }}>
+                    <form onSubmit={handleSearch} style={{ maxWidth: 640, marginBottom: 16 }}>
+                        <div style={{ display: "flex", gap: 0, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 0, overflow: "hidden" }}>
+                            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
+                                <Scan style={{ position: "absolute", left: 20, width: 18, height: 18, color: C.muted }} />
                                 <input
                                     type="text"
                                     value={batchCode}
-                                    onChange={(e) => {
-                                        setBatchCode(e.target.value.toUpperCase());
-                                        setError("");
+                                    onChange={(e) => { setBatchCode(e.target.value.toUpperCase()); setError(""); }}
+                                    placeholder="ENTER BATCH CODE"
+                                    style={{
+                                        width: "100%", padding: "22px 20px 22px 52px",
+                                        background: "transparent", border: "none", color: C.white,
+                                        fontFamily: FM, fontSize: 14, letterSpacing: "0.08em", textTransform: "uppercase",
                                     }}
-                                    placeholder="e.g., CP-A3K9M2"
-                                    className="w-full pl-14 pr-4 py-4 bg-white/5 border border-white/5 rounded-2xl text-white placeholder-white/20 focus:outline-none focus:bg-black/40 focus:border-emerald-500/50 transition-all font-mono uppercase text-lg"
                                 />
                             </div>
                             <button
                                 type="submit"
                                 disabled={isSearching}
-                                className="px-8 py-4 cp-btn-primary rounded-2xl font-bold text-white tracking-wide uppercase text-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed min-w-[140px]"
+                                className="cp-btn cp-btn-accent"
+                                style={{ borderRadius: 0, border: "none", borderLeft: `1px solid ${C.border}`, padding: "22px 32px", minWidth: 160 }}
                             >
-                                {isSearching ? (
-                                    <>
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        <span>Tracing...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Search className="h-4 w-4" />
-                                        <span>Track</span>
-                                    </>
-                                )}
+                                <span>
+                                    {isSearching ? (
+                                        <>
+                                            <div style={{ width: 14, height: 14, border: "2px solid rgba(74,222,128,0.3)", borderTop: "2px solid #4ade80", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                                            Tracing
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Search style={{ width: 14, height: 14 }} />
+                                            Track
+                                        </>
+                                    )}
+                                </span>
                             </button>
-                        </form>
-                    </motion.div>
+                        </div>
+                    </form>
                     {error && (
-                        <motion.p
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            className="mt-4 text-red-400 text-sm bg-red-500/10 px-4 py-2 rounded-lg inline-block border border-red-500/20"
-                        >
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ fontFamily: FS, fontSize: 13, color: "#f87171", marginTop: 12 }}>
                             {error}
                         </motion.p>
                     )}
-
-                    {/* Recent/Demo Batches */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="mt-12"
-                    >
-                        <h3 className="text-sm font-semibold uppercase tracking-widest mb-6"><span className="text-white">Try a Demo Batch</span></h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {recentBatches.map((batch, i) => (
-                                <button
-                                    key={batch.code}
-                                    onClick={() => setBatchCode(batch.code)}
-                                    className="cp-glass-card p-5 rounded-2xl text-left group hover:bg-white/5 transition-all text-white/80 hover:text-white"
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="font-mono text-sm font-bold text-emerald-400 group-hover:text-emerald-300">{batch.code}</p>
-                                        <ArrowRight className="h-3 w-3 text-white/20 group-hover:text-white/60 transform group-hover:translate-x-1 transition-all" />
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <p className="text-sm font-medium">{batch.crop}</p>
-                                        <div className="flex items-center gap-1.5 text-xs text-white/40">
-                                            <MapPin className="h-3 w-3" />
-                                            {batch.farmer}
-                                        </div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </motion.div>
                 </motion.div>
-            </main>
+
+                {/* Divider */}
+                <div style={{ maxWidth: 640, display: "flex", alignItems: "center", gap: 16, margin: "48px 0 40px" }}>
+                    <div style={{ height: 1, flex: 1, background: C.border }} />
+                    <span style={{ fontFamily: FM, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted }}>Or Try a Demo</span>
+                    <div style={{ height: 1, flex: 1, background: C.border }} />
+                </div>
+
+                {/* Demo Batches */}
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.7 }}>
+                    <div className="cp-demo-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, maxWidth: 640 }}>
+                        {demoBatches.map((batch, i) => (
+                            <motion.button
+                                key={batch.code}
+                                whileHover={{ y: -2 }}
+                                onClick={() => setBatchCode(batch.code)}
+                                style={{
+                                    background: "transparent",
+                                    border: `1px solid ${C.border}`,
+                                    padding: "20px",
+                                    cursor: "pointer",
+                                    textAlign: "left",
+                                    transition: "all 0.4s cubic-bezier(0.19, 1, 0.22, 1)",
+                                    position: "relative",
+                                    overflow: "hidden",
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.borderG; e.currentTarget.style.background = "rgba(74,222,128,0.03)"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = "transparent"; }}
+                            >
+                                <p style={{ fontFamily: FM, fontSize: 12, color: C.accent, letterSpacing: "0.05em", marginBottom: 10, fontWeight: 700 }}>{batch.code}</p>
+                                <p style={{ fontFamily: FD, fontSize: 18, color: C.white, fontWeight: 500, marginBottom: 8 }}>{batch.crop}</p>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                    <MapPin style={{ width: 10, height: 10, color: C.muted }} />
+                                    <span style={{ fontFamily: FS, fontSize: 11, color: C.muted }}>{batch.farmer}</span>
+                                </div>
+                                <ChevronRight style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: C.muted, opacity: 0.3 }} />
+                            </motion.button>
+                        ))}
+                    </div>
+                </motion.div>
+
+                {/* Features Grid */}
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6, duration: 0.8 }} style={{ marginTop: 80, maxWidth: 640 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
+                        <span style={{ fontFamily: FM, fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted }}>What You'll Discover</span>
+                        <div style={{ height: 1, flex: 1, background: C.border }} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: C.border }}>
+                        {features.map((f, i) => (
+                            <div key={i} style={{ background: C.deep, padding: "28px 24px" }}>
+                                <span style={{ fontSize: 24, display: "block", marginBottom: 14 }}>{f.icon}</span>
+                                <p style={{ fontFamily: FS, fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 6, letterSpacing: "0.02em" }}>{f.label}</p>
+                                <p style={{ fontFamily: FS, fontSize: 12, color: C.muted, lineHeight: 1.5, fontWeight: 300 }}>{f.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+            </div>
 
             {/* Footer */}
-            <footer className="relative z-10 py-8 border-t border-white/5 bg-black/20">
-                <div className="max-w-6xl mx-auto px-6 text-center">
-                    <p className="text-white/20 text-xs">&copy; 2026 Cherry Pick. All rights reserved.</p>
+            <footer style={{ position: "relative", zIndex: 10, borderTop: `1px solid ${C.border}`, marginTop: 80 }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>🍒</div>
+                        <span style={{ fontFamily: FD, fontWeight: 700, fontSize: 11, letterSpacing: 1.5, color: C.muted }}>CHERRY PICK</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 12 }}>
+                        {["BASE L2", "IPFS", "AGROCHAIN 360"].map((t) => (
+                            <span key={t} style={{ fontFamily: FM, fontSize: 9, letterSpacing: "0.1em", color: C.muted, background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, padding: "4px 10px" }}>{t}</span>
+                        ))}
+                    </div>
                 </div>
             </footer>
         </div>

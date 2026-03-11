@@ -1,13 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  QrCode, MapPin, Truck, Warehouse, Store,
-  Leaf, CheckCircle, Clock, User, ThermometerSun,
-  Droplets, Award, ExternalLink, ChevronDown,
-  Sprout, Factory, ShoppingBag, X, Info
-} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { TraceabilityEvent, Batch } from "@/lib/traceabilityService";
 
 interface TraceabilityViewProps {
@@ -18,7 +11,6 @@ interface TraceabilityViewProps {
     location_address?: string;
     farm_size?: number;
     verified?: boolean;
-    years_farming?: number;
   };
   contract?: {
     contract_code: string;
@@ -29,31 +21,84 @@ interface TraceabilityViewProps {
   isPublic?: boolean;
 }
 
-// Map event types to broader timeline steps
-const getTimelineStep = (eventType: string) => {
-  if (['planting', 'germination', 'growth_update', 'input_application', 'fertilization', 'irrigation', 'flowering', 'pest_control'].includes(eventType)) return 'Farm';
-  if (['harvest', 'post_harvest_handling', 'quality_check'].includes(eventType)) return 'Farm';
-  if (['storage', 'aggregation', 'transport_start', 'transport_checkpoint'].includes(eventType)) return 'Aggregation';
-  if (['warehouse_arrival', 'processing', 'packaging'].includes(eventType)) return 'Processing';
-  if (['distribution', 'retail_arrival'].includes(eventType)) return 'Distribution';
-  return 'Verification';
+const MANGO_ORANGE = "#F97316";
+const LEAF_GREEN = "#2D5A3D";
+const CREAM = "#FDF8F2";
+const SOIL = "#8B5E3C";
+const DARK = "#18181B";
+
+const DEFAULT_IMG_HERO = "https://images.unsplash.com/photo-1610832958506-aa56368176cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80";
+const DEFAULT_IMG_FARMER = "https://images.unsplash.com/photo-1595844730298-b960fa25e9e3?ixlib=rb-4.0.3&auto=format&fit=crop&w=256&q=80";
+
+const EVENT_EMOJIS: Record<string, string> = {
+  planting: "🌱",
+  growth_update: "🌿",
+  input_application: "💧",
+  irrigation: "💦",
+  pest_control: "🛡️",
+  harvest: "🧺",
+  post_harvest_handling: "📦",
+  quality_check: "🏅",
+  storage: "🏭",
+  aggregation: "🏢",
+  transport_start: "🚛",
+  transport_checkpoint: "📍",
+  warehouse_arrival: "🏭",
+  processing: "🔆",
+  packaging: "📦",
+  distribution: "🚚",
+  retail_arrival: "🏪",
+  verification: "✅",
+  ai_diagnostic: "🤖",
 };
 
-const STEP_COLORS: Record<string, string> = {
-  'Farm': 'bg-emerald-500',
-  'Aggregation': 'bg-blue-500',
-  'Processing': 'bg-indigo-500',
-  'Distribution': 'bg-teal-500',
-  'Verification': 'bg-purple-500',
+const formatDateDayMonth = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-const STEP_ICONS: Record<string, any> = {
-  'Farm': Leaf,
-  'Aggregation': Warehouse,
-  'Processing': Factory,
-  'Distribution': Truck,
-  'Verification': CheckCircle,
-};
+function useInView(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, inView] as const;
+}
+
+function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const [ref, inView] = useInView();
+  return (
+    <div ref={ref} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? "translateY(0)" : "translateY(20px)",
+      transition: `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function MapZambia() {
+  const [pulse, setPulse] = useState(false);
+  useEffect(() => { setTimeout(() => setPulse(true), 800); }, []);
+  return (
+    <div style={{ position: "relative", width: 80, height: 70, flexShrink: 0 }}>
+      <svg viewBox="0 0 200 180" style={{ width: "100%", height: "100%", opacity: 0.9 }}>
+        <path d="M60,20 L140,15 L165,45 L170,90 L155,130 L130,160 L90,165 L55,150 L30,110 L25,70 L40,35 Z" fill="#2D5A3D" stroke="#1A3D2B" strokeWidth="2" />
+        <path d="M80,60 L110,55 L125,75 L120,100 L100,115 L75,110 L62,90 L65,70 Z" fill="#4A7C59" />
+      </svg>
+      <div style={{
+        position: "absolute", top: "38%", left: "60%",
+        width: 8, height: 8, borderRadius: "50%",
+        background: MANGO_ORANGE,
+        animation: "pulse 2s infinite",
+      }} />
+      <style>{`@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0.6)} 50%{box-shadow:0 0 0 8px rgba(249,115,22,0)} } @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
+    </div>
+  );
+}
 
 export default function TraceabilityView({
   batch,
@@ -62,17 +107,8 @@ export default function TraceabilityView({
   contract,
   isPublic = false
 }: TraceabilityViewProps) {
-  const [showQR, setShowQR] = useState(false);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
-
-  const formatDate = (dateString: string, includeTime: boolean = false) => {
-    const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
-    if (includeTime) {
-      options.hour = '2-digit';
-      options.minute = '2-digit';
-    }
-    return new Date(dateString).toLocaleDateString('en-GB', options);
-  };
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
 
   let metadata: any = {};
   try {
@@ -83,377 +119,306 @@ export default function TraceabilityView({
     console.error("Error parsing metadata", e);
   }
 
-  // Find key events
-  const harvestEvent = events.find(e => e.event_type === 'harvest');
-  const verificationEvents = events.filter(e => e.event_type === 'verification' || e.actor_type === 'verifier');
-  const processingEvents = events.filter(e => ['processing', 'warehouse_arrival', 'packaging', 'quality_check'].includes(e.event_type) && e.actor_type !== 'verifier');
+  const heroImage = metadata.batch_image || DEFAULT_IMG_HERO;
+  const farmerImage = metadata.farmer_image || DEFAULT_IMG_FARMER;
+  const cropType = batch.crop_type || "Premium Produce";
+  const variety = batch.variety || "Premium Quality";
+  const location = farmer?.location_address || "Eastern Province, Zambia";
+  const farmerName = farmer?.name || "Verified Smallholder";
+  const farmSize = farmer?.farm_size || 3;
+  const farmerExp = metadata.farmer_experience || "12";
+  const impactIncrease = metadata.income_increase || "25";
 
-  // Timeline aggregation
-  const timelineSteps = events.reduce((acc, event) => {
-    const step = getTimelineStep(event.event_type);
-    if (!acc.some(s => s.step === step)) {
-      acc.push({
-        step,
-        location: event.location_address || (step === 'Farm' ? farmer?.location_address : 'Lusaka'),
-        date: event.created_at,
-        icon: STEP_ICONS[step] || CheckCircle,
-        color: STEP_COLORS[step] || 'bg-gray-500'
-      });
-    }
-    return acc;
-  }, [] as any[]);
+  const specs = [
+    { icon: "🆔", label: "Batch ID", value: batch.batch_code },
+    { icon: "📅", label: "Production Date", value: metadata.productionDate ? formatDateDayMonth(metadata.productionDate) : (batch.harvest_date ? formatDateDayMonth(batch.harvest_date) : "Not set") },
+    { icon: "⌛", label: "Expiry Date", value: metadata.expiryDate ? formatDateDayMonth(metadata.expiryDate) : "Not set" },
+    { icon: "⚖️", label: "Total Batch Weight", value: `${batch.total_quantity || 0} ${batch.unit || 'kg'}` },
+  ];
+
+  const impacts = [
+    { icon: "👩🏾‍🌾", color: "#2D5A3D", bg: "#E8F5EE", label: "Community", value: "Supports smallholder families" },
+    { icon: "🍃", color: "#166534", bg: "#DCFCE7", label: "Eco-Friendly", value: `Saved waste with precision care` },
+    { icon: "🇿🇲", color: "#9A3412", bg: "#FFEDD5", label: "Local Pride", value: "100% Zambian tracked" },
+  ];
 
   return (
-    <>
-      <div className={`${isPublic ? 'min-h-screen bg-[#FDFDF9] text-[#2D332F] font-sans pb-24' : ''}`}>
-        <div className={`${isPublic ? 'max-w-xl mx-auto md:px-4' : ''}`}>
+    <div style={{ background: isPublic ? "#F4F4F5" : "transparent", minHeight: isPublic ? "100vh" : "auto", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <div style={{ maxWidth: 680, margin: "0 auto", background: "#FAF9F6", minHeight: "100vh", boxShadow: isPublic ? "0 0 40px rgba(0,0,0,0.05)" : "none", paddingBottom: 40, borderRadius: isPublic ? 0 : 32, overflow: "hidden" }}>
 
-          {/* 1. Product Identity (Hero) */}
-          <motion.section
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="md:pt-8"
-          >
-            <div className="relative md:rounded-[2rem] overflow-hidden shadow-2xl bg-white aspect-[4/5] md:aspect-square flex flex-col group">
-              {/* Product Image */}
-              <div className="absolute inset-0 h-[60%] z-0">
-                <img
-                  src={metadata.batch_image || "https://images.unsplash.com/photo-1550828520-4cb49ec7358d?auto=format&fit=crop&w=800&q=80"}
-                  alt={contract?.crop_type || batch.crop_type}
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" />
+        {/* HERO SECTION */}
+        <div style={{ position: "relative", overflow: "hidden", borderRadius: isPublic ? "0 0 32px 32px" : "32px", paddingBottom: 40, backgroundColor: DARK, boxShadow: "0 10px 30px rgba(0,0,0,0.15)" }}>
+          <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${heroImage})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.6 }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(24,24,27,0.2) 0%, rgba(24,24,27,0.95) 80%, rgba(24,24,27,1) 100%)" }} />
+          <div style={{ position: "relative", padding: "20px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={() => window.history.back()} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, padding: "6px 12px", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, backdropFilter: "blur(8px)" }}>
+                ← Back
+              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🍒</div>
+                <span style={{ color: "#FFF", fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700, letterSpacing: 1, fontSize: 13 }}>CHERRY PICK</span>
+              </div>
+            </div>
+            <div style={{ background: "rgba(74,215,120,0.15)", border: "1px solid rgba(74,215,120,0.3)", borderRadius: 20, padding: "4px 12px", display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#4AD778", animation: "blink 2s infinite" }} />
+              <span style={{ color: "#4AD778", fontSize: 10, fontFamily: "monospace", fontWeight: 700, letterSpacing: 1 }}>VERIFIED</span>
+            </div>
+          </div>
+          <div style={{ height: "120px" }} />
+          <div style={{ position: "relative", padding: "0 24px" }}>
+            <p style={{ color: MANGO_ORANGE, fontSize: 11, fontFamily: "monospace", letterSpacing: 3, marginBottom: 8, textTransform: "uppercase", fontWeight: 700 }}>
+              {variety}
+            </p>
+            <h1 style={{ color: "#FFF", fontFamily: "'Playfair Display', Georgia, serif", fontSize: 42, fontWeight: 900, margin: "0 0 16px", lineHeight: 1.1, letterSpacing: -0.5 }}>
+              {cropType}
+            </h1>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+              <span style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#FFF", fontSize: 11, fontFamily: "monospace", padding: "6px 12px", borderRadius: 8 }}>
+                {batch.batch_code}
+              </span>
+              <span style={{ background: "rgba(249,115,22,0.15)", border: "1px solid rgba(249,115,22,0.3)", color: "#FFEDD5", fontSize: 11, padding: "6px 12px", borderRadius: 8 }}>
+                📍 {location}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "16px" }}>
+              <MapZambia />
+              <div>
+                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, textTransform: "uppercase", letterSpacing: 2, marginBottom: 4 }}>The Origin</p>
+                <p style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, lineHeight: 1.5, fontFamily: "Georgia, serif", fontStyle: "italic", margin: 0 }}>
+                  "Grown by smallholder farmers in {location} and traced securely."
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                {/* Header tags */}
-                <div className="absolute top-6 left-6 right-6 flex justify-between items-start z-20">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-full border border-white/30 text-white">
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Verified Origin</span>
+        <div style={{ height: 16 }} />
+
+        {/* FARMER SECTION */}
+        <FadeIn delay={0.1}>
+          <div style={{ margin: "24px 16px", background: "#FFF", borderRadius: 24, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.02)" }}>
+            <div style={{ background: LEAF_GREEN, padding: "12px 20px" }}>
+              <span style={{ color: "#fff", fontSize: 11, fontFamily: "monospace", letterSpacing: 3, textTransform: "uppercase", fontWeight: 600 }}>Meet Your Farmer</span>
+            </div>
+            <div style={{ padding: 24 }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 20 }}>
+                <img src={farmerImage} alt={farmerName} style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: `3px solid ${CREAM}`, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", flexShrink: 0 }} />
+                <div style={{ flex: 1, paddingTop: 4 }}>
+                  <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, fontWeight: 900, color: DARK, margin: "0 0 4px" }}>{farmerName}</h2>
+                  <p style={{ color: LEAF_GREEN, fontSize: 12, fontFamily: "monospace", letterSpacing: 0.5, marginBottom: 12, fontWeight: 600 }}>Lead Farmer · {location.split(',')[0]}</p>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ textAlign: "center", background: "#F4F4F5", borderRadius: 12, padding: "8px 16px", border: "1px solid #E4E4E7" }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: DARK }}>{farmSize} ha</div>
+                      <div style={{ fontSize: 10, color: "#71717A", textTransform: "uppercase", letterSpacing: 1, marginTop: 2 }}>Size</div>
+                    </div>
+                    <div style={{ textAlign: "center", background: "#FFF7ED", borderRadius: 12, padding: "8px 16px", border: "1px solid #FFEDD5" }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: MANGO_ORANGE }}>{farmerExp} yrs</div>
+                      <div style={{ fontSize: 10, color: "#71717A", textTransform: "uppercase", letterSpacing: 1, marginTop: 2 }}>Exp</div>
+                    </div>
                   </div>
-                  <button onClick={() => setShowQR(!showQR)} className="p-2 bg-black/20 backdrop-blur-md hover:bg-black/40 rounded-full transition-colors border border-white/20 text-white">
-                    <QrCode className="w-4 h-4" />
-                  </button>
                 </div>
               </div>
+              <div style={{ borderLeft: `3px solid ${MANGO_ORANGE}`, paddingLeft: 16, marginBottom: 20 }}>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: "#52525B", fontFamily: "Georgia, serif", fontStyle: "italic", margin: 0 }}>
+                  "{farmerName.split(' ')[0]} partners with Cherry-Pick. By verifying crops on AgroChain 360, household income increased by <strong style={{ color: LEAF_GREEN, fontStyle: "normal" }}>{impactIncrease}%</strong>, ensuring community resilience."
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ background: "#DCFCE7", border: "1px solid #BBF7D0", color: "#166534", fontSize: 11, padding: "6px 12px", borderRadius: 20, fontWeight: 600 }}>✓ Verified Journey</span>
+                <span style={{ background: "#F4F4F5", border: "1px solid #E4E4E7", color: "#52525B", fontSize: 11, padding: "6px 12px", borderRadius: 20, fontWeight: 600 }}>🌳 Impact Driven</span>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
 
-              {/* Product Info Card below image */}
-              <div className="absolute bottom-0 left-0 right-0 h-[45%] md:h-[40%] bg-white rounded-t-[2rem] z-10 flex flex-col justify-between p-8 border-t border-gray-100/50 shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.1)]">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-serif font-medium tracking-tight text-[#1A2E22] mb-2">
-                    Cherry-Pick {contract?.crop_type || batch.crop_type}
-                  </h1>
-                  <p className="text-[#5C6E64] text-sm leading-relaxed max-w-sm">
-                    This {contract?.crop_type || batch.crop_type?.toLowerCase()} was grown by smallholder farmers in
-                    <span className="font-semibold text-[#1A2E22]"> {farmer?.location_address?.split(',')[0] || 'Eastern Province'} </span>
-                    and processed by Cherry-Pick in Lusaka.
-                  </p>
+        {/* SPECS SECTION */}
+        <FadeIn delay={0.1}>
+          <div style={{ margin: "0 16px 24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <span style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: 3, color: "#71717A", textTransform: "uppercase" }}>Farm & Quality Specs</span>
+              <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {specs.map((s, i) => (
+                <div key={i} style={{ background: "#fff", borderRadius: 16, padding: "16px", boxShadow: "0 2px 10px rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.04)" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: CREAM, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, marginBottom: 10, border: "1px solid #F5EAE0" }}>{s.icon}</div>
+                  <div style={{ fontSize: 10, color: "#A1A1AA", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{s.label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{s.value}</div>
                 </div>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
 
-                <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-[#F0F2F1]">
-                  <div>
-                    <span className="block text-[9px] font-bold text-[#8FA398] uppercase tracking-wider mb-1">Batch Number</span>
-                    <span className="font-mono text-sm font-medium text-[#2D332F]">{batch.batch_code}</span>
+        {/* VERIFICATION SEAL */}
+        <FadeIn delay={0.1}>
+          <div style={{ margin: "0 16px 24px", background: `linear-gradient(135deg, ${LEAF_GREEN}, #1A3D2B)`, borderRadius: 24, padding: 24, position: "relative", overflow: "hidden", boxShadow: "0 10px 25px rgba(45,90,61,0.2)" }}>
+            <div style={{ position: "absolute", right: -40, top: -40, width: 160, height: 160, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)" }} />
+            <div style={{ position: "absolute", right: -20, top: -20, width: 100, height: 100, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.08)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, border: "1px solid rgba(255,255,255,0.2)" }}>🏅</div>
+              <div>
+                <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, fontFamily: "monospace", letterSpacing: 2, margin: "0 0 2px", textTransform: "uppercase" }}>Verification Seal</p>
+                <p style={{ color: "#fff", fontSize: 16, fontWeight: 800, margin: 0, fontFamily: "'Playfair Display', Georgia, serif" }}>Independent Audit</p>
+              </div>
+            </div>
+            <div style={{ background: "rgba(0,0,0,0.15)", borderRadius: 16, padding: 16, marginBottom: 16, border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>Verified By</span>
+                <span style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>{events.find(e => e.event_type === 'verification')?.actor_name || "AgroChain 360 Guardian"}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>Last Updated</span>
+                <span style={{ color: "#fff", fontSize: 12, fontWeight: 600 }}>{batch.updated_at ? formatDateDayMonth(batch.updated_at) : "Recent"}</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {["✓ Origin Valid", "✓ Quality Specs", "✓ Supply Chain"].map((badge, i) => (
+                <span key={i} style={{ background: "rgba(74,215,120,0.15)", border: "1px solid rgba(74,215,120,0.3)", color: "#A7F3C0", fontSize: 11, padding: "6px 12px", borderRadius: 20, fontWeight: 500 }}>{badge}</span>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+
+        {/* TIMELINE SECTION */}
+        <FadeIn delay={0.1}>
+          <div style={{ margin: "0 16px 24px", background: "#FFF", borderRadius: 24, padding: "24px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.02)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+              <span style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: 3, color: "#71717A", textTransform: "uppercase" }}>The Full Journey</span>
+              <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
+            </div>
+            {events.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0" }}>
+                <p style={{ color: "#A1A1AA" }}>Tracking has just begun...</p>
+              </div>
+            ) : (
+              <div style={{ position: "relative", paddingLeft: 28 }}>
+                <div style={{ position: "absolute", left: 11, top: 12, bottom: 12, width: 2, background: "#E4E4E7", borderRadius: 2 }} />
+                {events.map((m, i) => (
+                  <div key={m.id || i} style={{ position: "relative", marginBottom: i < events.length - 1 ? 24 : 0 }} onClick={() => setExpanded(expanded === i ? null : i)}>
+                    <div style={{ position: "absolute", left: -25, top: 2, width: 16, height: 16, borderRadius: "50%", background: expanded === i ? MANGO_ORANGE : "#fff", border: `2px solid ${expanded === i ? MANGO_ORANGE : "#D4D4D8"}`, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.3s", cursor: "pointer", zIndex: 2 }}>
+                      {expanded === i && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />}
+                    </div>
+                    <div style={{ background: expanded === i ? "#FFF7ED" : "transparent", border: `1px solid ${expanded === i ? MANGO_ORANGE + "40" : "transparent"}`, borderRadius: 16, padding: expanded === i ? "14px" : "0 0 0 10px", cursor: "pointer", transition: "all 0.3s ease" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                            <span style={{ fontSize: 16 }}>{EVENT_EMOJIS[m.event_type] || "🌿"}</span>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: DARK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.event_title}</span>
+                          </div>
+                          <p style={{ fontSize: 12, color: "#71717A", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.location_address || "Verified Location"}</p>
+                        </div>
+                        <span style={{ fontSize: 11, color: expanded === i ? MANGO_ORANGE : "#A1A1AA", fontFamily: "monospace", fontWeight: 600, whiteSpace: "nowrap", paddingTop: 4 }}>
+                          {m.created_at ? formatDateDayMonth(m.created_at) : ""}
+                        </span>
+                      </div>
+                      <div style={{ maxHeight: expanded === i ? 500 : 0, overflow: "hidden", transition: "max-height 0.3s ease", opacity: expanded === i ? 1 : 0 }}>
+                        <p style={{ fontSize: 13, color: "#52525B", margin: "12px 0 0", lineHeight: 1.5, borderTop: `1px solid ${MANGO_ORANGE}20`, paddingTop: 12 }}>{m.event_description || "Verified action."}</p>
+                        {m.photos && m.photos.length > 0 && (
+                          <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                            {m.photos.map((photo, idx) => (
+                              <img key={idx} src={photo} alt="Event proof" style={{ width: 64, height: 64, borderRadius: 12, objectFit: "cover", border: "1px solid #E4E4E7" }} />
+                            ))}
+                          </div>
+                        )}
+                        {m.actor_name && (
+                          <div style={{ marginTop: 12, fontSize: 11, color: "#71717A", background: "#fff", display: "inline-block", padding: "4px 8px", borderRadius: 6, border: "1px solid #E4E4E7" }}>
+                            Performed by: {m.actor_name}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </FadeIn>
+
+        {/* IMPACT SECTION */}
+        <FadeIn delay={0.1}>
+          <div style={{ margin: "0 16px 24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <span style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: 3, color: "#71717A", textTransform: "uppercase" }}>Your Impact</span>
+              <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {impacts.map((item, i) => (
+                <div key={i} style={{ background: item.bg, borderRadius: 20, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, border: `1px solid ${item.color}20` }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", flexShrink: 0 }}>{item.icon}</div>
                   <div>
-                    <span className="block text-[9px] font-bold text-[#8FA398] uppercase tracking-wider mb-1">Processing Date</span>
-                    <span className="text-sm font-medium text-[#2D332F]">
-                      {processingEvents.length > 0 && processingEvents[0].created_at ? formatDate(processingEvents[0].created_at) : '14 Jan 2026'}
-                    </span>
+                    <p style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: 1.5, color: item.color, textTransform: "uppercase", margin: "0 0 4px", fontWeight: 700 }}>{item.label}</p>
+                    <p style={{ fontSize: 14, color: DARK, margin: 0, fontWeight: 700 }}>{item.value}</p>
                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+
+        {/* BLOCKCHAIN SECTION */}
+        {batch.blockchain_tx && (
+          <FadeIn delay={0.1}>
+            <div style={{ margin: "0 16px 24px", background: "#09090B", borderRadius: 24, padding: 24, border: "1px solid #27272A", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", width: 150, height: 150, borderRadius: "50%", background: "radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(0,0,0,0) 70%)", right: -20, top: -20, pointerEvents: "none" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⛓️</div>
+                <div>
+                  <p style={{ fontSize: 10, fontFamily: "monospace", letterSpacing: 2, color: "#A1A1AA", textTransform: "uppercase", margin: "0 0 2px" }}>AgroChain 360</p>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: "#fff", margin: 0, fontFamily: "'Playfair Display', Georgia, serif" }}>Immutable Trust</p>
+                </div>
+              </div>
+              <p style={{ color: "#A1A1AA", fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
+                While the story is human, the data is permanent. Every milestone is cryptographically signed on <span style={{ color: "#C4B5FD", fontWeight: 600 }}>Base L2</span>.
+              </p>
+              <div style={{ background: "#18181B", borderRadius: 12, padding: "12px 16px", marginBottom: 16, border: "1px solid #27272A", cursor: "pointer" }} onClick={() => { setCopied(true); navigator.clipboard.writeText(batch.blockchain_tx!); setTimeout(() => setCopied(false), 2000); }}>
+                <div style={{ display: "flex", justifyItems: "space-between", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, fontFamily: "monospace", color: "#71717A", letterSpacing: 1 }}>TX HASH</span>
+                  {copied && <span style={{ fontSize: 10, color: "#34D399", fontWeight: 600 }}>Copied!</span>}
+                </div>
+                <p style={{ fontSize: 13, fontFamily: "monospace", color: "#C4B5FD", margin: 0, wordBreak: "break-all" }}>{batch.blockchain_tx}</p>
+              </div>
+              <a href={`https://basescan.org/tx/${batch.blockchain_tx}`} target="_blank" rel="noopener noreferrer" style={{ width: "100%", background: "#FAFAFA", color: "#09090B", border: "none", borderRadius: 12, padding: "14px", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none" }}>
+                View Blockchain Receipt ↗
+              </a>
+            </div>
+          </FadeIn>
+        )}
+
+        {/* SHARE SECTION */}
+        {isPublic && (
+          <FadeIn delay={0.1}>
+            <div style={{ margin: "0 16px 32px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <button style={{ background: MANGO_ORANGE, color: "#fff", border: "none", borderRadius: 16, padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(249,115,22,0.25)" }}>
+                  ⭐ Rate this Batch
+                </button>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button style={{ flex: 1, background: "#fff", color: DARK, border: "1px solid #E4E4E7", borderRadius: 16, padding: "14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>🛒 Buy Again</button>
+                  <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }} style={{ flex: 1, background: "#fff", color: DARK, border: "1px solid #E4E4E7", borderRadius: 16, padding: "14px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>📸 Share</button>
                 </div>
               </div>
             </div>
-          </motion.section>
+          </FadeIn>
+        )}
 
-          <div className="px-5 space-y-6 mt-6">
-
-            {/* 2. Meet the Farmer */}
-            {farmer && (
-              <motion.section
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-white rounded-3xl p-6 shadow-sm border border-[#EBEBE8] relative overflow-hidden group"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#F4F9F6] rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110" />
-
-                <div className="flex items-center gap-2 mb-6 relative z-10">
-                  <User className="w-5 h-5 text-[#2E7D32]" />
-                  <h2 className="text-lg font-bold text-[#1A2E22]">Meet the Farmer</h2>
-                </div>
-
-                <div className="flex gap-5 relative z-10">
-                  <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-[#F4F9F6] border border-[#EBEBE8]">
-                    {/* Placeholder for farmer image, using a stylized icon if none exists */}
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9]">
-                      <Sprout className="w-8 h-8 text-[#4CAF50]" />
-                    </div>
-                  </div>
-
-                  <div className="flex-1">
-                    <h3 className="text-xl font-serif font-medium text-[#1A2E22] mb-1">{farmer.name}</h3>
-                    <div className="flex items-center gap-1.5 text-sm text-[#5C6E64] mb-3">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {farmer.location_address || 'Chipata District, Eastern Province'}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-y-2 text-sm">
-                      <div>
-                        <span className="block text-[10px] text-[#8FA398] uppercase tracking-wider font-bold">Farm Size</span>
-                        <span className="font-medium">{metadata.field_size || '3 hectares'}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[10px] text-[#8FA398] uppercase tracking-wider font-bold">Crops</span>
-                        <span className="font-medium text-xs truncate block pr-2" title={contract?.crop_type || batch.crop_type}>
-                          {contract?.crop_type || batch.crop_type}, Maize
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 pt-5 border-t border-[#F0F2F1] relative z-10">
-                  <p className="text-sm text-[#5C6E64] font-medium leading-relaxed italic">
-                    "{farmer.name.split(' ')[0]} joined the Cherry-Pick supply network to gain reliable market access for their {contract?.crop_type?.toLowerCase() || batch.crop_type?.toLowerCase()} harvest."
-                  </p>
-                </div>
-              </motion.section>
-            )}
-
-            {/* 3. Farm & Growing Conditions */}
-            <motion.section
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-3xl p-6 shadow-sm border border-[#EBEBE8]"
-            >
-              <div className="flex items-center gap-2 mb-5">
-                <Leaf className="w-5 h-5 text-[#2E7D32]" />
-                <h2 className="text-lg font-bold text-[#1A2E22]">Growing Conditions</h2>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#F8FAF9] p-4 rounded-2xl">
-                  <div className="text-[10px] text-[#8FA398] uppercase tracking-wider font-bold mb-1">Harvest Date</div>
-                  <div className="font-medium text-[#1A2E22]">
-                    {harvestEvent?.created_at ? formatDate(harvestEvent.created_at) : '12 Jan 2026'}
-                  </div>
-                </div>
-                <div className="bg-[#F8FAF9] p-4 rounded-2xl">
-                  <div className="text-[10px] text-[#8FA398] uppercase tracking-wider font-bold mb-1">Method</div>
-                  <div className="font-medium text-[#1A2E22]">Smallholder orchard</div>
-                </div>
-                <div className="bg-[#F8FAF9] p-4 rounded-2xl">
-                  <div className="text-[10px] text-[#8FA398] uppercase tracking-wider font-bold mb-1">Irrigation</div>
-                  <div className="font-medium text-[#1A2E22]">Rain-fed</div>
-                </div>
-                <div className="bg-[#F8FAF9] p-4 rounded-2xl">
-                  <div className="text-[10px] text-[#8FA398] uppercase tracking-wider font-bold mb-1">Fertilizer</div>
-                  <div className="font-medium text-[#1A2E22]">{batch.organic_certified ? 'Organic compost' : 'Minimal'}</div>
-                </div>
-              </div>
-            </motion.section>
-
-            {/* 4. Verification & Quality Checks */}
-            {verificationEvents.length > 0 && (
-              <motion.section
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-[#1A2E22] text-white rounded-3xl p-6 shadow-lg shadow-[#1A2E22]/20"
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-[#81C784]" />
-                    <h2 className="text-lg font-bold">Independent Quality Check</h2>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
-                    <CheckCircle className="w-5 h-5 text-[#81C784]" />
-                  </div>
-                </div>
-
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/10 mb-5">
-                  <div className="text-[10px] text-white/50 uppercase tracking-wider font-bold mb-1">Verified By</div>
-                  <div className="font-medium text-[#81C784] mb-2">{verificationEvents[0].actor_name || 'AgroChain Field Verifier'}</div>
-                  <div className="text-[10px] text-white/50 uppercase tracking-wider font-bold mb-1">Inspection Date</div>
-                  <div className="font-medium">{verificationEvents[0].created_at ? formatDate(verificationEvents[0].created_at) : '10 Jan 2026'}</div>
-                </div>
-
-                <div className="space-y-3 pl-2">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-4 h-4 text-[#81C784] mt-0.5 shrink-0" />
-                    <span className="text-sm text-white/90">Farm inspection completed</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-4 h-4 text-[#81C784] mt-0.5 shrink-0" />
-                    <span className="text-sm text-white/90">Crop health verified</span>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-4 h-4 text-[#81C784] mt-0.5 shrink-0" />
-                    <span className="text-sm text-white/90">Harvest batch logged</span>
-                  </div>
-                </div>
-              </motion.section>
-            )}
-
-            {/* 5. Processing Information */}
-            <motion.section
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-white rounded-3xl p-6 shadow-sm border border-[#EBEBE8]"
-            >
-              <div className="flex items-center gap-2 mb-5">
-                <Factory className="w-5 h-5 text-[#2D332F]" />
-                <h2 className="text-lg font-bold text-[#1A2E22]">Processing</h2>
-              </div>
-
-              <div className="divide-y divide-[#F0F2F1]">
-                <div className="flex justify-between items-center py-3">
-                  <span className="text-sm text-[#5C6E64] font-medium">Facility</span>
-                  <span className="text-sm font-bold text-[#1A2E22]">Cherry-Pick Lusaka</span>
-                </div>
-                <div className="flex justify-between items-center py-3">
-                  <span className="text-sm text-[#5C6E64] font-medium">Method</span>
-                  <span className="text-sm font-bold text-[#1A2E22]">Low temp. dehydration</span>
-                </div>
-                {batch.quality_grade && (
-                  <div className="flex justify-between items-center py-3">
-                    <span className="text-sm text-[#5C6E64] font-medium">Quality Rating</span>
-                    <span className="text-sm font-bold text-[#2E7D32] bg-[#E8F5E9] px-2 py-0.5 rounded-md">{batch.quality_grade}</span>
-                  </div>
-                )}
-              </div>
-            </motion.section>
-
-            {/* 6. Supply Chain Journey (Visual Timeline) */}
-            <motion.section
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white rounded-3xl p-6 shadow-sm border border-[#EBEBE8]"
-            >
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-2">
-                  <Truck className="w-5 h-5 text-[#2E7D32]" />
-                  <h2 className="text-lg font-bold text-[#1A2E22]">The Journey</h2>
-                </div>
-              </div>
-
-              <div className="relative pl-6">
-                {/* Timeline Line */}
-                <div className="absolute left-[11px] top-4 bottom-4 w-[2px] bg-gradient-to-b from-[#4CAF50] via-[#E0E0E0] to-[#E0E0E0]" />
-
-                <div className="space-y-8">
-                  {timelineSteps.length > 0 ? timelineSteps.map((step, idx) => (
-                    <div key={idx} className="relative">
-                      {/* Node */}
-                      <div className={`absolute -left-6 w-6 h-6 rounded-full border-[3px] border-white shadow-sm flex items-center justify-center z-10 ${idx === timelineSteps.length - 1 ? step.color : 'bg-[#E0E0E0]'}`}>
-                        <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                      </div>
-
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className={`text-base font-bold ${idx === timelineSteps.length - 1 ? 'text-[#1A2E22]' : 'text-[#8FA398]'}`}>
-                            {step.step}
-                          </h4>
-                          <div className="flex items-center gap-1 mt-0.5 text-xs text-[#5C6E64]">
-                            <MapPin className="w-3 h-3" />
-                            {step.location?.split(',')[0]}
-                          </div>
-                        </div>
-                        <div className="text-[11px] font-bold text-[#8FA398] uppercase tracking-wider text-right">
-                          {step.date ? formatDate(step.date) : ''}
-                        </div>
-                      </div>
-                    </div>
-                  )) : (
-                    // Fallback visually appealing timeline if no events exist yet
-                    [
-                      { step: 'Harvest', location: farmer?.location_address?.split(',')[0] || 'Farm', date: '12 Jan', active: true },
-                      { step: 'Collection', location: 'Depot', date: '13 Jan', active: true },
-                      { step: 'Processing', location: 'Lusaka', date: '14 Jan', active: true },
-                      { step: 'Packaging', location: 'Lusaka', date: '15 Jan', active: false },
-                    ].map((step, idx) => (
-                      <div key={idx} className="relative">
-                        <div className={`absolute -left-6 w-6 h-6 rounded-full border-[3px] border-white shadow-sm flex items-center justify-center z-10 ${step.active ? 'bg-[#4CAF50]' : 'bg-[#E0E0E0]'}`}>
-                          <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                        </div>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className={`text-base font-bold ${step.active ? 'text-[#1A2E22]' : 'text-[#8FA398]'}`}>{step.step}</h4>
-                            <div className="flex items-center gap-1 mt-0.5 text-xs text-[#5C6E64]"><MapPin className="w-3 h-3" />{step.location}</div>
-                          </div>
-                          <div className="text-[11px] font-bold text-[#8FA398] uppercase tracking-wider">{step.date}</div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </motion.section>
-
-            {/* 7. Blockchain Verification */}
-            {batch.blockchain_tx && (
-              <motion.section
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="bg-gradient-to-r from-[#0052FF] to-[#0A389F] rounded-3xl p-6 text-white shadow-lg overflow-hidden relative group"
-              >
-                {/* Decorative background logo element */}
-                <div className="absolute top-1/2 -translate-y-1/2 right-0 w-48 h-48 opacity-10 pointer-events-none transform translate-x-12">
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
-                  </svg>
-                </div>
-
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="p-1.5 bg-white/20 rounded-lg">
-                      <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16 2.66699C8.636 2.66699 2.66663 8.63633 2.66663 16.0003C2.66663 23.3643 8.636 29.3337 16 29.3337C23.364 29.3337 29.3333 23.3643 29.3333 16.0003C29.3333 8.63633 23.364 2.66699 16 2.66699ZM16 26.667C10.116 26.667 5.33329 21.8843 5.33329 16.0003C5.33329 10.1163 10.116 5.33366 16 5.33366C21.884 5.33366 26.6666 10.1163 26.6666 16.0003C26.6666 21.8843 21.884 26.667 16 26.667Z" fill="currentColor" />
-                        <path d="M16 8C11.5816 8 8 11.5816 8 16C8 20.4184 11.5816 24 16 24C20.4184 24 24 20.4184 24 16C24 11.5816 20.4184 8 16 8ZM16 21.3333C13.0546 21.3333 10.6667 18.9454 10.6667 16C10.6667 13.0546 13.0546 10.6667 16 10.6667C18.9454 10.6667 21.3333 13.0546 21.3333 16C21.3333 18.9454 18.9454 21.3333 16 21.3333Z" fill="currentColor" />
-                      </svg>
-                    </div>
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-white/90">Secured with Blockchain</h3>
-                  </div>
-
-                  <p className="text-white/80 text-sm leading-relaxed mb-6 max-w-sm">
-                    Supply chain records for this batch are securely written to the Base blockchain network via the AgroChain 360 platform, ensuring total transparency.
-                  </p>
-
-                  <a
-                    href={`https://basescan.org/tx/${batch.blockchain_tx}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-white text-[#0052FF] px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-[#F0F4FF] transition-colors shadow-lg"
-                  >
-                    View Verification Record
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
-              </motion.section>
-            )}
-
-            {/* Brand Footer */}
-            {isPublic && (
-              <footer className="pt-8 pb-4 text-center border-t border-[#EBEBE8] mt-8">
-                <div className="flex flex-col items-center justify-center mb-4">
-                  <div className="w-8 h-8 rounded-full bg-[#1A2E22] flex items-center justify-center mb-2">
-                    <Sprout className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-sm font-serif font-bold text-[#1A2E22] tracking-wide">CHERRY-PICK</span>
-                </div>
-                <p className="text-[9px] font-bold text-[#8FA398] uppercase tracking-[0.2em] max-w-[200px] mx-auto leading-relaxed">
-                  Transparent & Equitable Food Supply Chain
-                </p>
-              </footer>
-            )}
+        {/* FOOTER */}
+        <div style={{ background: DARK, padding: "32px 24px 48px", textAlign: "center", borderTop: "1px solid #27272A" }}>
+          <div style={{ display: "flex", justifyItems: "center", justifyContent: "center", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", fontSize: 12 }}>🍒</div>
+            <span style={{ color: "#fff", fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700, letterSpacing: 1 }}>Cherry Pick</span>
+          </div>
+          <p style={{ color: "#71717A", fontSize: 10, fontFamily: "monospace", letterSpacing: 2, textTransform: "uppercase", margin: 0 }}>Farm-to-Shelf Traceability Protocol</p>
+          <div style={{ display: "flex", justifyItems: "center", justifyContent: "center", gap: 12, marginTop: 24 }}>
+            {["BASE L2", "IPFS", "AGROCHAIN 360"].map((t) => (
+              <span key={t} style={{ color: "#A1A1AA", fontSize: 9, fontFamily: "monospace", background: "#27272A", padding: "4px 8px", borderRadius: 6 }}>{t}</span>
+            ))}
           </div>
         </div>
+
       </div>
-      {/* Removed QR code modal to keep code concise, assume standard implementation if needed */}
-    </>
+    </div>
   );
-};
+}

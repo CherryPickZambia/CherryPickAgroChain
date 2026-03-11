@@ -20,7 +20,7 @@ const STORAGE_KEY = 'agrochain_offline_evidence';
  */
 export function saveOfflineEvidence(evidence: Omit<OfflineEvidence, 'id' | 'status'>): string {
   const id = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   const offlineEvidence: OfflineEvidence = {
     id,
     ...evidence,
@@ -29,9 +29,9 @@ export function saveOfflineEvidence(evidence: Omit<OfflineEvidence, 'id' | 'stat
 
   const stored = getOfflineEvidence();
   stored.push(offlineEvidence);
-  
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
-  
+
   return id;
 }
 
@@ -57,7 +57,7 @@ export function getPendingCount(): number {
 export function updateEvidenceStatus(id: string, status: OfflineEvidence['status']): void {
   const stored = getOfflineEvidence();
   const index = stored.findIndex(e => e.id === id);
-  
+
   if (index !== -1) {
     stored[index].status = status;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
@@ -100,7 +100,7 @@ export async function syncOfflineEvidence(
       await uploadFunction(evidence);
       updateEvidenceStatus(evidence.id, 'synced');
       success++;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Failed to sync evidence ${evidence.id}:`, error);
       updateEvidenceStatus(evidence.id, 'failed');
       failed++;
@@ -135,11 +135,11 @@ export function setupOfflineListeners(
 export function getStorageSize(): string {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (!stored) return '0 KB';
-  
+
   const bytes = new Blob([stored]).size;
   const kb = bytes / 1024;
   const mb = kb / 1024;
-  
+
   if (mb > 1) return `${mb.toFixed(2)} MB`;
   return `${kb.toFixed(2)} KB`;
 }

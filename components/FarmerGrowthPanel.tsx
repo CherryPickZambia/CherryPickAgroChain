@@ -10,6 +10,7 @@ import { uploadToIPFS } from "@/lib/ipfsService";
 interface FarmerGrowthPanelProps {
     farmerId: string;
     contracts: { id: string; cropType: string; variety?: string; status: string }[];
+    batches?: { id: string; batch_code: string; crop_type: string; current_status: string }[];
     isPending?: boolean;
 }
 
@@ -25,7 +26,7 @@ const ACTIVITY_TYPES = [
     { value: "other", label: "Other", icon: "📋" },
 ] as const;
 
-export default function FarmerGrowthPanel({ farmerId, contracts, isPending }: FarmerGrowthPanelProps) {
+export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], isPending }: FarmerGrowthPanelProps) {
     const [activities, setActivities] = useState<GrowthActivity[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -36,6 +37,7 @@ export default function FarmerGrowthPanel({ farmerId, contracts, isPending }: Fa
 
     const [form, setForm] = useState({
         contract_id: "",
+        batch_id: "",
         activity_type: "planting" as GrowthActivity["activity_type"],
         title: "",
         description: "",
@@ -85,8 +87,8 @@ export default function FarmerGrowthPanel({ farmerId, contracts, isPending }: Fa
     };
 
     const handleSubmit = async () => {
-        if (!form.contract_id || !form.title || !form.date) {
-            toast.error("Contract, title, and date are required");
+        if ((!form.contract_id && !form.batch_id) || !form.title || !form.date) {
+            toast.error("Select a contract or batch, plus title and date");
             return;
         }
         setSubmitting(true);
@@ -102,7 +104,8 @@ export default function FarmerGrowthPanel({ farmerId, contracts, isPending }: Fa
             }
 
             await logGrowthActivity({
-                contract_id: form.contract_id,
+                ...(form.contract_id ? { contract_id: form.contract_id } : {}),
+                ...(form.batch_id ? { batch_id: form.batch_id } : {}),
                 farmer_id: farmerId,
                 activity_type: form.activity_type,
                 title: form.title,
@@ -126,7 +129,7 @@ export default function FarmerGrowthPanel({ farmerId, contracts, isPending }: Fa
             setShowForm(false);
             setPhotos([]);
             setPhotoFiles([]);
-            setForm({ ...form, title: "", description: "", quantity: "", fertilizer_brand: "", fertilizer_type: "", npk_ratio: "", transport_type: "", vehicle_registration: "", driver_name: "", driver_phone: "", origin: "", destination: "" });
+            setForm({ ...form, title: "", description: "", quantity: "", batch_id: "", fertilizer_brand: "", fertilizer_type: "", npk_ratio: "", transport_type: "", vehicle_registration: "", driver_name: "", driver_phone: "", origin: "", destination: "" });
             loadActivities();
         } catch (error) {
             console.error("Error logging activity:", error);
@@ -160,7 +163,7 @@ export default function FarmerGrowthPanel({ farmerId, contracts, isPending }: Fa
                 </div>
                 <button
                     onClick={() => setShowForm(true)}
-                    disabled={contracts.filter(c => c.status === "active").length === 0}
+                    disabled={contracts.filter(c => c.status === "active").length === 0 && batches.length === 0}
                     className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm transition-colors"
                 >
                     <Plus className="h-4 w-4" />
@@ -168,9 +171,9 @@ export default function FarmerGrowthPanel({ farmerId, contracts, isPending }: Fa
                 </button>
             </div>
 
-            {contracts.filter(c => c.status === "active").length === 0 && (
+            {contracts.filter(c => c.status === "active").length === 0 && batches.length === 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
-                    You need an active contract before you can log growth activities.
+                    You need an active contract or batch before you can log growth activities.
                 </div>
             )}
 
@@ -182,10 +185,17 @@ export default function FarmerGrowthPanel({ farmerId, contracts, isPending }: Fa
                             <h3 className="text-lg font-semibold text-gray-900">Log Farm Activity</h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Contract *</label>
-                                    <select value={form.contract_id} onChange={e => setForm({ ...form, contract_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-                                        <option value="">Select contract</option>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Contract</label>
+                                    <select value={form.contract_id} onChange={e => setForm({ ...form, contract_id: e.target.value, batch_id: e.target.value ? '' : form.batch_id })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                                        <option value="">No contract</option>
                                         {contracts.filter(c => c.status === "active").map(c => <option key={c.id} value={c.id}>{c.cropType}{c.variety ? ` - ${c.variety}` : ""}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Batch (Independent)</label>
+                                    <select value={form.batch_id} onChange={e => setForm({ ...form, batch_id: e.target.value, contract_id: e.target.value ? '' : form.contract_id })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                                        <option value="">No batch</option>
+                                        {batches.map(b => <option key={b.id} value={b.id}>{b.batch_code} - {b.crop_type} ({b.current_status})</option>)}
                                     </select>
                                 </div>
                                 <div>

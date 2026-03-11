@@ -33,14 +33,16 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     try {
       const contractId = generateContractId();
       const qrCode = generateQRCode(contractId);
       const totalAmount = parseFloat(formData.requiredQuantity) * parseFloat(formData.discountedPrice);
-      
-      const milestoneNames = CROP_MILESTONES[formData.cropType] || [];
-      
+
+      let milestoneNames = CROP_MILESTONES[formData.cropType] || [];
+      if (milestoneNames.length === 0 || milestoneNames[milestoneNames.length - 1] !== "Delivery") {
+        milestoneNames = [...milestoneNames, "Delivery"];
+      }
       // Save contract to Supabase
       const savedContract = await createContract({
         contract_code: contractId,
@@ -58,7 +60,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
       const milestonePromises = milestoneNames.map(async (name, index) => {
         const paymentAmount = calculateMilestonePayment(totalAmount, index, milestoneNames.length);
         const expectedDate = new Date(Date.now() + (index + 1) * 30 * 24 * 60 * 60 * 1000);
-        
+
         return await createMilestone({
           contract_id: savedContract.id,
           milestone_number: index + 1,
@@ -133,7 +135,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
           {step === 1 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Step 1: Select Crop</h3>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Crop Type *
@@ -195,7 +197,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
           {step === 2 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">Step 2: Contract Terms</h3>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Required Harvest Quantity (kg) *

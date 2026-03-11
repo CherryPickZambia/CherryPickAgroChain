@@ -59,101 +59,101 @@ export default function OfficerDashboard() {
   // Sample demo data for when database is unavailable
   const DEMO_VERIFICATIONS: MilestoneVerificationTask[] = [
     {
-      id: 'demo-1',
+      id: "demo-1",
       milestone: {
-        id: 'demo-1',
-        name: 'Land Preparation Complete',
-        description: 'Initial land clearing and soil preparation for mango planting',
-        status: 'submitted',
-        payment_amount: 500,
-        expected_date: '2024-12-15',
+        id: "demo-1",
+        name: "Land Preparation Complete",
+        description: "Initial land clearing and soil preparation for mango planting",
+        status: "submitted",
+        paymentAmount: 500,
+        expected_date: "2024-12-15",
         completed_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         contract: {
-          id: 'contract-1',
-          crop_type: 'Mangoes',
-          farmer_id: 'farmer-1',
+          id: "contract-1",
+          crop_type: "Mangoes",
+          farmer_id: "farmer-1",
           farmer: {
-            name: 'John Mwale',
-            wallet_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1',
-            location_address: 'Mkushi, Central Province'
-          }
-        }
-      } as any,
+            name: "John Mwale",
+            wallet_address: "0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1",
+            location_address: "Mkushi, Central Province",
+          },
+        },
+      } as unknown as MilestoneVerificationTask["milestone"],
       submitted_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: 'medium'
+      priority: "medium",
     },
     {
-      id: 'demo-2',
+      id: "demo-2",
       milestone: {
-        id: 'demo-2',
-        name: 'Seedling Transplant',
-        description: 'Pineapple seedlings transplanted to main field',
-        status: 'submitted',
-        payment_amount: 750,
-        expected_date: '2024-12-20',
+        id: "demo-2",
+        name: "Seedling Transplant",
+        description: "Pineapple seedlings transplanted to main field",
+        status: "submitted",
+        paymentAmount: 750,
+        expected_date: "2024-12-20",
         completed_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
         contract: {
-          id: 'contract-2',
-          crop_type: 'Pineapples',
-          farmer_id: 'farmer-2',
+          id: "contract-2",
+          crop_type: "Pineapples",
+          farmer_id: "farmer-2",
           farmer: {
-            name: 'Mary Banda',
-            wallet_address: '0x8ba1F109551bD432803012645Ac136ddd64DBA72',
-            location_address: 'Chisamba, Central Province'
-          }
-        }
-      } as any,
+            name: "Mary Banda",
+            wallet_address: "0x8ba1F109551bD432803012645Ac136ddd64DBA72",
+            location_address: "Chisamba, Central Province",
+          },
+        },
+      } as unknown as MilestoneVerificationTask["milestone"],
       submitted_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: 'high'
+      priority: "high",
     },
     {
-      id: 'demo-3',
+      id: "demo-3",
       milestone: {
-        id: 'demo-3',
-        name: 'Fertilizer Application',
-        description: 'First round of NPK fertilizer applied to tomato crops',
-        status: 'submitted',
-        payment_amount: 300,
-        expected_date: '2024-12-18',
+        id: "demo-3",
+        name: "Fertilizer Application",
+        description: "First round of NPK fertilizer applied to tomato crops",
+        status: "submitted",
+        paymentAmount: 300,
+        expected_date: "2024-12-18",
         completed_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
         contract: {
-          id: 'contract-3',
-          crop_type: 'Tomatoes',
-          farmer_id: 'farmer-3',
+          id: "contract-3",
+          crop_type: "Tomatoes",
+          farmer_id: "farmer-3",
           farmer: {
-            name: 'Peter Phiri',
-            wallet_address: '0x9f2dF0fed2C77648de5860a4dc508cd0572B6C1a',
-            location_address: 'Mazabuka, Southern Province'
-          }
-        }
-      } as any,
+            name: "Peter Phiri",
+            wallet_address: "0x9f2dF0fed2C77648de5860a4dc508cd0572B6C1a",
+            location_address: "Mazabuka, Southern Province",
+          },
+        },
+      } as unknown as MilestoneVerificationTask["milestone"],
       submitted_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: 'low'
+      priority: "low",
     },
     {
-      id: 'demo-4',
+      id: "demo-4",
       milestone: {
-        id: 'demo-4',
-        name: 'Harvest Ready Inspection',
-        description: 'Cashew nuts ready for harvest - quality inspection needed',
-        status: 'submitted',
-        payment_amount: 1000,
-        expected_date: '2024-12-10',
+        id: "demo-4",
+        name: "Harvest Ready Inspection",
+        description: "Cashew nuts ready for harvest - quality inspection needed",
+        status: "submitted",
+        paymentAmount: 1000,
+        expected_date: "2024-12-10",
         completed_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
         contract: {
-          id: 'contract-4',
-          crop_type: 'Cashews',
-          farmer_id: 'farmer-4',
+          id: "contract-4",
+          crop_type: "Cashews",
+          farmer_id: "farmer-4",
           farmer: {
-            name: 'Grace Tembo',
-            wallet_address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
-            location_address: 'Chipata, Eastern Province'
-          }
-        }
-      } as any,
+            name: "Grace Tembo",
+            wallet_address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+            location_address: "Chipata, Eastern Province",
+          },
+        },
+      } as unknown as MilestoneVerificationTask["milestone"],
       submitted_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: 'high'
-    }
+      priority: "high",
+    },
   ];
 
   const DEMO_HISTORY: VerificationHistory[] = [
@@ -170,7 +170,7 @@ export default function OfficerDashboard() {
   const loadVerifications = async () => {
     try {
       setLoading(true);
-      
+
       // Check if Supabase is available
       if (!supabase) {
         // Use demo data
@@ -179,7 +179,7 @@ export default function OfficerDashboard() {
         setLoading(false);
         return;
       }
-      
+
       // Fetch milestones with status 'submitted' (awaiting officer verification)
       const { data: milestones, error } = await supabase
         .from('milestones')
@@ -203,9 +203,9 @@ export default function OfficerDashboard() {
 
       // Transform to verification tasks
       const tasks: MilestoneVerificationTask[] = (milestones || []).map((m: any) => ({
-        id: m.id,
-        milestone: m,
-        submitted_date: m.completed_date || m.created_at,
+        id: m.id as string,
+        milestone: m as MilestoneVerificationTask['milestone'],
+        submitted_date: (m.completed_date as string) || (m.created_at as string),
         priority: calculatePriority(m),
       }));
 
@@ -233,21 +233,21 @@ export default function OfficerDashboard() {
 
       if (!historyError && historyData && historyData.length > 0) {
         const historyItems: VerificationHistory[] = historyData.map((m: any) => ({
-          id: m.id,
+          id: m.id as string,
           type: 'milestone',
-          crop_type: m.contract?.crop_type || 'Unknown',
-          farmer_name: m.contract?.farmer?.name || 'Unknown',
+          crop_type: (m.contract?.crop_type as string) || 'Unknown',
+          farmer_name: (m.contract?.farmer?.name as string) || 'Unknown',
           status: m.status === 'verified' ? 'approved' : 'rejected',
           verified_date: new Date(m.updated_at).toLocaleDateString(),
-          notes: m.evidence?.[0]?.metadata?.notes || '',
+          notes: (m.evidence?.[0]?.metadata?.notes as string) || '',
           fee_earned: 50,
         }));
         setHistory(historyItems);
       } else {
         setHistory(DEMO_HISTORY);
       }
-    } catch (error: any) {
-      console.error('Error loading verifications:', error?.message || error);
+    } catch (error: unknown) {
+      console.error('Error loading verifications:', error instanceof Error ? error.message : JSON.stringify(error));
       // Use demo data on error
       setPendingVerifications(DEMO_VERIFICATIONS);
       setHistory(DEMO_HISTORY);
@@ -257,8 +257,9 @@ export default function OfficerDashboard() {
   };
 
   const calculatePriority = (milestone: any): "high" | "medium" | "low" => {
+    const dateStr = (milestone.completed_date || milestone.created_at) as string;
     const daysOld = Math.floor(
-      (Date.now() - new Date(milestone.completed_date || milestone.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      (Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24)
     );
     if (daysOld > 3) return 'high';
     if (daysOld > 1) return 'medium';
@@ -288,25 +289,27 @@ export default function OfficerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+    <div className="min-h-screen" style={{ background: "#F7F9FB" }}>
+      {/* Header — ARKTOS */}
+      <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Officer Dashboard</h1>
-              <p className="text-gray-600 mt-1">Verify milestones and ensure quality standards</p>
+              <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", marginBottom: 8 }}>Verification Officer Portal v1.0</div>
+              <h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 4vw, 2.5rem)", lineHeight: 0.95, letterSpacing: "-0.03em", color: "#0C2D3A" }}>
+                OFFICER DASHBOARD
+              </h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
-                <Award className="h-5 w-5 text-blue-600" />
-                <span className="text-sm font-medium text-blue-700">Verified Officer</span>
+            <div className="flex items-center space-x-3 px-4 py-2 rounded-2xl" style={{ background: "#F7F9FB", border: "1px solid rgba(12,45,58,0.08)" }}>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#0C2D3A" }}>
+                <Award className="h-4 w-4" style={{ color: "#BFFF00" }} />
               </div>
+              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "0.8rem", color: "#0C2D3A" }}>Verified Officer</span>
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex space-x-1 mt-6 border-b border-gray-200">
+          {/* Tabs — ARKTOS */}
+          <div className="flex space-x-1 mt-6 border-b border-gray-100">
             {[
               { id: "pending", label: "Pending Verifications", icon: Clock, count: stats.pending },
               { id: "map", label: "Nearby Farms", icon: Navigation },
@@ -317,28 +320,28 @@ export default function OfficerDashboard() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center space-x-2 px-6 py-3 font-medium transition-all relative ${
-                    activeTab === tab.id
-                      ? "text-green-600"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  onClick={() => setActiveTab(tab.id as "pending" | "map" | "history" | "stats")}
+                  style={{ fontFamily: "'Manrope', sans-serif" }}
+                  className={`flex items-center space-x-2 px-6 py-3 font-medium transition-all relative ${activeTab === tab.id
+                    ? "text-[#0C2D3A]"
+                    : "text-[#5A7684] hover:text-[#0C2D3A]"
+                    }`}
                 >
-                  <Icon className="h-5 w-5" />
-                  <span>{tab.label}</span>
+                  <Icon className="h-4 w-4" />
+                  <span className="text-sm">{tab.label}</span>
                   {tab.count !== undefined && (
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                      activeTab === tab.id
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${activeTab === tab.id
+                      ? "text-[#0C2D3A]"
+                      : "text-[#5A7684]"
+                      }`} style={{ background: activeTab === tab.id ? "rgba(191,255,0,0.2)" : "rgba(12,45,58,0.05)" }}>
                       {tab.count}
                     </span>
                   )}
                   {activeTab === tab.id && (
                     <motion.div
                       layoutId="activeTab"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600"
+                      className="absolute bottom-0 left-0 right-0 h-0.5"
+                      style={{ background: "#BFFF00" }}
                     />
                   )}
                 </button>
@@ -356,7 +359,7 @@ export default function OfficerDashboard() {
             {evmAddress && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <WalletBalance walletAddress={evmAddress} userRole="officer" />
-                <CropDiagnostics 
+                <CropDiagnostics
                   onDiagnosisComplete={(result, imageUrl) => {
                     console.log('Officer AI Diagnosis:', result);
                     toast.success(`AI Analysis: ${result.diagnosis} - ${result.healthScore}% health`);
@@ -364,7 +367,7 @@ export default function OfficerDashboard() {
                 />
               </div>
             )}
-            
+
             {/* Verification Queue - Full Width */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-6">
@@ -415,33 +418,31 @@ export default function OfficerDashboard() {
                         setSelectedVerification(verification);
                         setShowVerificationModal(true);
                       }}
-                      className={`text-left p-4 rounded-xl border-2 transition-all ${
-                        selectedVerification?.id === verification.id
-                          ? "border-green-500 bg-green-50 shadow-lg"
-                          : "border-gray-200 hover:border-green-300 hover:shadow-md bg-white"
-                      }`}
+                      className={`text-left p-4 rounded-xl border-2 transition-all ${selectedVerification?.id === verification.id
+                        ? "border-green-500 bg-green-50 shadow-lg"
+                        : "border-gray-200 hover:border-green-300 hover:shadow-md bg-white"
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          verification.priority === "high"
-                            ? "bg-red-100 text-red-700"
-                            : verification.priority === "medium"
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${verification.priority === "high"
+                          ? "bg-red-100 text-red-700"
+                          : verification.priority === "medium"
                             ? "bg-orange-100 text-orange-700"
                             : "bg-gray-100 text-gray-700"
-                        }`}>
+                          }`}>
                           {verification.priority}
                         </span>
                         <span className="text-lg font-bold text-green-600">
                           K{verification.milestone.paymentAmount?.toLocaleString() || 0}
                         </span>
                       </div>
-                      
+
                       <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{verification.milestone.name}</h3>
                       <p className="text-sm text-gray-600 mb-2">{verification.milestone.contract?.farmer?.name || 'Unknown Farmer'}</p>
                       <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-700 text-xs rounded-full mb-3">
                         {verification.milestone.contract?.crop_type || 'Unknown Crop'}
                       </span>
-                      
+
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
                         <span className="flex items-center">
                           <Calendar className="h-3 w-3 mr-1" />
@@ -461,7 +462,7 @@ export default function OfficerDashboard() {
 
         {/* Map Tab - Nearby Farms */}
         {activeTab === "map" && (
-          <VerificationMap 
+          <VerificationMap
             onSelectRequest={(request) => {
               // Reload verifications when a request is accepted
               loadVerifications();
@@ -488,11 +489,10 @@ export default function OfficerDashboard() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <h3 className="font-semibold text-gray-900">{item.crop_type}</h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          item.status === "approved"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${item.status === "approved"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                          }`}>
                           {item.status}
                         </span>
                       </div>

@@ -37,6 +37,18 @@ export interface Database {
           farm_size: number | null;
           status: 'pending' | 'approved' | 'rejected';
           rejection_reason: string | null;
+          // GLOBALG.A.P. / ISO 22005 compliance fields
+          gps_lat?: number | null;
+          gps_lng?: number | null;
+          farm_size_hectares?: number | null;
+          crops_grown?: string[];
+          years_farming?: number | null;
+          certifications?: Record<string, unknown>[];
+          certification_docs?: string[];
+          soil_type?: string | null;
+          water_source?: string | null;
+          farming_method?: 'conventional' | 'organic' | 'integrated' | 'conservation' | 'other' | null;
+          compliance_standards?: string[];
           created_at: string;
           updated_at: string;
         };

@@ -7,7 +7,10 @@ import {
     Thermometer, Box, Truck, ClipboardCheck, Save, AlertCircle, Coins, Loader2, ExternalLink
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { uploadImageToIPFS } from "@/lib/ipfsService";
 import { mintTraceabilityNFT } from "@/lib/nftMintingService";
+import { Upload } from "lucide-react";
+import CropDiagnostics from "./CropDiagnostics";
 
 interface ProcessingData {
     batchCode: string;
@@ -24,7 +27,7 @@ interface ProcessingModalProps {
     onSaveAction?: (processingData: ProcessingResult) => void;
 }
 
-interface ProcessingResult {
+export interface ProcessingResult {
     batchCode: string;
     qualityCheck: {
         passed: boolean;
@@ -49,13 +52,21 @@ interface ProcessingResult {
         packageType: string;
         packageCount: number;
         labelsPrinted: boolean;
+        notes?: string;
     };
     productionDate: string;
     expiryDate: string;
     storageConditions: string;
     readyForDistribution: boolean;
+    productName?: string;
+    productImage?: string;
     nftMinted?: boolean;
     nftTxHash?: string;
+    aiDefectScan?: {
+        disease: string;
+        confidence: number;
+        healthScore: number;
+    };
 }
 
 export default function WarehouseProcessingModal({
@@ -68,6 +79,28 @@ export default function WarehouseProcessingModal({
 }: ProcessingModalProps & { savedData?: Partial<ProcessingResult> }) {
     const [activeStep, setActiveStep] = useState(savedData ? getLastCompletedStep(savedData) : 0);
     const [isMintingNFT, setIsMintingNFT] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setIsUploading(true);
+
+            // Upload to IPFS using existing service (includes compression)
+            const result = await uploadImageToIPFS(file);
+
+            setProcessing(prev => ({ ...prev, productImage: result.url }));
+            toast.success("Product image uploaded to IPFS");
+        } catch (error: unknown) {
+            console.error("Upload error:", error);
+            const message = error instanceof Error ? error.message : "Failed to upload image";
+            toast.error(message);
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     // Helper to determine which step to resume from
     function getLastCompletedStep(data: Partial<ProcessingResult>): number {
@@ -102,13 +135,19 @@ export default function WarehouseProcessingModal({
             completed: false,
             packageType: "",
             packageCount: 0,
-            labelsPrinted: false
+            labelsPrinted: false,
+            notes: ""
         },
         productionDate: savedData?.productionDate || new Date().toISOString().split('T')[0],
         expiryDate: savedData?.expiryDate || "",
         storageConditions: savedData?.storageConditions || "",
-        readyForDistribution: false
+        productName: savedData?.productName || batch?.cropType || "",
+        productImage: savedData?.productImage || "",
+        readyForDistribution: false,
+        aiDefectScan: savedData?.aiDefectScan
     });
+
+    const [showAiScanner, setShowAiScanner] = useState(false);
 
     const steps = [
         { id: 0, label: "Quality Check", icon: ClipboardCheck },
@@ -119,7 +158,8 @@ export default function WarehouseProcessingModal({
     ];
 
     const grades = ["Premium", "Grade A", "Grade B", "Standard"];
-    const packageTypes = ["Crate", "Box", "Bag", "Pallet", "Bulk Container"];
+    const packageTypes = ["Crate", "Box", "Bag", "Pallet", "Bulk Container", "Pack"];
+    const packSizes = ["200g", "100g", "50g", "25g"];
     const processingMethods = [
         "Sun Drying",
         "Mechanical Drying",
@@ -198,6 +238,9 @@ export default function WarehouseProcessingModal({
                 storageConditions: processing.storageConditions,
                 isOrganic: false,
                 certifications: [],
+                productName: processing.productName,
+                productImage: processing.productImage,
+                aiDefectScan: processing.aiDefectScan
             });
 
             if (!result.success) {
@@ -230,13 +273,14 @@ export default function WarehouseProcessingModal({
 
             onCompleteAction(completedData);
             onCloseAction();
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.dismiss("nft-minting");
             console.error('NFT minting error:', error);
+            const message = error instanceof Error ? error.message : 'Please try again';
             toast.error(
                 <div>
                     <p className="font-bold">Failed to mint NFT</p>
-                    <p className="text-xs mt-1">{error.message || 'Please try again'}</p>
+                    <p className="text-xs mt-1">{message}</p>
                 </div>,
                 { duration: 5000 }
             );
@@ -333,22 +377,94 @@ export default function WarehouseProcessingModal({
                                     </div>
 
                                     <div className="flex items-center">
-                                        <label className="flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={processing.qualityCheck.passed}
-                                                onChange={(e) => setProcessing(prev => ({
-                                                    ...prev,
-                                                    qualityCheck: { ...prev.qualityCheck, passed: e.target.checked }
-                                                }))}
-                                                className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"
-                                            />
-                                            <span className="ml-3 text-sm font-medium text-gray-700">Quality Check Passed</span>
-                                        </label>
+                                        <div className="flex items-center gap-4">
+                                            <label className="flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={processing.qualityCheck.passed}
+                                                    onChange={(e) => setProcessing(prev => ({
+                                                        ...prev,
+                                                        qualityCheck: { ...prev.qualityCheck, passed: e.target.checked }
+                                                    }))}
+                                                    className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"
+                                                />
+                                                <span className="ml-3 text-sm font-medium text-gray-700">Quality Check Passed</span>
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setProcessing(prev => ({
+                                                        ...prev,
+                                                        qualityCheck: { ...prev.qualityCheck, passed: false, notes: prev.qualityCheck.notes ? prev.qualityCheck.notes + '\n[FAILED] Quality check failed - batch rejected.' : '[FAILED] Quality check failed - batch rejected.' }
+                                                    }));
+                                                    toast.error('Quality check marked as FAILED');
+                                                }}
+                                                className="px-3 py-1.5 bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-200 transition-colors"
+                                            >
+                                                ✕ Mark as Failed
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div>
+                                {/* AI Intake Defect Scanning */}
+                                <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 mt-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div>
+                                            <h4 className="text-sm font-bold text-indigo-800 flex items-center gap-2">
+                                                <CheckCircle2 className="w-4 h-4" /> AI Defect Scanner
+                                            </h4>
+                                            <p className="text-xs text-indigo-600 mt-1">Scan intake crates for rot, disease, and overall quality.</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAiScanner(!showAiScanner)}
+                                            className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+                                        >
+                                            {showAiScanner ? "Close Scanner" : "Scan Batch"}
+                                        </button>
+                                    </div>
+
+                                    {showAiScanner && (
+                                        <div className="bg-white rounded-xl overflow-hidden border border-indigo-100 shadow-sm mt-4" style={{ minHeight: 320 }}>
+                                            <CropDiagnostics
+                                                cropType={batch?.cropType}
+                                                onResult={(result) => {
+                                                    setProcessing(prev => ({
+                                                        ...prev,
+                                                        aiDefectScan: {
+                                                            disease: result.disease,
+                                                            confidence: result.confidence,
+                                                            healthScore: result.healthScore
+                                                        },
+                                                        qualityCheck: {
+                                                            ...prev.qualityCheck,
+                                                            notes: `${prev.qualityCheck.notes}\n[AI Scan] Health: ${result.healthScore}/100, Defect/Disease: ${result.disease} (${(result.confidence * 100).toFixed(0)}%)`.trim(),
+                                                            grade: result.healthScore >= 80 ? "Premium" : result.healthScore >= 60 ? "Grade A" : "Grade B"
+                                                        }
+                                                    }));
+                                                    toast.success("Batch successfully scanned!");
+                                                    setShowAiScanner(false);
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {processing.aiDefectScan && (
+                                        <div className="mt-3 bg-white p-3 rounded-xl border border-indigo-200 flex justify-between items-center">
+                                            <div>
+                                                <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Last Scan Result</span>
+                                                <p className="text-sm font-semibold text-gray-900">{processing.aiDefectScan.disease}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-xs font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Score: {processing.aiDefectScan.healthScore}/100</span>
+                                                <p className="text-[10px] text-gray-400 mt-1">Conf: {(processing.aiDefectScan.confidence * 100).toFixed(1)}%</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Quality Notes</label>
                                     <textarea
                                         value={processing.qualityCheck.notes}
@@ -443,9 +559,30 @@ export default function WarehouseProcessingModal({
                                 </label>
 
                                 {processing.processing.applicable && (
-                                    <>
+                                    <div className="space-y-4 pt-2">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-3">Processing Methods (select all that apply)</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Processing Type</label>
+                                            <select
+                                                value={processing.processing.methods[0] || ""}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setProcessing(prev => ({
+                                                        ...prev,
+                                                        processing: { ...prev.processing, methods: val ? [val] : [] }
+                                                    }));
+                                                }}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                                            >
+                                                <option value="">Select Processing Type</option>
+                                                <option value="Dehydration">Dehydration</option>
+                                                <option value="Freezing">Freezing</option>
+                                                <option value="Juicing">Juicing</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-3">All Applied Methods (select additional if any)</label>
                                             <div className="grid grid-cols-3 gap-2">
                                                 {processingMethods.map(method => (
                                                     <label
@@ -508,7 +645,7 @@ export default function WarehouseProcessingModal({
                                             />
                                             <span className="ml-3 text-sm font-medium text-gray-700">Processing Completed</span>
                                         </label>
-                                    </>
+                                    </div>
                                 )}
                             </div>
                         )}
@@ -546,6 +683,34 @@ export default function WarehouseProcessingModal({
                                         />
                                     </div>
                                 </div>
+
+                                {processing.packaging.packageType === "Pack" && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="p-4 bg-teal-50 rounded-xl border border-teal-100"
+                                    >
+                                        <label className="block text-sm font-medium text-teal-900 mb-3">Select Pack Size</label>
+                                        <div className="flex flex-wrap gap-3">
+                                            {packSizes.map(size => (
+                                                <button
+                                                    key={size}
+                                                    type="button"
+                                                    onClick={() => setProcessing(prev => ({
+                                                        ...prev,
+                                                        packaging: { ...prev.packaging, notes: size }
+                                                    }))}
+                                                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${processing.packaging.notes === size
+                                                        ? 'bg-teal-600 text-white shadow-md'
+                                                        : 'bg-white text-teal-600 border border-teal-200 hover:bg-teal-100'
+                                                        }`}
+                                                >
+                                                    {size}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
 
                                 <div className="flex items-center gap-8">
                                     <label className="flex items-center cursor-pointer">
@@ -654,6 +819,69 @@ export default function WarehouseProcessingModal({
                                     </div>
                                 </div>
 
+                                <div className="space-y-4 pt-4 border-t">
+                                    <h4 className="font-semibold text-gray-900">Final Product Identity</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Final Product Name</label>
+                                            <input
+                                                type="text"
+                                                value={processing.productName}
+                                                onChange={(e) => setProcessing(prev => ({ ...prev, productName: e.target.value }))}
+                                                placeholder="e.g. Cherry-Pick Dried Mango"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Product Image</label>
+                                            <div className="flex flex-col gap-3">
+                                                <div className="relative group">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={handleImageUpload}
+                                                        className="hidden"
+                                                        id="product-image-upload"
+                                                        disabled={isUploading}
+                                                    />
+                                                    <label
+                                                        htmlFor="product-image-upload"
+                                                        className={`flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${isUploading
+                                                            ? 'bg-gray-50 border-gray-300'
+                                                            : 'bg-teal-50/30 border-teal-200 hover:border-teal-400 hover:bg-teal-50'
+                                                            }`}
+                                                    >
+                                                        {isUploading ? (
+                                                            <>
+                                                                <Loader2 className="h-5 w-5 text-teal-600 animate-spin" />
+                                                                <span className="text-sm font-medium text-teal-600">Uploading...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Upload className="h-5 w-5 text-teal-600" />
+                                                                <span className="text-sm font-medium text-teal-600">Choose File or Take Photo</span>
+                                                            </>
+                                                        )}
+                                                    </label>
+                                                </div>
+
+                                                {processing.productImage && (
+                                                    <div className="relative h-24 w-full rounded-xl overflow-hidden border bg-gray-50 group">
+                                                        <img
+                                                            src={processing.productImage}
+                                                            alt="Product Preview"
+                                                            className="h-full w-full object-contain"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <span className="text-white text-xs font-bold">Image Set</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* NFT Info */}
                                 <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
                                     <div className="flex items-center gap-3">
@@ -661,7 +889,7 @@ export default function WarehouseProcessingModal({
                                         <div>
                                             <h4 className="font-semibold text-purple-900">Blockchain Certificate</h4>
                                             <p className="text-sm text-purple-700">
-                                                Clicking "Ready for Distribution" will mint an NFT with full traceability data on the blockchain.
+                                                Clicking &quot;Ready for Distribution&quot; will mint an NFT with full traceability data on the blockchain.
                                             </p>
                                         </div>
                                     </div>

@@ -1,17 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { X, Upload, Camera, Thermometer, Droplets, Wind, Image as ImageIcon, Plus, Trash2, Loader2 } from "lucide-react";
+import { X, Upload, Camera, Thermometer, Droplets, Wind, Plus, Trash2, Loader2, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { uploadToIPFS } from "@/lib/ipfsService";
+import { analyzeCropHealth, fileToBase64, type CropDiagnosisResult } from "@/lib/aiDiagnostics";
 
-interface IoTReading {
+export interface IoTReading {
   id: string;
   type: "temperature" | "humidity" | "soil_moisture" | "ph_level";
   value: number;
   unit: string;
   timestamp: string;
+}
+
+export interface EvidenceAIAnalysis {
+  imageIndex: number;
+  imagePreview: string;
+  imageUrl?: string;
+  analyzedAt: string;
+  result: CropDiagnosisResult;
 }
 
 interface EvidenceUploadModalProps {
@@ -20,10 +29,12 @@ interface EvidenceUploadModalProps {
   milestoneId: string;
   milestoneName: string;
   contractId: string;
+  cropType?: string;
   onSubmitAction: (evidence: {
     images: string[];
     iotReadings: IoTReading[];
     notes: string;
+    aiAnalysis?: EvidenceAIAnalysis | null;
   }) => Promise<void>;
 }
 
@@ -33,6 +44,7 @@ export default function EvidenceUploadModal({
   milestoneId,
   milestoneName,
   contractId,
+  cropType,
   onSubmitAction,
 }: EvidenceUploadModalProps) {
   const [images, setImages] = useState<File[]>([]);
@@ -40,6 +52,10 @@ export default function EvidenceUploadModal({
   const [iotReadings, setIotReadings] = useState<IoTReading[]>([]);
   const [notes, setNotes] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [selectedAiImageIndex, setSelectedAiImageIndex] = useState<number | null>(null);
+  const [aiAdditionalContext, setAiAdditionalContext] = useState("");
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<EvidenceAIAnalysis | null>(null);
 
   // IoT Reading Form State
   const [showIoTForm, setShowIoTForm] = useState(false);
@@ -48,7 +64,7 @@ export default function EvidenceUploadModal({
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     if (images.length + files.length > 10) {
       toast.error("Maximum 10 images allowed");
       return;
@@ -64,11 +80,66 @@ export default function EvidenceUploadModal({
       };
       reader.readAsDataURL(file);
     });
+
+    setSelectedAiImageIndex((prev) => prev ?? images.length);
   };
 
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index));
     setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+
+    if (selectedAiImageIndex === index) {
+      setSelectedAiImageIndex(null);
+    } else if (selectedAiImageIndex !== null && selectedAiImageIndex > index) {
+      setSelectedAiImageIndex(selectedAiImageIndex - 1);
+    }
+
+    if (aiAnalysis?.imageIndex === index) {
+      setAiAnalysis(null);
+    } else if (aiAnalysis && aiAnalysis.imageIndex > index) {
+      setAiAnalysis({
+        ...aiAnalysis,
+        imageIndex: aiAnalysis.imageIndex - 1,
+      });
+    }
+  };
+
+  const handleAnalyzeSelectedImage = async () => {
+    if (selectedAiImageIndex === null || !images[selectedAiImageIndex] || !imagePreviews[selectedAiImageIndex]) {
+      toast.error("Select an evidence photo first");
+      return;
+    }
+
+    setAiAnalyzing(true);
+
+    try {
+      const imageBase64 = await fileToBase64(images[selectedAiImageIndex]);
+      const additionalContext = [
+        `Verifier evidence for milestone: ${milestoneName}`,
+        notes.trim() ? `Verifier notes: ${notes.trim()}` : "",
+        aiAdditionalContext.trim(),
+      ].filter(Boolean).join("\n");
+
+      const result = await analyzeCropHealth({
+        imageBase64,
+        cropType: cropType || undefined,
+        additionalContext: additionalContext || undefined,
+      });
+
+      setAiAnalysis({
+        imageIndex: selectedAiImageIndex,
+        imagePreview: imagePreviews[selectedAiImageIndex],
+        analyzedAt: new Date().toISOString(),
+        result,
+      });
+
+      toast.success("AI analysis attached to evidence");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to analyze selected image";
+      toast.error(message);
+    } finally {
+      setAiAnalyzing(false);
+    }
   };
 
   const addIoTReading = () => {
@@ -113,7 +184,7 @@ export default function EvidenceUploadModal({
     try {
       // Upload images to Pinata IPFS
       const imageUrls: string[] = [];
-      
+
       for (const image of images) {
         const result = await uploadToIPFS(image);
         // Use the Pinata gateway URL directly
@@ -125,18 +196,27 @@ export default function EvidenceUploadModal({
         images: imageUrls,
         iotReadings,
         notes,
+        aiAnalysis: aiAnalysis
+          ? {
+              ...aiAnalysis,
+              imageUrl: imageUrls[aiAnalysis.imageIndex],
+            }
+          : null,
       });
 
       toast.success("Evidence uploaded to Pinata successfully!");
       onCloseAction();
-      
+
       // Reset form
       setImages([]);
       setImagePreviews([]);
       setIotReadings([]);
       setNotes("");
-    } catch (error) {
-      console.error("Error submitting evidence:", error);
+      setSelectedAiImageIndex(null);
+      setAiAdditionalContext("");
+      setAiAnalysis(null);
+    } catch (error: unknown) {
+      console.error("Error submitting evidence:", error instanceof Error ? error.message : JSON.stringify(error));
       toast.error("Failed to upload evidence to Pinata");
     } finally {
       setUploading(false);
@@ -173,7 +253,7 @@ export default function EvidenceUploadModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10100] flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -204,25 +284,44 @@ export default function EvidenceUploadModal({
                 <Camera className="h-5 w-5 inline mr-2" />
                 Upload Images ({images.length}/10)
               </label>
-              
+
               {/* Image Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 {imagePreviews.map((preview, index) => (
-                  <div key={index} className="relative group">
+                  <div
+                    key={index}
+                    onClick={() => setSelectedAiImageIndex(index)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSelectedAiImageIndex(index);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className={`relative group text-left rounded-lg overflow-hidden border-2 transition-all ${selectedAiImageIndex === index ? "border-green-500 ring-2 ring-green-100" : "border-gray-200 hover:border-green-300"}`}
+                  >
                     <img
                       src={preview}
                       alt={`Preview ${index + 1}`}
-                      className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                      className="w-full h-32 object-cover"
                     />
+                    <div className="absolute left-2 bottom-2 px-2 py-1 rounded-full bg-black/65 text-white text-[10px] font-semibold">
+                      {selectedAiImageIndex === index ? "Selected for AI" : `Photo ${index + 1}`}
+                    </div>
                     <button
-                      onClick={() => removeImage(index)}
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeImage(index);
+                      }}
                       className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
-                
+
                 {/* Upload Button */}
                 {images.length < 10 && (
                   <label className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors">
@@ -238,6 +337,90 @@ export default function EvidenceUploadModal({
                   </label>
                 )}
               </div>
+
+              {images.length > 0 && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-emerald-900 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        AI Crop Analysis for Evidence
+                      </h4>
+                      <p className="text-xs text-emerald-700 mt-1">
+                        Run AI analysis on a captured evidence photo so the diagnosis is stored with the verifier evidence.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAnalyzeSelectedImage}
+                      disabled={aiAnalyzing || selectedAiImageIndex === null}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                    >
+                      {aiAnalyzing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Analyze Selected Photo
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <textarea
+                    value={aiAdditionalContext}
+                    onChange={(e) => setAiAdditionalContext(e.target.value)}
+                    placeholder="Optional AI context, e.g. yellow leaves observed near the edges or suspected pest stress..."
+                    rows={2}
+                    className="w-full px-4 py-3 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none bg-white"
+                  />
+
+                  {aiAnalysis && (
+                    <div className="rounded-xl border border-emerald-200 bg-white p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{aiAnalysis.result.diagnosis}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Attached to photo {aiAnalysis.imageIndex + 1} • Confidence {aiAnalysis.result.confidenceScore}%
+                          </p>
+                        </div>
+                        <span className="inline-flex px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                          Health Score {aiAnalysis.result.healthScore}/100
+                        </span>
+                      </div>
+
+                      {aiAnalysis.result.identifiedIssues.length > 0 && (
+                        <div className="mb-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Detected Issues</p>
+                          <div className="flex flex-wrap gap-2">
+                            {aiAnalysis.result.identifiedIssues.map((issue) => (
+                              <span key={issue} className="px-2 py-1 rounded-full bg-amber-50 text-amber-800 text-xs border border-amber-200">
+                                {issue}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {aiAnalysis.result.recommendations.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Recommendations</p>
+                          <ul className="space-y-1">
+                            {aiAnalysis.result.recommendations.slice(0, 3).map((recommendation) => (
+                              <li key={recommendation} className="text-sm text-gray-700">
+                                {recommendation}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* IoT Readings Section */}
@@ -354,7 +537,7 @@ export default function EvidenceUploadModal({
           {/* Footer */}
           <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
             <div className="text-sm text-gray-600">
-              {images.length} image(s) • {iotReadings.length} reading(s)
+              {images.length} image(s) • {iotReadings.length} reading(s) • {aiAnalysis ? "AI linked" : "No AI analysis"}
             </div>
             <div className="flex gap-3">
               <button

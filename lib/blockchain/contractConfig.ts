@@ -39,7 +39,7 @@ export const CONTRACTS = {
 };
 
 // Current network (change based on environment)
-export const CURRENT_NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'mainnet' ? 'base' : 'baseSepolia';
+export const CURRENT_NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'testnet' ? 'baseSepolia' : 'base';
 
 export const getContractAddress = (contractName: 'AgroChain360Manager' | 'CropJourneyNFT') => {
   return CONTRACTS[CURRENT_NETWORK].contracts[contractName].address;

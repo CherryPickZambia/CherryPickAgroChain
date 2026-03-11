@@ -14,7 +14,7 @@ function checkSupabase() {
 
 export interface GrowthActivity {
     id?: string;
-    contract_id: string;
+    contract_id?: string;
     farmer_id: string;
     batch_id?: string;
     activity_type: 'planting' | 'weeding' | 'fertilizer' | 'pesticide' | 'irrigation' | 'pruning' | 'harvesting' | 'dispatch' | 'other';
@@ -58,18 +58,24 @@ export async function logGrowthActivity(
 }
 
 export async function getGrowthActivities(
-    contractId: string,
-    farmerId?: string
+    contractId?: string,
+    farmerId?: string,
+    batchId?: string
 ): Promise<GrowthActivity[]> {
     const client = checkSupabase();
     let query = client
         .from('growth_activities')
         .select('*')
-        .eq('contract_id', contractId)
         .order('date', { ascending: false });
 
+    if (contractId) {
+        query = query.eq('contract_id', contractId);
+    }
     if (farmerId) {
         query = query.eq('farmer_id', farmerId);
+    }
+    if (batchId) {
+        query = query.eq('batch_id', batchId);
     }
 
     const { data, error } = await query;

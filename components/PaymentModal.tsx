@@ -254,7 +254,7 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
                         <div className="flex justify-between items-center">
                           <span className="text-gray-900 font-medium">Total Amount</span>
                           <span className="text-2xl font-bold text-green-600">
-                            K{order.total_amount.toLocaleString()}
+                            ZK {order.total_amount.toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -385,7 +385,7 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
                     >
                       <DollarSign className="h-5 w-5" />
                       <span>
-                        {usdcBalance < order.total_amount ? 'Insufficient Funds' : `Pay K${order.total_amount.toLocaleString()}`}
+                        {usdcBalance < order.total_amount ? 'Insufficient Funds' : `Pay ZK ${order.total_amount.toLocaleString()}`}
                       </span>
                     </button>
                   </div>

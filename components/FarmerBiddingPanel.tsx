@@ -37,15 +37,20 @@ export default function FarmerBiddingPanel({ farmerId, isPending }: FarmerBiddin
     }, [farmerId]);
 
     const loadData = async () => {
+        if (!farmerId) return;
+        setLoading(true);
+        console.log(`FarmerBiddingPanel: Loading data for farmer ${farmerId}`);
         try {
             const [openDemands, farmerBids] = await Promise.all([
                 getOpenSupplyDemands(),
                 getBidsByFarmer(farmerId),
             ]);
+            console.log(`FarmerBiddingPanel: Loaded ${openDemands.length} demands and ${farmerBids.length} bids.`);
             setDemands(openDemands);
             setMyBids(farmerBids);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error loading bidding data:", error);
+            toast.error("Failed to load bidding data. Please try again.");
         } finally {
             setLoading(false);
         }

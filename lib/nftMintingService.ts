@@ -23,6 +23,13 @@ export interface MintTraceabilityNFTParams {
     farmLocation?: string;
     isOrganic?: boolean;
     certifications?: string[];
+    productName?: string;
+    productImage?: string;
+    aiDefectScan?: {
+        disease: string;
+        confidence: number;
+        healthScore: number;
+    };
 }
 
 /**

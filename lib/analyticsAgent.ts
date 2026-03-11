@@ -140,7 +140,7 @@ export async function getYieldForecast(params: {
   season: string;
 }) {
   const query = `What is the yield forecast for ${params.crop} in ${params.region} for ${params.season}? Include weather factors and risk assessment.`;
-  
+
   return await runAnalyticsWorkflow({ input_as_text: query });
 }
 
@@ -152,7 +152,7 @@ export async function getMarketPriceTrends(params: {
   timeframe: string;
 }) {
   const query = `Analyze market price trends for ${params.crop} over the ${params.timeframe}. Include supply-demand factors and forecast.`;
-  
+
   return await runAnalyticsWorkflow({ input_as_text: query });
 }
 
@@ -165,7 +165,7 @@ export async function getRiskAssessment(params: {
   factors: string[];
 }) {
   const query = `Assess risks for ${params.crop} farming in ${params.region}. Consider: ${params.factors.join(', ')}. Provide mitigation strategies.`;
-  
+
   return await runAnalyticsWorkflow({ input_as_text: query });
 }
 
@@ -177,7 +177,7 @@ export async function getWeatherForecast(params: {
   crop: string;
 }) {
   const query = `Provide weather forecast for ${params.region} and its impact on ${params.crop} production. Include recommendations.`;
-  
+
   return await runAnalyticsWorkflow({ input_as_text: query });
 }
 
@@ -187,9 +187,9 @@ export async function getWeatherForecast(params: {
 export async function getAIInsights(params: {
   farmerId: string;
   cropType: string;
-  historicalData: any;
+  historicalData: unknown;
 }) {
   const query = `Analyze farming data for ${params.cropType}. Historical performance: ${JSON.stringify(params.historicalData)}. Provide strategic insights and recommendations.`;
-  
+
   return await runAnalyticsWorkflow({ input_as_text: query });
 }

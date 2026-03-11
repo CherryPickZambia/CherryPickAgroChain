@@ -65,7 +65,7 @@ export default function ConsumerPortal() {
                 <Leaf className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[#1a1a1a]">AgroChain360</h1>
+                <h1 className="text-2xl font-bold text-[#1a1a1a]">AgroChain 360</h1>
                 <p className="text-xs text-gray-600">Farm to Table Marketplace</p>
               </div>
             </div>

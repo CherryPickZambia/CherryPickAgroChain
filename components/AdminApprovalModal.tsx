@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 
 interface AdminApprovalModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   milestone: {
     id: string;
     name: string;
@@ -34,8 +34,8 @@ interface AdminApprovalModalProps {
       officerName: string;
     };
   };
-  onApprove: (adminNotes: string) => Promise<void>;
-  onReject: (adminNotes: string) => Promise<void>;
+  onApproveAction: (adminNotes: string) => Promise<void>;
+  onRejectAction: (adminNotes: string) => Promise<void>;
 }
 
 /**
@@ -56,13 +56,10 @@ interface AdminApprovalModalProps {
  */
 export default function AdminApprovalModal({
   isOpen,
-  // @ts-ignore - Next.js false positive: function props are valid in client-to-client components
-  onClose,
+  onCloseAction,
   milestone,
-  // @ts-ignore - Next.js false positive: function props are valid in client-to-client components
-  onApprove,
-  // @ts-ignore - Next.js false positive: function props are valid in client-to-client components
-  onReject,
+  onApproveAction,
+  onRejectAction,
 }: AdminApprovalModalProps) {
   const [adminNotes, setAdminNotes] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -76,9 +73,9 @@ export default function AdminApprovalModal({
 
     setProcessing(true);
     try {
-      await onApprove(adminNotes);
+      await onApproveAction(adminNotes);
       toast.success("Milestone approved! Payment will be released.");
-      onClose();
+      onCloseAction();
     } catch (error) {
       console.error("Error approving milestone:", error);
       toast.error("Failed to approve milestone");
@@ -95,9 +92,9 @@ export default function AdminApprovalModal({
 
     setProcessing(true);
     try {
-      await onReject(adminNotes);
+      await onRejectAction(adminNotes);
       toast.success("Milestone rejected");
-      onClose();
+      onCloseAction();
     } catch (error) {
       console.error("Error rejecting milestone:", error);
       toast.error("Failed to reject milestone");
@@ -111,7 +108,7 @@ export default function AdminApprovalModal({
   return (
     <>
       <AnimatePresence>
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -126,7 +123,7 @@ export default function AdminApprovalModal({
                   <p className="text-purple-100 mt-1">{milestone.name}</p>
                 </div>
                 <button
-                  onClick={onClose}
+                  onClick={onCloseAction}
                   className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                 >
                   <X className="h-6 w-6" />
@@ -149,25 +146,34 @@ export default function AdminApprovalModal({
                     </p>
 
                     <div className="space-y-3">
-                      {milestone.farmerActivities.map((activity, index) => (
-                        <div key={index} className="bg-white rounded-lg p-3 border border-green-100">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium text-sm text-gray-900">
-                              {activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
-                            </span>
-                            <span className="text-xs text-gray-500">{activity.date}</span>
-                          </div>
-                          <p className="text-sm text-gray-700 mb-1">{activity.description}</p>
-                          {activity.quantity && (
-                            <p className="text-xs text-gray-600">
-                              Quantity: {activity.quantity} {activity.unit}
-                            </p>
-                          )}
-                          {activity.notes && (
-                            <p className="text-xs text-gray-500 italic mt-1">{activity.notes}</p>
-                          )}
+                      {milestone.farmerActivities.length === 0 ? (
+                        <div className="text-center py-6 text-gray-400">
+                          <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No farmer activities logged yet</p>
                         </div>
-                      ))}
+                      ) : (
+                        milestone.farmerActivities.map((activity, index) => (
+                          <div key={index} className="bg-white rounded-lg p-3 border border-green-100">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-sm text-gray-900">
+                                {activity.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(activity.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-1">{activity.description}</p>
+                            {activity.quantity && (
+                              <p className="text-xs text-gray-600">
+                                Quantity: {activity.quantity} {activity.unit}
+                              </p>
+                            )}
+                            {activity.notes && (
+                              <p className="text-xs text-gray-500 italic mt-1">{activity.notes}</p>
+                            )}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -214,16 +220,32 @@ export default function AdminApprovalModal({
                       <h4 className="text-sm font-medium text-gray-700 mb-2">
                         IoT Sensor Readings ({milestone.officerEvidence.iotReadings.length})
                       </h4>
-                      <div className="space-y-2">
-                        {milestone.officerEvidence.iotReadings.map((reading, index) => (
-                          <div key={index} className="bg-white rounded-lg p-2 border border-blue-100 flex items-center justify-between">
-                            <span className="text-sm text-gray-700">{reading.type}</span>
-                            <span className="text-sm font-semibold text-gray-900">
-                              {reading.value} {reading.unit}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                      {milestone.officerEvidence.iotReadings.length === 0 ? (
+                        <div className="text-center py-4 text-gray-400">
+                          <Activity className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                          <p className="text-xs">No IoT readings recorded</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {milestone.officerEvidence.iotReadings.map((reading, index) => (
+                            <div key={index} className="bg-white rounded-lg p-2 border border-blue-100 flex items-center justify-between">
+                              <div>
+                                <span className="text-sm text-gray-700 font-medium">
+                                  {reading.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                </span>
+                                {reading.timestamp && (
+                                  <span className="text-xs text-gray-400 ml-2">
+                                    {new Date(reading.timestamp).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-sm font-semibold text-gray-900">
+                                {reading.value} {reading.unit}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Officer Notes */}
@@ -233,6 +255,91 @@ export default function AdminApprovalModal({
                         <p className="text-sm text-gray-700">{milestone.officerEvidence.notes}</p>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Full Compliance History Timeline */}
+              <div className="mt-6 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="h-5 w-5 text-purple-600" />
+                  <h3 className="font-semibold text-gray-900">Compliance History Timeline</h3>
+                  <span className="ml-auto text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+                    {milestone.farmerActivities.length + milestone.officerEvidence.iotReadings.length + (milestone.officerEvidence.images.length > 0 ? 1 : 0) + (milestone.officerEvidence.notes ? 1 : 0)} entries
+                  </span>
+                </div>
+
+                <div className="relative">
+                  {/* Timeline line */}
+                  <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-purple-200" />
+
+                  <div className="space-y-3">
+                    {/* Farmer Activities */}
+                    {milestone.farmerActivities.map((activity, index) => (
+                      <div key={`fa-${index}`} className="relative pl-8">
+                        <div className="absolute left-1.5 top-1.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm" />
+                        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">Farmer</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(activity.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-gray-900">{activity.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
+                          <p className="text-xs text-gray-600 mt-0.5">{activity.description}</p>
+                          {activity.quantity && (
+                            <p className="text-xs text-gray-500 mt-0.5">Qty: {activity.quantity} {activity.unit}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* IoT Readings */}
+                    {milestone.officerEvidence.iotReadings.map((reading, index) => (
+                      <div key={`iot-${index}`} className="relative pl-8">
+                        <div className="absolute left-1.5 top-1.5 w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-sm" />
+                        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">IoT Sensor</span>
+                            {reading.timestamp && (
+                              <span className="text-xs text-gray-500">
+                                {new Date(reading.timestamp).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-gray-900">{reading.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
+                            <span className="text-sm font-bold text-blue-700">{reading.value} {reading.unit}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Verifier Evidence Entry */}
+                    {(milestone.officerEvidence.images.length > 0 || milestone.officerEvidence.notes) && (
+                      <div className="relative pl-8">
+                        <div className="absolute left-1.5 top-1.5 w-3 h-3 rounded-full bg-indigo-500 border-2 border-white shadow-sm" />
+                        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">Verifier</span>
+                            <span className="text-xs text-gray-500">Officer: {milestone.officerEvidence.officerName}</span>
+                          </div>
+                          <p className="text-sm font-medium text-gray-900">Field Verification Completed</p>
+                          <p className="text-xs text-gray-600 mt-0.5">{milestone.officerEvidence.notes}</p>
+                          {milestone.officerEvidence.images.length > 0 && (
+                            <p className="text-xs text-gray-500 mt-1">{milestone.officerEvidence.images.length} photo(s) submitted as evidence</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Empty state */}
+                    {milestone.farmerActivities.length === 0 && milestone.officerEvidence.iotReadings.length === 0 && !milestone.officerEvidence.notes && milestone.officerEvidence.images.length === 0 && (
+                      <div className="text-center py-6 text-gray-400">
+                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No compliance history available</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -258,7 +365,7 @@ export default function AdminApprovalModal({
             {/* Footer */}
             <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
               <button
-                onClick={onClose}
+                onClick={onCloseAction}
                 disabled={processing}
                 className="btn-secondary"
               >

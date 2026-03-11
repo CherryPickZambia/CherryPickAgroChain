@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { processPayment, pollPaymentStatus } from "@/lib/basePay";
-import { createPayment } from "@/lib/supabaseService";
+import axios from "axios";
 
 interface BasePayButtonProps {
   amount: string;
@@ -37,52 +36,30 @@ export default function BasePayButton({
     setIsProcessing(true);
 
     try {
-      // Process payment with Base Pay
-      const payment = await processPayment({
-        amount,
-        to: recipientAddress,
-        description,
-        testnet: true, // Set to false for mainnet
-        payerInfo: {
-          requests: [
-            { type: "email" },
-            { type: "onchainAddress" },
-          ],
-        },
-      });
+      // Direct integration to our new backend route which handles Escrow release or Funding
+      // Since this is generic, we determine if we're funding a contract or releasing a milestone.
 
-      // Save payment to database
-      const dbPayment = await createPayment({
-        contract_id: contractId,
-        milestone_id: milestoneId || null,
-        recipient_id: recipientId,
-        recipient_type: recipientType,
+      const endpoint = milestoneId
+        ? "/api/payments/process-milestone"
+        : "/api/payments/fund-contract"; // Assume an endpoint for funding
+
+      const response = await axios.post(endpoint, {
+        contractId,
+        milestoneId,
         amount: parseFloat(amount),
-        transaction_hash: payment.id,
-        status: "processing",
-        completed_at: null,
+        farmerWalletAddress: recipientAddress,
+        officerId: recipientId
       });
 
-      // Poll for payment completion
-      const status = await pollPaymentStatus(payment.id, true, 30, 2000);
-
-      if (status === "completed") {
-        // Update payment status in database
-        await createPayment({
-          ...dbPayment,
-          status: "completed",
-          completed_at: new Date().toISOString(),
-        });
-
-        onSuccess?.(payment.id);
-      } else if (status === "failed") {
-        throw new Error("Payment failed");
+      if (response.data?.success) {
+        onSuccess?.(response.data.transactionHash || "processed");
       } else {
-        throw new Error("Payment timeout - please check transaction status");
+        throw new Error(response.data?.error || "Payment failed");
       }
+
     } catch (error: any) {
-      console.error("Payment error:", error);
-      onError?.(error.message || "Payment failed");
+      console.error("Payment error:", error?.response?.data || error);
+      onError?.(error?.response?.data?.error || error.message || "Payment failed");
     } finally {
       setIsProcessing(false);
     }

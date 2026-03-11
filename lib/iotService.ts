@@ -2,6 +2,7 @@
 // Handles systematic capture and storage of IoT readings for analytics
 
 import { supabase } from './supabase';
+import { type CropDiagnostic } from './types';
 
 function checkSupabase() {
   if (!supabase) {
@@ -21,7 +22,7 @@ export interface IoTReading {
   reading_unit: string;
   location_lat?: number;
   location_lng?: number;
-  raw_data?: any;
+  raw_data?: Record<string, unknown>;
   blockchain_tx?: string;
   created_at?: string;
 }
@@ -166,7 +167,7 @@ export async function getContractIoTReadings(contractId: string): Promise<IoTRea
 // Get sensor summary for dashboard
 export async function getSensorSummary(farmerId: string): Promise<SensorSummary[]> {
   const client = checkSupabase();
-  
+
   // Get last 24 hours of readings
   const yesterday = new Date();
   yesterday.setHours(yesterday.getHours() - 24);
@@ -192,7 +193,7 @@ export async function getSensorSummary(farmerId: string): Promise<SensorSummary[
 
   // Calculate summaries
   const summaries: SensorSummary[] = [];
-  grouped.forEach((readings, key) => {
+  grouped.forEach((readings, _key) => {
     if (readings.length === 0) return;
 
     const values = readings.map(r => r.reading_value);
@@ -236,7 +237,7 @@ export async function getIoTAnalytics(
   days: number = 7
 ): Promise<{ date: string; value: number }[]> {
   const client = checkSupabase();
-  
+
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
@@ -275,7 +276,7 @@ export async function getIoTAnalytics(
 // Simulated IoT data generator for demo purposes
 export function generateMockSensorData(farmerId: string, contractId?: string): Omit<IoTReading, 'id' | 'created_at'>[] {
   const readings: Omit<IoTReading, 'id' | 'created_at'>[] = [];
-  
+
   // Soil moisture
   readings.push({
     farmer_id: farmerId,
@@ -351,10 +352,8 @@ export async function storeAIDiagnostic(diagnostic: {
   recommendations: string[];
   confidence_score: number;
   ai_provider?: string;
-  raw_response?: any;
-  location_lat?: number;
   location_lng?: number;
-}): Promise<any> {
+}): Promise<CropDiagnostic> {
   const client = checkSupabase();
   const { data, error } = await client
     .from('crop_diagnostics')
@@ -367,7 +366,7 @@ export async function storeAIDiagnostic(diagnostic: {
 }
 
 // Get AI diagnostics for a farmer
-export async function getFarmerDiagnostics(farmerId: string, limit: number = 10): Promise<any[]> {
+export async function getFarmerDiagnostics(farmerId: string, limit: number = 10): Promise<CropDiagnostic[]> {
   const client = checkSupabase();
   const { data, error } = await client
     .from('crop_diagnostics')
@@ -381,7 +380,7 @@ export async function getFarmerDiagnostics(farmerId: string, limit: number = 10)
 }
 
 // Get diagnostics for a contract
-export async function getContractDiagnostics(contractId: string): Promise<any[]> {
+export async function getContractDiagnostics(contractId: string): Promise<CropDiagnostic[]> {
   const client = checkSupabase();
   const { data, error } = await client
     .from('crop_diagnostics')
