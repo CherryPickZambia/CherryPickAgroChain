@@ -139,21 +139,21 @@ export default function LocationPickerModal({
                     className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]"
                 >
                     {/* Header */}
-                    <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-emerald-50 to-green-50">
+                    <div className="p-6 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-green-100 rounded-xl text-green-600">
-                                <MapPin className="h-6 w-6" />
+                            <div className="p-2.5 rounded-xl" style={{ background: '#0C2D3A' }}>
+                                <MapPin className="h-5 w-5" style={{ color: '#BFFF00' }} />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900">Set Farm Location</h3>
-                                <p className="text-sm text-gray-500">Drag the marker or click to pinpoint your farm</p>
+                                <h3 className="text-xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Set Farm Location</h3>
+                                <p className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>Drag the marker or click to pinpoint your farm</p>
                             </div>
                         </div>
                         <button
                             onClick={onCloseAction}
-                            className="p-2 hover:bg-white/50 rounded-full transition-colors"
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                         >
-                            <X className="h-6 w-6 text-gray-500" />
+                            <X className="h-6 w-6" style={{ color: '#5A7684' }} />
                         </button>
                     </div>
 
@@ -232,21 +232,23 @@ export default function LocationPickerModal({
                     </div>
 
                     {/* Footer */}
-                    <div className="p-6 border-t bg-gray-50 flex items-center justify-between">
-                        <div className="text-sm text-gray-500">
-                            Accuracy: <span className="text-green-600 font-bold">High Precision enabled</span>
+                    <div className="p-6 border-t border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
+                        <div className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
+                            Accuracy: <span style={{ color: '#0C2D3A', fontWeight: 700 }}>High Precision enabled</span>
                         </div>
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={onCloseAction}
-                                className="px-6 py-2.5 rounded-xl font-semibold text-gray-700 hover:bg-gray-100 transition-all border border-gray-200"
+                                className="px-6 py-2.5 rounded-xl transition-colors"
+                                style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A' }}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleConfirm}
                                 disabled={!address || isGeocoding}
-                                className="px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 hover:shadow-xl hover:from-emerald-700 hover:to-green-700 transition-all disabled:opacity-50 flex items-center gap-2"
+                                className="px-8 py-2.5 text-white rounded-xl transition-all disabled:opacity-40 flex items-center gap-2"
+                                style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                             >
                                 <Check className="h-5 w-5" />
                                 Confirm Location

@@ -301,16 +301,18 @@ export default function WarehouseProcessingModal({
                     className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
                 >
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-4 text-white flex items-center justify-between">
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
                         <div className="flex items-center gap-3">
-                            <Package className="h-6 w-6" />
+                            <div className="p-2.5 rounded-xl" style={{ background: '#0C2D3A' }}>
+                                <Package className="h-5 w-5" style={{ color: '#BFFF00' }} />
+                            </div>
                             <div>
-                                <h2 className="text-xl font-bold">Warehouse Processing</h2>
-                                <p className="text-sm text-white/80">Batch: {batch?.batchCode}</p>
+                                <h2 className="text-xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Warehouse Processing</h2>
+                                <p className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>Batch: {batch?.batchCode}</p>
                             </div>
                         </div>
-                        <button onClick={onCloseAction} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
-                            <X className="h-5 w-5" />
+                        <button onClick={onCloseAction} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                            <X className="h-5 w-5" style={{ color: '#5A7684' }} />
                         </button>
                     </div>
 
@@ -899,18 +901,20 @@ export default function WarehouseProcessingModal({
                     </div>
 
                     {/* Footer */}
-                    <div className="border-t px-6 py-4 flex items-center justify-between bg-gray-50">
+                    <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
                         <button
                             onClick={() => activeStep > 0 && setActiveStep(activeStep - 1)}
                             disabled={activeStep === 0}
-                            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                            className="px-4 py-2.5 rounded-xl transition-colors disabled:opacity-40"
+                            style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A' }}
                         >
                             Previous
                         </button>
                         <div className="flex gap-3">
                             <button
                                 onClick={handleSave}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg transition-colors flex items-center gap-2"
+                                className="px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2"
+                                style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A' }}
                             >
                                 <Save className="h-4 w-4" />
                                 Save & Close
@@ -918,7 +922,8 @@ export default function WarehouseProcessingModal({
                             {activeStep < 4 ? (
                                 <button
                                     onClick={() => setActiveStep(activeStep + 1)}
-                                    className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2"
+                                    className="px-6 py-2.5 text-white rounded-xl transition-colors flex items-center gap-2"
+                                    style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                                 >
                                     Next Step
                                 </button>
@@ -926,7 +931,8 @@ export default function WarehouseProcessingModal({
                                 <button
                                     onClick={handleComplete}
                                     disabled={!processing.qualityCheck.passed || !processing.sorting.completed || !processing.packaging.completed || isMintingNFT}
-                                    className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
+                                    className="px-6 py-2.5 text-white rounded-xl transition-colors flex items-center gap-2 disabled:opacity-40"
+                                    style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                                 >
                                     {isMintingNFT ? (
                                         <>

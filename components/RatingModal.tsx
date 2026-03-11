@@ -136,22 +136,22 @@ export default function RatingModal({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 text-white relative">
-            <button
-              onClick={onCloseAction}
-              className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-full transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <Star className="w-6 h-6" />
+              <div className="p-2.5 rounded-xl" style={{ background: '#0C2D3A' }}>
+                <Star className="w-5 h-5" style={{ color: '#BFFF00' }} />
               </div>
               <div>
-                <h2 className="text-xl font-bold">Rate {ratingType === 'farmer' ? 'Farmer' : 'Verifier'}</h2>
-                <p className="text-yellow-100 text-sm">{targetName}</p>
+                <h2 className="text-xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Rate {ratingType === 'farmer' ? 'Farmer' : 'Verifier'}</h2>
+                <p className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>{targetName}</p>
               </div>
             </div>
+            <button
+              onClick={onCloseAction}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" style={{ color: '#5A7684' }} />
+            </button>
           </div>
 
           {/* Content */}
@@ -246,7 +246,8 @@ export default function RatingModal({
               whileTap={{ scale: 0.98 }}
               onClick={handleSubmit}
               disabled={isSubmitting || rating === 0}
-              className="w-full py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              className="w-full py-3.5 text-white rounded-xl text-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 700, background: '#0C2D3A' }}
             >
               {isSubmitting ? (
                 <>

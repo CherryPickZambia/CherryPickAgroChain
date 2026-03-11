@@ -261,19 +261,22 @@ export default function EvidenceUploadModal({
           className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">Upload Evidence</h2>
-                <p className="text-green-100 mt-1">{milestoneName}</p>
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl" style={{ background: '#0C2D3A' }}>
+                <Camera className="h-6 w-6" style={{ color: '#BFFF00' }} />
               </div>
-              <button
-                onClick={onCloseAction}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
+              <div>
+                <h2 className="text-2xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Upload Evidence</h2>
+                <p className="text-sm mt-0.5" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>{milestoneName}</p>
+              </div>
             </div>
+            <button
+              onClick={onCloseAction}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="h-6 w-6" style={{ color: '#5A7684' }} />
+            </button>
           </div>
 
           {/* Content */}
@@ -535,22 +538,24 @@ export default function EvidenceUploadModal({
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
-            <div className="text-sm text-gray-600">
+          <div className="px-6 py-5 flex items-center justify-between border-t border-gray-100" style={{ background: '#F7F9FB' }}>
+            <div className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500, color: '#5A7684' }}>
               {images.length} image(s) • {iotReadings.length} reading(s) • {aiAnalysis ? "AI linked" : "No AI analysis"}
             </div>
             <div className="flex gap-3">
               <button
                 onClick={onCloseAction}
                 disabled={uploading}
-                className="btn-secondary"
+                className="px-6 py-2.5 rounded-xl transition-colors"
+                style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={uploading || images.length === 0}
-                className="btn-primary flex items-center gap-2"
+                className="px-6 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-white disabled:opacity-40"
+                style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
               >
                 {uploading ? (
                   <>

@@ -159,26 +159,29 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                         className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-xl flex flex-col h-[750px] max-h-[90vh]"
                     >
                         {/* Header */}
-                        <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <Sprout className="w-5 h-5 text-green-600" />
-                                    Start New Batch
-                                </h3>
-                                <p className="text-xs text-gray-500 mt-1">Step {currentStep} of 2: {STEPS[currentStep - 1].title}</p>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center" style={{ background: '#F7F9FB' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl" style={{ background: '#0C2D3A' }}>
+                                    <Sprout className="w-5 h-5" style={{ color: '#BFFF00' }} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Start New Batch</h3>
+                                    <p className="text-xs mt-0.5" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>Step {currentStep} of 2: {STEPS[currentStep - 1].title}</p>
+                                </div>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                             >
-                                <X className="w-5 h-5 text-gray-500" />
+                                <X className="w-5 h-5" style={{ color: '#5A7684' }} />
                             </button>
                         </div>
 
                         {/* Progress Bar */}
                         <div className="h-1 w-full bg-gray-100">
                             <motion.div
-                                className="h-full bg-green-500"
+                                className="h-full"
+                                style={{ background: '#0C2D3A' }}
                                 initial={{ width: "50%" }}
                                 animate={{ width: `${(currentStep / 2) * 100}%` }}
                                 transition={{ duration: 0.3 }}
@@ -445,7 +448,8 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                 <button
                                     type="button"
                                     onClick={nextStep}
-                                    className="px-6 py-2.5 bg-gray-900 text-white font-medium rounded-xl hover:bg-black transition-colors flex items-center gap-2"
+                                    className="px-6 py-2.5 text-white font-medium rounded-xl transition-colors flex items-center gap-2"
+                                    style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                                 >
                                     Next <ChevronRight className="w-4 h-4" />
                                 </button>
@@ -453,7 +457,8 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                 <button
                                     onClick={handleSubmit}
                                     disabled={loading}
-                                    className="px-6 py-2.5 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-70 shadow-lg shadow-green-200"
+                                    className="px-6 py-2.5 text-white font-medium rounded-xl transition-colors flex items-center gap-2 disabled:opacity-40"
+                                    style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                                 >
                                     {loading ? (
                                         <>

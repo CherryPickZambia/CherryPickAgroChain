@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Loader2, Sparkles, Plus, Trash2, Check, AlertCircle, ChevronUp, ChevronDown } from "lucide-react";
+import { X, Loader2, Sparkles, Plus, Trash2, Check, AlertCircle, ChevronUp, ChevronDown, Package } from "lucide-react";
 import { SUPPORTED_CROPS } from "@/lib/config";
 import { generateContractId, generateQRCode, calculateMilestonePayment } from "@/lib/utils";
 import { type SmartContract } from "@/lib/types";
@@ -292,16 +292,21 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Create Farming Contract</h2>
-            <p className="text-sm text-gray-600 mt-1">Admin-managed contract creation with AI-powered milestones</p>
+        <div className="sticky top-0 border-b border-gray-100 p-6 flex justify-between items-center z-10" style={{ background: '#F7F9FB' }}>
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl" style={{ background: '#0C2D3A' }}>
+              <Package className="h-6 w-6" style={{ color: '#BFFF00' }} />
+            </div>
+            <div>
+              <h2 className="text-2xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Create Farming Contract</h2>
+              <p className="text-sm mt-0.5" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>Admin-managed contract creation with AI-powered milestones</p>
+            </div>
           </div>
           <button
             onClick={onCloseAction}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <X className="h-6 w-6 text-gray-600" />
+            <X className="h-6 w-6" style={{ color: '#5A7684' }} />
           </button>
         </div>
 
@@ -644,14 +649,16 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-semibold transition-colors"
+                  className="flex-1 py-3 rounded-xl transition-colors"
+                  style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A' }}
                 >
                   Back
                 </button>
                 <button
                   type="submit"
                   disabled={loading || getTotalPercentage() !== 100 || milestones.length === 0}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 text-white py-3 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
+                  style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                 >
                   {loading && <Loader2 className="h-5 w-5 animate-spin" />}
                   <span>{loading ? "Creating..." : "Create Contract"}</span>

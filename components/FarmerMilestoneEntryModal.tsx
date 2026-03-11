@@ -365,15 +365,18 @@ export default function FarmerMilestoneEntryModal({
           className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden"
         >
           {/* Header */}
-          <div className="bg-white border-b p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Log New Activity</h2>
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl" style={{ background: '#0C2D3A' }}>
+                <Sprout className="h-6 w-6" style={{ color: '#BFFF00' }} />
               </div>
-              <button onClick={onCloseAction} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <X className="h-6 w-6 text-gray-400" />
-              </button>
+              <div>
+                <h2 className="text-2xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Log New Activity</h2>
+              </div>
             </div>
+            <button onClick={onCloseAction} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X className="h-6 w-6" style={{ color: '#5A7684' }} />
+            </button>
           </div>
 
           {/* Content */}
@@ -720,11 +723,6 @@ export default function FarmerMilestoneEntryModal({
                             <strong>Recommendation:</strong> {aiResult.treatmentRec}
                           </div>
                         )}
-                        <div className="mt-2 text-right">
-                          <button onClick={() => setAiResult(null)} className="text-xs text-red-500 hover:text-red-700 font-medium tracking-wide">
-                            Clear AI Result
-                          </button>
-                        </div>
                       </div>
                     )}
                   </div>
@@ -955,13 +953,13 @@ export default function FarmerMilestoneEntryModal({
             )}
           </div>
 
-          <div className="bg-white px-6 py-6 flex items-center justify-between border-t border-gray-100">
-            <div className="text-sm font-medium text-gray-500">
+          <div className="px-6 py-5 flex items-center justify-between border-t border-gray-100" style={{ background: '#F7F9FB' }}>
+            <div className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500, color: '#5A7684' }}>
               {activities.length} {activities.length === 1 ? "activity" : "activities"} logged
             </div>
-            <div className="flex gap-4">
-              <button onClick={onCloseAction} disabled={submitting} className="btn-secondary px-6">Cancel</button>
-              <button onClick={handleSubmit} disabled={submitting || activities.length === 0} className="btn-primary flex items-center gap-2 px-8">
+            <div className="flex gap-3">
+              <button onClick={onCloseAction} disabled={submitting} className="px-6 py-2.5 rounded-xl transition-colors" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A' }}>Cancel</button>
+              <button onClick={handleSubmit} disabled={submitting || activities.length === 0} className="px-8 py-2.5 rounded-xl transition-colors flex items-center gap-2 text-white disabled:opacity-40" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}>
                 {submitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />

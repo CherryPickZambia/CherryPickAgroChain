@@ -184,21 +184,24 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
               className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold">Complete Payment</h2>
-                  {!isProcessing && (
-                    <button
-                      onClick={handleClose}
-                      className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  )}
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl" style={{ background: '#0C2D3A' }}>
+                    <DollarSign className="h-6 w-6" style={{ color: '#BFFF00' }} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Complete Payment</h2>
+                    <p className="text-sm mt-0.5" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>Pay {order.farmer_name} for {order.crop_type}</p>
+                  </div>
                 </div>
-                <p className="text-green-100">
-                  Pay {order.farmer_name} for {order.crop_type}
-                </p>
+                {!isProcessing && (
+                  <button
+                    onClick={handleClose}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <X className="h-5 w-5" style={{ color: '#5A7684' }} />
+                  </button>
+                )}
               </div>
 
               {/* Content */}
@@ -374,14 +377,16 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
                   <div className="flex space-x-3">
                     <button
                       onClick={handleClose}
-                      className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                      className="flex-1 px-6 py-3 rounded-xl transition-colors"
+                      style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A' }}
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handlePayment}
                       disabled={isProcessing || usdcBalance < order.total_amount}
-                      className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 text-white rounded-xl transition-colors disabled:opacity-40"
+                      style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                     >
                       <DollarSign className="h-5 w-5" />
                       <span>

@@ -261,13 +261,18 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                         exit={{ opacity: 0, scale: 0.95 }}
                         className="bg-white rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col h-[95vh] max-h-[95vh]"
                     >
-                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-white">
-                            <h3 className="text-xl font-bold text-gray-900">Log New Activity</h3>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center" style={{ background: '#F7F9FB' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl" style={{ background: '#0C2D3A' }}>
+                                    <Sprout className="w-5 h-5" style={{ color: '#BFFF00' }} />
+                                </div>
+                                <h3 className="text-xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Log New Activity</h3>
+                            </div>
                             <button
                                 onClick={onCloseAction}
                                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                             >
-                                <X className="w-6 h-6 text-gray-400" />
+                                <X className="w-6 h-6" style={{ color: '#5A7684' }} />
                             </button>
                         </div>
 
@@ -722,18 +727,20 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                             )}
 
                             {/* Footer inside form to handle submit properly */}
-                            <div className="pt-8 flex justify-between items-center border-t border-gray-100 bg-white sticky bottom-0">
+                            <div className="pt-8 flex justify-between items-center border-t border-gray-100 sticky bottom-0" style={{ background: '#F7F9FB', padding: '1.25rem 0' }}>
                                 <button
                                     type="button"
                                     onClick={onCloseAction}
-                                    className="px-8 py-3 text-gray-500 font-semibold hover:bg-gray-50 rounded-2xl transition-all"
+                                    className="px-6 py-2.5 rounded-xl transition-colors"
+                                    style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A' }}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="px-10 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all flex items-center gap-2 disabled:bg-blue-400 shadow-xl shadow-blue-100 transform active:scale-95"
+                                    className="px-8 py-2.5 text-white rounded-xl transition-all flex items-center gap-2 disabled:opacity-40"
+                                    style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                                 >
                                     {loading ? (
                                         <>

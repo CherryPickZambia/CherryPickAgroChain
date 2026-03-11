@@ -112,24 +112,22 @@ export default function NewJobModal({ isOpen, onCloseAction, onCreateJobAction, 
               className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-xl">
-                      <Briefcase className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Create New Job</h3>
-                      <p className="text-emerald-100 text-sm">Assign tasks to farmers</p>
-                    </div>
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl" style={{ background: '#0C2D3A' }}>
+                    <Briefcase className="h-5 w-5" style={{ color: '#BFFF00' }} />
                   </div>
-                  <button 
-                    onClick={onCloseAction}
-                    className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
+                  <div>
+                    <h3 className="text-xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Create New Job</h3>
+                    <p className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>Assign tasks to farmers</p>
+                  </div>
                 </div>
+                <button 
+                  onClick={onCloseAction}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="h-5 w-5" style={{ color: '#5A7684' }} />
+                </button>
               </div>
 
               {/* Form */}
@@ -276,13 +274,15 @@ export default function NewJobModal({ isOpen, onCloseAction, onCreateJobAction, 
               <div className="px-6 pb-6 flex gap-3">
                 <button
                   onClick={onCloseAction}
-                  className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl transition-colors"
+                  style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A' }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 text-white rounded-xl transition-all flex items-center justify-center gap-2"
+                  style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                 >
                   <Plus className="h-4 w-4" />
                   Create Job
