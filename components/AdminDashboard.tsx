@@ -572,9 +572,9 @@ export default function AdminDashboard() {
         countByContract[m.contract_id] = (countByContract[m.contract_id] || 0) + 1;
       });
 
-      // Fetch farmer traceability activities per contract (batched)
+      // Fetch farmer traceability activities per contract (parallel)
       const farmerActivitiesByContract: Record<string, Array<{ type: string; description: string; quantity?: number; unit?: string; date: string; notes?: string }>> = {};
-      for (const contractId of contractIds) {
+      await Promise.all(contractIds.map(async (contractId) => {
         try {
           const batches = await getBatchesByContract(contractId);
           if (batches && batches.length > 0) {
@@ -595,7 +595,7 @@ export default function AdminDashboard() {
         } catch (err) {
           console.warn('Failed to load farmer activities for contract:', contractId, err);
         }
-      }
+      }));
 
       // Transform to PendingVerification format
       const verifications: PendingVerification[] = submittedMilestones.map((milestone: any) => {
