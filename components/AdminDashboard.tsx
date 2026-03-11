@@ -570,7 +570,7 @@ export default function AdminDashboard() {
 
       // Fetch farmer traceability activities per contract (parallel with timeout)
       const farmerActivitiesByContract: Record<string, Array<{ type: string; description: string; quantity?: number; unit?: string; date: string; notes?: string }>> = {};
-      const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T | null> =>
+      const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T | null> =>
         Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
 
       await Promise.all(contractIds.map(async (contractId) => {
