@@ -641,8 +641,6 @@ export default function AdminDashboard() {
       console.log('Processed verifications with IoT + activities:', verifications);
       setPendingVerifications(verifications);
 
-      toast.success(`Found ${verifications.length} milestone(s) awaiting approval`);
-
       // Log for debugging
       verifications.forEach(v => {
         console.log(`Pending: ${v.milestone_name} for ${v.farmer_name} - ZK ${v.payment_amount}`);
