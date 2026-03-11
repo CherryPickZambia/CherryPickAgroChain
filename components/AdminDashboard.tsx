@@ -568,19 +568,18 @@ export default function AdminDashboard() {
         countByContract[m.contract_id] = (countByContract[m.contract_id] || 0) + 1;
       });
 
-      // Fetch farmer traceability activities per contract (parallel with timeout)
+      // Fetch farmer traceability activities per contract (batched)
       const farmerActivitiesByContract: Record<string, Array<{ type: string; description: string; quantity?: number; unit?: string; date: string; notes?: string }>> = {};
-      const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T | null> =>
-        Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
-
-      await Promise.all(contractIds.map(async (contractId) => {
+      for (const contractId of contractIds) {
         try {
-          const batches = await withTimeout(getBatchesByContract(contractId), 5000);
+          const batches = await getBatchesByContract(contractId);
           if (batches && batches.length > 0) {
-            const events = await withTimeout(getBatchTraceability(batches[0].id!), 5000);
-            if (!events) return;
-            const farmerEvents = (events as TraceabilityEvent[]).filter((e) => e.actor_type === 'farmer');
-            farmerActivitiesByContract[contractId] = farmerEvents.map((e) => ({
+            const events = await getBatchTraceability(batches[0].id!);
+            // Filter to farmer-logged activities only (exclude system/admin/verifier events)
+            const farmerEvents = events.filter((e: TraceabilityEvent) =>
+              e.actor_type === 'farmer' || !e.actor_type
+            );
+            farmerActivitiesByContract[contractId] = farmerEvents.map((e: TraceabilityEvent) => ({
               type: e.event_type || 'update',
               description: e.event_description || e.event_title || '',
               quantity: e.quantity,
@@ -592,7 +591,7 @@ export default function AdminDashboard() {
         } catch (err) {
           console.warn('Failed to load farmer activities for contract:', contractId, err);
         }
-      }));
+      }
 
       // Transform to PendingVerification format
       const verifications: PendingVerification[] = submittedMilestones.map((milestone: any) => {

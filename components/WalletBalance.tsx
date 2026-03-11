@@ -1108,16 +1108,16 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                       <span className="relative bg-white px-3 text-xs text-gray-400">or send USDC directly</span>
                     </div>
 
-                    <div className="p-4 rounded-xl" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.12)' }}>
-                      <p className="text-sm font-bold mb-2" style={{ fontFamily: "'Syne', sans-serif", color: '#0C2D3A' }}>Your Wallet Address (USDC on Base)</p>
-                      <p className="text-sm font-semibold font-mono break-all leading-relaxed" style={{ color: '#0C2D3A', letterSpacing: '0.02em' }}>{walletAddress || evmAddress || 'Connect wallet first'}</p>
+                    <div className="p-5 rounded-xl" style={{ background: '#F7F9FB', border: '2px solid rgba(12,45,58,0.12)' }}>
+                      <p className="text-sm font-semibold text-gray-600 mb-2">Your Wallet Address (USDC on Base)</p>
+                      <p className="text-sm font-mono font-semibold break-all leading-relaxed" style={{ color: '#0C2D3A' }}>{walletAddress || evmAddress || 'Connect wallet first'}</p>
                       <button
                         onClick={() => {
                           const addr = walletAddress || evmAddress;
                           if (addr) { navigator.clipboard.writeText(addr); toast.success('Address copied!'); }
                         }}
-                        className="mt-3 text-sm font-semibold flex items-center gap-1.5 px-4 py-2 rounded-lg transition-colors"
-                        style={{ color: '#0C2D3A', border: '1.5px solid rgba(12,45,58,0.25)', fontFamily: "'Manrope', sans-serif" }}
+                        className="mt-3 text-sm font-medium flex items-center gap-2 px-4 py-2 rounded-lg transition-colors hover:bg-white"
+                        style={{ color: '#0C2D3A', border: '1.5px solid rgba(12,45,58,0.2)' }}
                       >
                         <Copy className="h-4 w-4" /> Copy Address
                       </button>
