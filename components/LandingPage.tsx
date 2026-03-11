@@ -161,9 +161,6 @@ export default function LandingPage() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.2, duration: 0.8 }}
               style={{ marginTop: "3rem", display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
               <Link href="/signin">
-                <button className="cp-btn cp-btn-accent"><span>Sign Up <ArrowRight style={{ width: 14, height: 14 }} /></span></button>
-              </Link>
-              <Link href="/signin">
                 <button className="cp-btn"><span>Sign In</span></button>
               </Link>
               <Link href="/lookup">
@@ -501,7 +498,7 @@ export default function LandingPage() {
             </p>
           </ScrollReveal>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
-            <Link href="/signin"><button className="cp-btn cp-btn-accent"><span>Join the Network <ArrowRight style={{ width: 14, height: 14 }} /></span></button></Link>
+            <Link href="/signin"><button className="cp-btn cp-btn-accent"><span>Sign Up <ArrowRight style={{ width: 14, height: 14 }} /></span></button></Link>
             <Link href="/lookup"><button className="cp-btn"><span><QrCode style={{ width: 14, height: 14 }} /> Explore Traceability</span></button></Link>
           </div>
         </div>

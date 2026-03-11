@@ -35,7 +35,7 @@ export interface InternalTransferParams {
 export interface MobileMoneyCollectionParams {
     amount: number;
     phone: string;
-    operator: 'mtn' | 'airtel';
+    operator: 'mtn' | 'airtel' | 'zamtel';
     reference: string;
     country?: string;
     bearer?: 'merchant' | 'customer';

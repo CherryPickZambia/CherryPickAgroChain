@@ -1,5 +1,5 @@
 "use client";
-
+// Updated stepper icons to be consistently rounded
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -338,10 +338,10 @@ export default function WarehouseProcessingModal({
                                         className="flex items-center cursor-pointer"
                                         onClick={() => setActiveStep(step.id)}
                                     >
-                                        <div className={`flex items-center justify-center w-10 h-10 rounded-full transition-all ${isCompleted ? 'bg-green-500 text-white' :
+                                        <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${isCompleted ? 'bg-green-500 text-white' :
                                             isActive ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-500'
                                             }`}>
-                                            {isCompleted ? <CheckCircle2 className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
+                                            <StepIcon className="h-5 w-5" />
                                         </div>
                                         <span className={`ml-2 text-sm font-medium ${isActive ? 'text-teal-600' : 'text-gray-500'}`}>
                                             {step.label}

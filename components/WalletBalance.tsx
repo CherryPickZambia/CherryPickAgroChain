@@ -21,7 +21,8 @@ import {
   Smartphone,
   ChevronDown,
   Loader2,
-  CreditCard
+  CreditCard,
+  Coins
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { getUSDCBalance } from "@/lib/blockchain/contractInteractions";
@@ -29,6 +30,7 @@ import { useSendUserOperation, useCurrentUser, useEvmAddress } from "@coinbase/c
 import { supabase } from "@/lib/supabase";
 import { encodeFunctionData } from "viem";
 import { lencoService, type Bank } from "@/lib/lenco-service";
+import { pay, getPaymentStatus } from "@base-org/account";
 
 // USDC contract on Base Mainnet
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string}`;
@@ -121,15 +123,16 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
   const [loadingBanks, setLoadingBanks] = useState(false);
 
   const [showDepositModal, setShowDepositModal] = useState(false);
-  const [depositMethod, setDepositMethod] = useState<'collect-momo' | 'deposit-card'>('collect-momo');
+  const [depositMethod, setDepositMethod] = useState<'collect-momo' | 'deposit-card' | 'crypto'>('collect-momo');
   const [depositAmount, setDepositAmount] = useState('');
-  const [depositOperator, setDepositOperator] = useState<'mtn' | 'airtel'>('mtn');
+  const [depositOperator, setDepositOperator] = useState<'mtn' | 'airtel' | 'zamtel'>('mtn');
   const [depositPhone, setDepositPhone] = useState('');
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCVC, setCardCVC] = useState('');
   const [depositing, setDepositing] = useState(false);
+  const [cryptoAmount, setCryptoAmount] = useState('');
 
   const { sendUserOperation } = useSendUserOperation();
   const { currentUser } = useCurrentUser();
@@ -937,20 +940,25 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Deposit Funds</h3>
-                <button onClick={() => setShowDepositModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="h-5 w-5 text-gray-500" />
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl" style={{ background: '#0C2D3A' }}>
+                    <ArrowDownLeft className="h-5 w-5" style={{ color: '#BFFF00' }} />
+                  </div>
+                  <h3 className="text-xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Deposit Funds</h3>
+                </div>
+                <button onClick={() => setShowDepositModal(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                  <X className="h-5 w-5" style={{ color: '#5A7684' }} />
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="p-6 space-y-4 overflow-y-auto flex-1">
                 {/* Deposit Method */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Deposit Method</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() => setDepositMethod('collect-momo')}
                       className={`p-3 rounded-xl border-2 transition-all text-center ${depositMethod === 'collect-momo' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'}`}
@@ -967,31 +975,41 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                       <p className="text-xs font-medium text-gray-900">Bank Card</p>
                       <p className="text-[10px] text-gray-500">Visa / Mastercard</p>
                     </button>
+                    <button
+                      onClick={() => setDepositMethod('crypto')}
+                      className={`p-3 rounded-xl border-2 transition-all text-center ${depositMethod === 'crypto' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <Coins className="h-5 w-5 mx-auto mb-1 text-purple-600" />
+                      <p className="text-xs font-medium text-gray-900">Crypto Deposit</p>
+                      <p className="text-[10px] text-gray-500">USDC on Base</p>
+                    </button>
                   </div>
                 </div>
 
                 {/* Amount */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount (Kwacha)</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">K</span>
-                    <input
-                      type="number"
-                      value={depositAmount}
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full pl-8 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
+                {depositMethod !== 'crypto' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Amount (Kwacha)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">K</span>
+                      <input
+                        type="number"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full pl-8 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Mobile Money fields */}
                 {depositMethod === 'collect-momo' && (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Network</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {(['airtel', 'mtn'] as const).map(op => (
+                      <div className="grid grid-cols-3 gap-2">
+                        {(['airtel', 'mtn', 'zamtel'] as const).map(op => (
                           <button
                             key={op}
                             onClick={() => setDepositOperator(op)}
@@ -1011,6 +1029,98 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                         placeholder="+260977123456"
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
+                    </div>
+                  </>
+                )}
+
+                {/* Crypto Deposit fields */}
+                {depositMethod === 'crypto' && (
+                  <>
+                    {/* USD Amount */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Amount (USD)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">$</span>
+                        <input
+                          type="number"
+                          value={cryptoAmount}
+                          onChange={(e) => setCryptoAmount(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full pl-8 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Base Pay Button */}
+                    <button
+                      onClick={async () => {
+                        const addr = walletAddress || evmAddress;
+                        if (!addr) { toast.error('Connect wallet first'); return; }
+                        if (!cryptoAmount || parseFloat(cryptoAmount) <= 0) { toast.error('Enter a valid amount'); return; }
+                        try {
+                          setDepositing(true);
+                          const payment = await pay({
+                            amount: cryptoAmount,
+                            to: addr,
+                            testnet: false,
+                          });
+                          toast.success(`Payment initiated! Confirming...`);
+                          const { status } = await getPaymentStatus({ id: payment.id, testnet: false });
+                          if (status === 'completed') {
+                            if (supabase) {
+                              await supabase.from('payments').insert({
+                                from_address: `base-pay-${payment.id}`,
+                                to_address: addr,
+                                amount: parseFloat(cryptoAmount),
+                                currency: 'USDC',
+                                transaction_hash: payment.id,
+                                status: 'confirmed',
+                                confirmed_at: new Date().toISOString(),
+                              });
+                            }
+                            toast.success(`$${cryptoAmount} USDC deposited successfully!`);
+                            setShowDepositModal(false);
+                            setCryptoAmount('');
+                            loadBalances();
+                          } else {
+                            toast.success(`Payment processing. Status: ${status}`);
+                          }
+                        } catch (error: unknown) {
+                          const msg = error instanceof Error ? error.message : 'Payment failed';
+                          toast.error(msg);
+                        } finally {
+                          setDepositing(false);
+                        }
+                      }}
+                      disabled={depositing || !cryptoAmount || parseFloat(cryptoAmount) <= 0}
+                      className="w-full py-3 text-white rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-40"
+                      style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
+                    >
+                      {depositing ? (
+                        <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
+                      ) : (
+                        <><Coins className="h-5 w-5" /> Deposit ${cryptoAmount || '0.00'} USDC via Base Pay</>
+                      )}
+                    </button>
+
+                    <div className="relative flex items-center justify-center my-1">
+                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+                      <span className="relative bg-white px-3 text-xs text-gray-400">or send USDC directly</span>
+                    </div>
+
+                    <div className="p-4 rounded-xl" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.12)' }}>
+                      <p className="text-sm font-bold mb-2" style={{ fontFamily: "'Syne', sans-serif", color: '#0C2D3A' }}>Your Wallet Address (USDC on Base)</p>
+                      <p className="text-sm font-semibold font-mono break-all leading-relaxed" style={{ color: '#0C2D3A', letterSpacing: '0.02em' }}>{walletAddress || evmAddress || 'Connect wallet first'}</p>
+                      <button
+                        onClick={() => {
+                          const addr = walletAddress || evmAddress;
+                          if (addr) { navigator.clipboard.writeText(addr); toast.success('Address copied!'); }
+                        }}
+                        className="mt-3 text-sm font-semibold flex items-center gap-1.5 px-4 py-2 rounded-lg transition-colors"
+                        style={{ color: '#0C2D3A', border: '1.5px solid rgba(12,45,58,0.25)', fontFamily: "'Manrope', sans-serif" }}
+                      >
+                        <Copy className="h-4 w-4" /> Copy Address
+                      </button>
                     </div>
                   </>
                 )}
@@ -1067,22 +1177,25 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                 )}
 
                 {/* Submit */}
-                <button
-                  onClick={handleDeposit}
-                  disabled={depositing || !depositAmount}
-                  className="w-full py-3 text-white font-medium rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{ background: "#0C2D3A" }}
-                >
-                  {depositing ? (
-                    <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
-                  ) : (
-                    <><ArrowDownLeft className="h-5 w-5" /> Deposit K{depositAmount || '0.00'}</>
-                  )}
-                </button>
+                {depositMethod !== 'crypto' && (
+                  <button
+                    onClick={handleDeposit}
+                    disabled={depositing || !depositAmount}
+                    className="w-full py-3 text-white rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                    style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
+                  >
+                    {depositing ? (
+                      <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
+                    ) : (
+                      <><ArrowDownLeft className="h-5 w-5" /> Deposit K{depositAmount || '0.00'}</>
+                    )}
+                  </button>
+                )}
 
                 <div className="p-3 bg-amber-50 rounded-lg">
                   <p className="text-xs text-amber-700 text-center">
                     {depositMethod === 'collect-momo' ? '📲 You will receive a prompt on your phone to authorize the deposit.' :
+                      depositMethod === 'crypto' ? '🔐 Base Pay: one-tap USDC deposit. No cards, no FX fees, settles in seconds.' :
                       '💳 Funds will be securely deposited from your bank card.'}
                   </p>
                 </div>
