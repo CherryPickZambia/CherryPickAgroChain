@@ -504,6 +504,10 @@ export default function AdminDashboard() {
 
   // Load pending verifications from database - milestones with status 'submitted'
   const loadPendingVerifications = async () => {
+    if (loadingVerifications) {
+      console.log('Already loading verifications, skipping duplicate call');
+      return;
+    }
     setLoadingVerifications(true);
     try {
       console.log('Loading pending verifications from database...');
