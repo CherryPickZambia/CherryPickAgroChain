@@ -208,6 +208,10 @@ export default function TraceabilityView({
     return ta - tb;
   });
 
+  // Growth updates: farmer-logged events showing crop growth journey.
+  const GROWTH_TYPES = new Set(['planting', 'growth_update', 'input_application', 'irrigation', 'pest_control', 'harvest']);
+  const growthUpdates = sortedEvents.filter(e => e.actor_type === 'farmer' || GROWTH_TYPES.has(e.event_type as string));
+
   const impacts = [
     { icon: "👩🏾‍🌾", color: "#2D5A3D", bg: "#E8F5EE", label: "Community", value: "Supports smallholder families" },
     { icon: "🍃", color: "#166534", bg: "#DCFCE7", label: "Eco-Friendly", value: `Saved waste with precision care` },
@@ -366,6 +370,54 @@ export default function TraceabilityView({
             </div>
           </div>
         </FadeIn>
+
+        {/* GROWTH UPDATES SECTION (farmer-logged crop journey) */}
+        {growthUpdates.length > 0 && (
+          <FadeIn delay={0.1}>
+            <div style={{ margin: "0 16px 24px", background: "#FFF", borderRadius: 24, padding: "24px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.02)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+                <span style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: 3, color: LEAF_GREEN, textTransform: "uppercase", fontWeight: 700 }}>🌱 Farmer's Growth Updates</span>
+                <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
+                <span style={{ fontSize: 11, color: "#71717A" }}>{growthUpdates.length} log{growthUpdates.length === 1 ? "" : "s"}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {growthUpdates.map((g, i) => (
+                  <div key={`growth-${g.id || i}`} style={{ background: "#F8FAF7", borderRadius: 16, padding: 14, border: "1px solid #E5EBE3" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 16 }}>{EVENT_EMOJIS[g.event_type] || "🌿"}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: DARK }}>{g.event_title}</span>
+                        </div>
+                        {g.event_description && (
+                          <p style={{ fontSize: 12, color: "#52525B", margin: "4px 0 0", lineHeight: 1.5 }}>{g.event_description}</p>
+                        )}
+                        {g.location_address && (
+                          <p style={{ fontSize: 11, color: "#71717A", margin: "6px 0 0" }}>📍 {g.location_address}</p>
+                        )}
+                      </div>
+                      <span style={{ fontSize: 10, color: LEAF_GREEN, fontFamily: "monospace", fontWeight: 600, whiteSpace: "nowrap", paddingTop: 2 }}>
+                        {g.created_at ? formatDateDayMonth(g.created_at) : ""}
+                      </span>
+                    </div>
+                    {g.photos && g.photos.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                        {g.photos.slice(0, 4).map((photo, idx) => (
+                          <img key={idx} src={photo} alt="Growth update" style={{ width: 56, height: 56, borderRadius: 10, objectFit: "cover", border: "1px solid #E4E4E7" }} />
+                        ))}
+                        {g.photos.length > 4 && (
+                          <div style={{ width: 56, height: 56, borderRadius: 10, background: "#E5EBE3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: LEAF_GREEN }}>
+                            +{g.photos.length - 4}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+        )}
 
         {/* TIMELINE SECTION */}
         <FadeIn delay={0.1}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Calendar, DollarSign, Package, MapPin, CheckCircle2, Clock, AlertCircle, QrCode, ArrowRight, User } from "lucide-react";
+import { X, Calendar, DollarSign, Package, MapPin, CheckCircle2, Clock, AlertCircle, QrCode, ArrowRight, ChevronDown, ChevronUp, Sprout, Factory, Image as ImageIcon, Activity, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
@@ -14,6 +14,43 @@ interface Milestone {
     payment_amount: number;
     expected_date: string;
     completed_date?: string;
+    payment_status?: string;
+    metadata?: Record<string, any> | null;
+}
+
+interface BatchRecord {
+    id: string;
+    batch_code: string;
+    crop_type: string;
+    variety?: string;
+    current_status?: string;
+    total_quantity?: number;
+    unit?: string;
+    harvest_date?: string;
+    ipfs_metadata?: string | null;
+    updated_at?: string;
+}
+
+interface GrowthActivityRecord {
+    id: string;
+    activity_type: string;
+    title: string;
+    description?: string;
+    date: string;
+    quantity?: number;
+    unit?: string;
+    photos?: string[];
+    fertilizer_brand?: string;
+    fertilizer_type?: string;
+    npk_ratio?: string;
+    transport_type?: string;
+    vehicle_registration?: string;
+    driver_name?: string;
+    driver_phone?: string;
+    origin?: string;
+    destination?: string;
+    location_address?: string;
+    metadata?: Record<string, any> | null;
 }
 
 interface Contract {
@@ -43,6 +80,11 @@ interface AdminContractDetailModalProps {
 export default function AdminContractDetailModal({ isOpen, onCloseAction, contractId }: AdminContractDetailModalProps) {
     const [contract, setContract] = useState<Contract | null>(null);
     const [milestones, setMilestones] = useState<Milestone[]>([]);
+    const [batches, setBatches] = useState<BatchRecord[]>([]);
+    const [growthActivities, setGrowthActivities] = useState<GrowthActivityRecord[]>([]);
+    const [expandedMilestoneId, setExpandedMilestoneId] = useState<string | null>(null);
+    const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null);
+    const [expandedActivityId, setExpandedActivityId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -78,6 +120,22 @@ export default function AdminContractDetailModal({ isOpen, onCloseAction, contra
 
             if (milestoneError) throw milestoneError;
             setMilestones(milestoneData || []);
+
+            // Fetch batches (for factory/processing details)
+            const { data: batchData } = await supabase
+                .from('batches')
+                .select('*')
+                .eq('contract_id', contractId)
+                .order('created_at', { ascending: true });
+            setBatches((batchData as BatchRecord[]) || []);
+
+            // Fetch farmer growth updates linked to this contract
+            const { data: growthData } = await supabase
+                .from('growth_activities')
+                .select('*')
+                .eq('contract_id', contractId)
+                .order('date', { ascending: false });
+            setGrowthActivities((growthData as GrowthActivityRecord[]) || []);
         } catch (error: any) {
             console.error('Error loading contract details:', error);
             toast.error('Failed to load contract details');
@@ -181,55 +239,307 @@ export default function AdminContractDetailModal({ isOpen, onCloseAction, contra
                                     <div className="relative">
                                         <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-100"></div>
 
-                                        <div className="space-y-8 relative">
-                                            {milestones.map((milestone, index) => (
-                                                <div key={milestone.id} className="flex gap-6">
-                                                    <div className="relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-4 border-white shadow-sm" style={{
-                                                        background: milestone.status === 'verified' ? '#0C2D3A' : milestone.status === 'submitted' ? '#BFFF00' : '#E6E2D6'
-                                                    }}>
-                                                        {milestone.status === 'verified' ? (
-                                                            <CheckCircle2 className="h-4 w-4 text-white" />
-                                                        ) : milestone.status === 'submitted' ? (
-                                                            <ArrowRight className="h-4 w-4 text-white" />
-                                                        ) : (
-                                                            <span className="text-white text-xs font-bold">{index + 1}</span>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="flex-1">
-                                                        <div className="flex items-start justify-between">
-                                                            <div>
-                                                                <h4 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>{milestone.name}</h4>
-                                                                <p className="text-sm mt-1" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>{milestone.description}</p>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="text-lg" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>K{milestone.payment_amount.toLocaleString()}</p>
-                                                                <p className="text-xs font-medium uppercase mt-1" style={{
-                                                                    fontFamily: "'Manrope', sans-serif",
-                                                                    color: milestone.status === 'verified' ? '#0C2D3A' : milestone.status === 'submitted' ? '#5A7684' : '#5A7684'
-                                                                }}>
-                                                                    {milestone.status}
-                                                                </p>
-                                                            </div>
+                                        <div className="space-y-4 relative">
+                                            {milestones.map((milestone, index) => {
+                                                const isExpanded = expandedMilestoneId === milestone.id;
+                                                const meta = milestone.metadata || {};
+                                                const officerImages: string[] = (meta.officer_images || meta.images || []) as string[];
+                                                const officerNotes: string = (meta.officer_notes || meta.notes || '') as string;
+                                                const officerIot = (meta.officer_iot_readings || meta.iot_readings || []) as any[];
+                                                const aiAnalysis = (meta.officer_ai_analysis || meta.ai_analysis || null) as any;
+                                                const verifiedAt = (meta.verified_at as string) || milestone.completed_date;
+                                                return (
+                                                    <div key={milestone.id} className="flex gap-6">
+                                                        <div className="relative z-10 w-8 h-8 rounded-full flex items-center justify-center border-4 border-white shadow-sm flex-shrink-0" style={{
+                                                            background: milestone.status === 'verified' ? '#0C2D3A' : milestone.status === 'submitted' ? '#BFFF00' : '#E6E2D6'
+                                                        }}>
+                                                            {milestone.status === 'verified' ? (
+                                                                <CheckCircle2 className="h-4 w-4 text-white" />
+                                                            ) : milestone.status === 'submitted' ? (
+                                                                <ArrowRight className="h-4 w-4 text-white" />
+                                                            ) : (
+                                                                <span className="text-white text-xs font-bold">{index + 1}</span>
+                                                            )}
                                                         </div>
 
-                                                        <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
-                                                            <span className="flex items-center gap-1">
-                                                                <Calendar className="h-3 w-3" />
-                                                                Expected: {new Date(milestone.expected_date).toLocaleDateString()}
-                                                            </span>
-                                                            {milestone.completed_date && (
-                                                                <span className="flex items-center gap-1" style={{ color: '#0C2D3A' }}>
-                                                                    <CheckCircle2 className="h-3 w-3" />
-                                                                    Completed: {new Date(milestone.completed_date).toLocaleDateString()}
-                                                                </span>
+                                                        <div className="flex-1">
+                                                            <button
+                                                                onClick={() => setExpandedMilestoneId(isExpanded ? null : milestone.id)}
+                                                                className="w-full text-left rounded-xl px-4 py-3 transition-colors hover:bg-[#F7F9FB] border border-transparent hover:border-[#E6E2D6]"
+                                                            >
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <h4 className="flex items-center gap-2" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>
+                                                                            {milestone.name}
+                                                                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                                        </h4>
+                                                                        <p className="text-sm mt-1" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>{milestone.description}</p>
+                                                                    </div>
+                                                                    <div className="text-right flex-shrink-0">
+                                                                        <p className="text-lg" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>K{milestone.payment_amount.toLocaleString()}</p>
+                                                                        <p className="text-xs font-medium uppercase mt-1" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
+                                                                            {milestone.status}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-4 mt-3 text-xs text-gray-400 flex-wrap">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Calendar className="h-3 w-3" />
+                                                                        Expected: {new Date(milestone.expected_date).toLocaleDateString()}
+                                                                    </span>
+                                                                    {milestone.completed_date && (
+                                                                        <span className="flex items-center gap-1" style={{ color: '#0C2D3A' }}>
+                                                                            <CheckCircle2 className="h-3 w-3" />
+                                                                            Completed: {new Date(milestone.completed_date).toLocaleDateString()}
+                                                                        </span>
+                                                                    )}
+                                                                    {milestone.payment_status && (
+                                                                        <span className="flex items-center gap-1">
+                                                                            <DollarSign className="h-3 w-3" />
+                                                                            Payment: {milestone.payment_status}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </button>
+
+                                                            {isExpanded && (
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, height: 0 }}
+                                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                                    exit={{ opacity: 0, height: 0 }}
+                                                                    className="mt-3 ml-4 pl-4 border-l-2 space-y-4"
+                                                                    style={{ borderColor: '#BFFF00' }}
+                                                                >
+                                                                    {officerNotes && (
+                                                                        <div>
+                                                                            <p className="text-xs uppercase tracking-wide font-bold mb-1" style={{ color: '#5A7684' }}>Verifier Notes</p>
+                                                                            <p className="text-sm text-[#0C2D3A] bg-[#F7F9FB] rounded-lg p-3">{officerNotes}</p>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {officerImages.length > 0 && (
+                                                                        <div>
+                                                                            <p className="text-xs uppercase tracking-wide font-bold mb-2 flex items-center gap-1" style={{ color: '#5A7684' }}>
+                                                                                <ImageIcon className="h-3 w-3" /> Evidence Photos ({officerImages.length})
+                                                                            </p>
+                                                                            <div className="flex gap-2 flex-wrap">
+                                                                                {officerImages.map((src, i) => (
+                                                                                    <a key={i} href={src} target="_blank" rel="noopener noreferrer" className="block">
+                                                                                        <img src={src} alt={`Evidence ${i + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:scale-105 transition-transform" />
+                                                                                    </a>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {Array.isArray(officerIot) && officerIot.length > 0 && (
+                                                                        <div>
+                                                                            <p className="text-xs uppercase tracking-wide font-bold mb-2 flex items-center gap-1" style={{ color: '#5A7684' }}>
+                                                                                <Activity className="h-3 w-3" /> IoT / Sensor Readings
+                                                                            </p>
+                                                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                                                                {officerIot.map((r: any, i: number) => (
+                                                                                    <div key={i} className="bg-white border border-gray-200 rounded-lg p-2 text-xs">
+                                                                                        <p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>{r.type || 'reading'}</p>
+                                                                                        <p className="font-bold text-[#0C2D3A]">{r.value} {r.unit || ''}</p>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {aiAnalysis && (
+                                                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                                                            <p className="text-xs uppercase tracking-wide font-bold mb-1 text-purple-700">AI Analysis</p>
+                                                                            {aiAnalysis.disease && <p className="text-sm"><span className="font-bold">Diagnosis:</span> {aiAnalysis.disease}</p>}
+                                                                            {aiAnalysis.healthScore !== undefined && <p className="text-sm"><span className="font-bold">Health Score:</span> {aiAnalysis.healthScore}%</p>}
+                                                                            {aiAnalysis.confidence !== undefined && <p className="text-sm"><span className="font-bold">Confidence:</span> {aiAnalysis.confidence}%</p>}
+                                                                            {aiAnalysis.treatmentRec && <p className="text-sm mt-1"><span className="font-bold">Recommendation:</span> {aiAnalysis.treatmentRec}</p>}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {meta.location_address && (
+                                                                        <div className="flex items-center gap-2 text-sm text-[#5A7684]">
+                                                                            <MapPin className="h-4 w-4" />
+                                                                            {meta.location_address}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {verifiedAt && (
+                                                                        <p className="text-xs" style={{ color: '#5A7684' }}>
+                                                                            Verified at: {new Date(verifiedAt).toLocaleString()}
+                                                                        </p>
+                                                                    )}
+
+                                                                    {!officerNotes && officerImages.length === 0 && !aiAnalysis && (
+                                                                        <p className="text-sm italic" style={{ color: '#5A7684' }}>No additional verification details recorded for this milestone yet.</p>
+                                                                    )}
+                                                                </motion.div>
                                                             )}
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Factory / Warehouse Processing */}
+                                {batches.length > 0 && (
+                                    <div className="card-premium">
+                                        <h3 className="text-lg mb-6 flex items-center gap-2" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>
+                                            <Factory className="h-5 w-5" />
+                                            Factory & Warehouse Processing
+                                        </h3>
+                                        <div className="space-y-3">
+                                            {batches.map((b) => {
+                                                const isOpen = expandedBatchId === b.id;
+                                                let bm: any = {};
+                                                try { if (b.ipfs_metadata) bm = JSON.parse(b.ipfs_metadata); } catch { /* ignore */ }
+                                                const sizes: any[] = Array.isArray(bm.packagingSizes) ? bm.packagingSizes : [];
+                                                const totalKg = typeof bm.totalWeightKg === 'number' ? bm.totalWeightKg : (b.total_quantity || 0);
+                                                return (
+                                                    <div key={b.id} className="border border-[#E6E2D6] rounded-xl overflow-hidden">
+                                                        <button
+                                                            onClick={() => setExpandedBatchId(isOpen ? null : b.id)}
+                                                            className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-[#F7F9FB] transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <Package className="h-5 w-5 flex-shrink-0" style={{ color: '#0C2D3A' }} />
+                                                                <div className="min-w-0">
+                                                                    <p className="font-bold truncate" style={{ fontFamily: "'Syne', sans-serif", color: '#0C2D3A' }}>{b.batch_code}</p>
+                                                                    <p className="text-xs" style={{ color: '#5A7684' }}>{b.crop_type}{b.variety ? ` · ${b.variety}` : ''} · {b.current_status || 'growing'}</p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-3 flex-shrink-0">
+                                                                <span className="text-sm font-bold" style={{ color: '#0C2D3A' }}>{totalKg ? `${totalKg} kg` : '—'}</span>
+                                                                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                            </div>
+                                                        </button>
+                                                        {isOpen && (
+                                                            <div className="px-4 pb-4 pt-2 bg-[#F7F9FB] border-t border-[#E6E2D6] space-y-3">
+                                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                                                                    {bm.productionDate && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Production</p><p className="font-bold">{new Date(bm.productionDate).toLocaleDateString()}</p></div>}
+                                                                    {bm.expiryDate && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Expiry</p><p className="font-bold">{new Date(bm.expiryDate).toLocaleDateString()}</p></div>}
+                                                                    {b.harvest_date && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Harvest</p><p className="font-bold">{new Date(b.harvest_date).toLocaleDateString()}</p></div>}
+                                                                    {bm.processingFacility && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Facility</p><p className="font-bold">{bm.processingFacility}</p></div>}
+                                                                    {bm.qualityGrade && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Grade</p><p className="font-bold">{bm.qualityGrade}</p></div>}
+                                                                    {bm.storageConditions && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Storage</p><p className="font-bold">{bm.storageConditions}</p></div>}
+                                                                </div>
+
+                                                                {sizes.length > 0 && (
+                                                                    <div>
+                                                                        <p className="text-xs uppercase tracking-wide font-bold mb-2" style={{ color: '#5A7684' }}>Packaging Breakdown</p>
+                                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                                                            {sizes.map((s, i) => (
+                                                                                <div key={i} className="bg-white border border-gray-200 rounded-lg p-2 text-xs">
+                                                                                    <p className="font-bold">{s.sizeKg ?? s.size} kg × {s.count}</p>
+                                                                                    <p style={{ color: '#5A7684' }}>{((parseFloat(s.sizeKg ?? s.size) || 0) * (parseFloat(s.count) || 0)).toFixed(2)} kg total</p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {Array.isArray(bm.processingSteps) && bm.processingSteps.length > 0 && (
+                                                                    <div>
+                                                                        <p className="text-xs uppercase tracking-wide font-bold mb-2" style={{ color: '#5A7684' }}>Processing Steps</p>
+                                                                        <ol className="list-decimal pl-5 text-sm space-y-1">
+                                                                            {bm.processingSteps.map((s: any, i: number) => (
+                                                                                <li key={i}>{typeof s === 'string' ? s : (s.name || s.title || JSON.stringify(s))}</li>
+                                                                            ))}
+                                                                        </ol>
+                                                                    </div>
+                                                                )}
+
+                                                                {bm.notes && (
+                                                                    <p className="text-sm bg-white rounded-lg p-3 border border-gray-200">{bm.notes}</p>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Growth Updates from farmer logs */}
+                                <div className="card-premium">
+                                    <h3 className="text-lg mb-2 flex items-center gap-2" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>
+                                        <Sprout className="h-5 w-5" />
+                                        Growth Updates
+                                    </h3>
+                                    <p className="text-sm mb-4" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
+                                        Self-logged updates from the farmer. These are informational only and do not affect milestone payouts.
+                                    </p>
+                                    {growthActivities.length === 0 ? (
+                                        <div className="text-center py-8 bg-[#F7F9FB] rounded-xl">
+                                            <Sprout className="h-10 w-10 mx-auto mb-2" style={{ color: '#5A7684', opacity: 0.5 }} />
+                                            <p className="text-sm" style={{ color: '#5A7684' }}>No growth updates logged yet.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {growthActivities.map((a) => {
+                                                const isOpen = expandedActivityId === a.id;
+                                                return (
+                                                    <div key={a.id} className="border border-[#E6E2D6] rounded-xl overflow-hidden">
+                                                        <button
+                                                            onClick={() => setExpandedActivityId(isOpen ? null : a.id)}
+                                                            className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-[#F7F9FB] transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(191,255,0,0.15)' }}>
+                                                                    <FileText className="h-4 w-4" style={{ color: '#0C2D3A' }} />
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="font-bold truncate" style={{ fontFamily: "'Syne', sans-serif", color: '#0C2D3A' }}>{a.title}</p>
+                                                                    <p className="text-xs flex items-center gap-2" style={{ color: '#5A7684' }}>
+                                                                        <span className="capitalize">{a.activity_type}</span>
+                                                                        <span>·</span>
+                                                                        <span>{new Date(a.date).toLocaleDateString()}</span>
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex-shrink-0">
+                                                                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                            </div>
+                                                        </button>
+                                                        {isOpen && (
+                                                            <div className="px-4 pb-4 pt-2 bg-[#F7F9FB] border-t border-[#E6E2D6] space-y-3">
+                                                                {a.description && <p className="text-sm text-[#0C2D3A]">{a.description}</p>}
+                                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                                                                    {a.quantity !== undefined && a.quantity !== null && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Quantity</p><p className="font-bold">{a.quantity} {a.unit || ''}</p></div>}
+                                                                    {a.fertilizer_brand && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Fertilizer</p><p className="font-bold">{a.fertilizer_brand}{a.fertilizer_type ? ` (${a.fertilizer_type})` : ''}</p></div>}
+                                                                    {a.npk_ratio && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>NPK Ratio</p><p className="font-bold">{a.npk_ratio}</p></div>}
+                                                                    {a.transport_type && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Transport</p><p className="font-bold">{a.transport_type}</p></div>}
+                                                                    {a.vehicle_registration && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Vehicle</p><p className="font-bold">{a.vehicle_registration}</p></div>}
+                                                                    {a.driver_name && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Driver</p><p className="font-bold">{a.driver_name}{a.driver_phone ? ` (${a.driver_phone})` : ''}</p></div>}
+                                                                    {a.origin && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Origin</p><p className="font-bold">{a.origin}</p></div>}
+                                                                    {a.destination && <div><p className="text-[10px] uppercase font-bold" style={{ color: '#5A7684' }}>Destination</p><p className="font-bold">{a.destination}</p></div>}
+                                                                </div>
+                                                                {a.location_address && (
+                                                                    <div className="flex items-center gap-2 text-sm text-[#5A7684]">
+                                                                        <MapPin className="h-4 w-4" />{a.location_address}
+                                                                    </div>
+                                                                )}
+                                                                {Array.isArray(a.photos) && a.photos.length > 0 && (
+                                                                    <div className="flex gap-2 flex-wrap">
+                                                                        {a.photos.map((p, i) => (
+                                                                            <a key={i} href={p} target="_blank" rel="noopener noreferrer">
+                                                                                <img src={p} alt={`Update ${i + 1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-200 hover:scale-105 transition-transform" />
+                                                                            </a>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* QR Code & Logistics Info */}
