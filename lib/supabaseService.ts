@@ -220,16 +220,46 @@ export async function getContractsByFarmer(farmerId: string) {
     return [];
   }
   const client = checkSupabase();
-  const { data, error } = await client
+
+  // Fetch contracts first (fast: indexed by farmer_id), then milestones in a
+  // single batched IN query. The embedded join (`*, milestones(*)`) was hitting
+  // the Supabase statement timeout (Postgres error 57014).
+  const { data: contracts, error } = await client
     .from('contracts')
-    .select('*, milestones(*)')
+    .select('*')
     .eq('farmer_id', farmerId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(100);
 
   if (error) {
     console.error('getContractsByFarmer error:', error.message || error.code);
     throw error;
   }
+
+  if (!contracts || contracts.length === 0) return [];
+
+  const contractIds = (contracts as Contract[]).map((c) => c.id).filter(Boolean);
+  const { data: milestones, error: msErr } = await client
+    .from('milestones')
+    .select('*')
+    .in('contract_id', contractIds);
+
+  if (msErr) {
+    console.error('milestones fetch error:', msErr.message || msErr.code);
+    // Don't fail the whole load — return contracts with empty milestones.
+  }
+
+  const milestonesByContract = new Map<string, Milestone[]>();
+  (milestones || []).forEach((m: Milestone) => {
+    const list = milestonesByContract.get(m.contract_id!) || [];
+    list.push(m);
+    milestonesByContract.set(m.contract_id!, list);
+  });
+
+  const data = (contracts as (Contract & { milestones: Milestone[] })[]).map((c) => ({
+    ...c,
+    milestones: milestonesByContract.get(c.id!) || [],
+  }));
 
   // Sort milestones by milestone_number within each contract
   if (data) {

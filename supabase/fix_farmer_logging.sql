@@ -81,4 +81,16 @@ BEGIN
     END IF;
 END $$;
 
+-- 4. Performance indexes — fix Postgres statement-timeout (57014)
+--    on getContractsByFarmer caused by missing indexes on join columns.
+CREATE INDEX IF NOT EXISTS idx_contracts_farmer_id ON contracts(farmer_id);
+CREATE INDEX IF NOT EXISTS idx_contracts_farmer_created ON contracts(farmer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_milestones_contract_id ON milestones(contract_id);
+CREATE INDEX IF NOT EXISTS idx_batches_farmer_id ON batches(farmer_id);
+CREATE INDEX IF NOT EXISTS idx_marketplace_listings_farmer_id ON marketplace_listings(farmer_id);
+
+-- Refresh planner stats so the new indexes are used.
+ANALYZE contracts;
+ANALYZE milestones;
+
 SELECT 'Farmer logging schema fixes applied.' AS result;
