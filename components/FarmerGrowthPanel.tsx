@@ -133,7 +133,8 @@ export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], i
             loadActivities();
         } catch (error) {
             console.error("Error logging activity:", error);
-            toast.error("Failed to log activity");
+            const msg = (error as { message?: string })?.message || "Failed to log activity";
+            toast.error(msg);
         } finally {
             setSubmitting(false);
         }

@@ -47,9 +47,16 @@ export async function logGrowthActivity(
     activity: Omit<GrowthActivity, 'id' | 'created_at'>
 ): Promise<GrowthActivity> {
     const client = checkSupabase();
+    // The `growth_activities` table does not have a `batch_id` column in production schema.
+    // Stash batch_id inside `metadata` so the link is preserved without breaking inserts.
+    const { batch_id, metadata, ...rest } = activity;
+    const payload = {
+        ...rest,
+        metadata: batch_id ? { ...(metadata || {}), batch_id } : metadata,
+    };
     const { data, error } = await client
         .from('growth_activities')
-        .insert(activity)
+        .insert(payload)
         .select()
         .single();
 

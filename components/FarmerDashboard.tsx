@@ -465,10 +465,10 @@ export default function FarmerDashboard() {
           total_price: totalPrice,
           description: listingForm.description,
           quality_grade: listingForm.quality_grade,
-          harvest_date: listingForm.harvest_date,
-          is_organic: listingForm.organic,
+          harvest_date: listingForm.harvest_date || null,
+          organic: listingForm.organic,
           batch_id: listingForm.batch_id || null,
-          status: 'available'
+          status: 'active'
         });
 
       if (error) throw error;
@@ -488,7 +488,8 @@ export default function FarmerDashboard() {
       loadMarketplaceListings();
     } catch (error: unknown) {
       console.error("Error creating listing:", error);
-      toast.error("Failed to create listing");
+      const msg = (error as { message?: string })?.message || "Failed to create listing";
+      toast.error(msg);
     }
   };
 

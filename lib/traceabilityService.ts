@@ -266,10 +266,25 @@ export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' |
   // Generate event hash for verification
   const eventHash = await generateEventHash(event);
 
+  // Strip AI-specific fields that aren't columns on traceability_events;
+  // append them to the description so they're preserved in the audit trail.
+  const { ai_disease, ai_confidence, ai_health_score, ai_treatment_rec, ...rest } = event;
+  let eventDescription = rest.event_description || '';
+  if (ai_health_score !== undefined || ai_disease) {
+    const aiSummary = [
+      ai_disease ? `AI Diagnosis: ${ai_disease}` : null,
+      ai_health_score !== undefined ? `Health Score: ${ai_health_score}%` : null,
+      ai_confidence !== undefined ? `Confidence: ${ai_confidence}%` : null,
+      ai_treatment_rec ? `Treatment: ${ai_treatment_rec}` : null,
+    ].filter(Boolean).join(' | ');
+    eventDescription = eventDescription ? `${eventDescription} | ${aiSummary}` : aiSummary;
+  }
+
   const { data, error } = await client
     .from('traceability_events')
     .insert({
-      ...event,
+      ...rest,
+      event_description: eventDescription,
       event_hash: eventHash,
     })
     .select()
@@ -277,15 +292,13 @@ export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' |
 
   if (error) throw error;
 
-  // Automated Yield Prediction Logic
-  // @ts-ignore - ai_health_score exists on TraceabilityEvent
-  if (data.ai_health_score !== undefined && data.ai_health_score < 90) {
-    const health = data.ai_health_score;
+  // Automated Yield Prediction Logic — only when AI health score indicates a problem.
+  if (ai_health_score !== undefined && ai_health_score < 90 && data.batch_id) {
+    const health = ai_health_score;
     const lossPercent = 100 - health;
-    const disease = data.ai_disease || 'General Health Issue';
+    const disease = ai_disease || 'General Health Issue';
     const warningDescription = `Yield Warning: ${lossPercent}% Potential Loss detected by AI analysis (${disease}).`;
 
-    // Log automated warning event
     await client
       .from('traceability_events')
       .insert({
@@ -293,26 +306,23 @@ export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' |
         event_type: 'quality_check',
         event_title: 'AI Yield Warning',
         event_description: warningDescription,
-        location: data.location,
-        timestamp: new Date().toISOString(),
-        actor_id: data.actor_id || 'AI_ENGINE'
+        location_address: data.location_address,
+        actor_type: 'admin',
+        actor_name: 'AI_ENGINE',
       });
 
-    // Adjust batch quantity if applicable
-    if (data.batch_id) {
-      const { data: batch } = await client
-        .from('batches')
-        .select('total_quantity')
-        .eq('id', data.batch_id)
-        .single();
+    const { data: batch } = await client
+      .from('batches')
+      .select('total_quantity')
+      .eq('id', data.batch_id)
+      .single();
 
-      if (batch && batch.total_quantity) {
-        const adjustedQuantity = batch.total_quantity * (health / 100);
-        await client
-          .from('batches')
-          .update({ total_quantity: adjustedQuantity })
-          .eq('id', data.batch_id);
-      }
+    if (batch && batch.total_quantity) {
+      const adjustedQuantity = batch.total_quantity * (health / 100);
+      await client
+        .from('batches')
+        .update({ total_quantity: adjustedQuantity })
+        .eq('id', data.batch_id);
     }
   }
 

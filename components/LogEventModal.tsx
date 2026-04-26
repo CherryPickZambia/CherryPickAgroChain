@@ -37,12 +37,13 @@ interface LogEventModalProps {
 
 const EVENT_TYPES = [
     { value: 'planting', label: 'Planting', icon: Calendar },
-    { value: 'germination', label: 'Germination', icon: Sprout },
-    { value: 'growth_update', label: 'Growth Update', icon: Calendar },
+    { value: 'growth_update', label: 'Growth Update / Germination / Flowering', icon: Sprout },
     { value: 'input_application', label: 'Inputs (Fert/Pesticide)', icon: Calendar },
-    { value: 'flowering', label: 'Flowering', icon: Sprout },
+    { value: 'irrigation', label: 'Irrigation', icon: Calendar },
+    { value: 'pest_control', label: 'Pest Control', icon: Calendar },
     { value: 'harvest', label: 'Harvest', icon: Calendar },
     { value: 'post_harvest_handling', label: 'Post-Harvest Handling', icon: ListTodo },
+    { value: 'quality_check', label: 'Quality Check', icon: ListTodo },
     { value: 'storage', label: 'Storage', icon: Warehouse },
     { value: 'transport_start', label: 'Transport / Dispatch', icon: Truck },
 ];
@@ -221,7 +222,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                 event_type: eventType,
                 event_title: title || availableEventTypes.find(t => t.value === eventType)?.label || 'Event',
                 event_description: extendedDescription,
-                actor_id: userId || farmerId,
+                actor_id: userId || undefined,
                 actor_type: 'farmer',
                 location_address: location,
                 photos: finalImageUrls.length > 0 ? finalImageUrls : undefined,
