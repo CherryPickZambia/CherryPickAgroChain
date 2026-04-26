@@ -29,6 +29,9 @@ Consider:
 
 Provide practical, actionable recommendations suitable for smallholder farmers in Zambia.`;
 
+// MIME types that the OpenAI Vision API actually accepts.
+const SUPPORTED_VISION_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
 function normalizeImageUrl(imageBase64: unknown): string {
   if (typeof imageBase64 !== 'string' || !imageBase64.trim()) {
     throw new Error('Crop image is required for analysis');
@@ -38,14 +41,24 @@ function normalizeImageUrl(imageBase64: unknown): string {
   const dataUrlMatch = trimmed.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$/);
 
   if (dataUrlMatch) {
-    const [, mimeType, base64Data] = dataUrlMatch;
-    return `data:${mimeType};base64,${base64Data.replace(/\s+/g, '')}`;
+    let [, mimeType, base64Data] = dataUrlMatch;
+    mimeType = mimeType.toLowerCase();
+    // HEIC/HEIF/etc. are not accepted by the Vision API. The client should be
+    // re-encoding to JPEG via fileToJpegDataUrl, but as a defensive fallback we
+    // re-tag unsupported MIMEs as JPEG so the request still flows.
+    if (!SUPPORTED_VISION_MIME.has(mimeType)) {
+      mimeType = 'image/jpeg';
+    }
+    const cleanedB64 = base64Data.replace(/\s+/g, '');
+    if (!cleanedB64) throw new Error('Crop image data is empty');
+    return `data:${mimeType};base64,${cleanedB64}`;
   }
 
   const cleaned = trimmed
     .replace(/^data:[^;]+;base64,/, '')
     .replace(/\s+/g, '');
 
+  if (!cleaned) throw new Error('Crop image data is empty');
   return `data:image/jpeg;base64,${cleaned}`;
 }
 

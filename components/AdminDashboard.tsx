@@ -573,7 +573,7 @@ export default function AdminDashboard() {
       });
 
       // Fetch farmer traceability activities per contract (parallel)
-      const farmerActivitiesByContract: Record<string, Array<{ type: string; description: string; quantity?: number; unit?: string; date: string; notes?: string }>> = {};
+      const farmerActivitiesByContract: Record<string, Array<{ type: string; description: string; quantity?: number; unit?: string; date: string; notes?: string; photos?: string[] }>> = {};
       await Promise.all(contractIds.map(async (contractId) => {
         try {
           const batches = await getBatchesByContract(contractId);
@@ -590,6 +590,7 @@ export default function AdminDashboard() {
               unit: e.unit,
               date: e.created_at || new Date().toISOString(),
               notes: e.location_address ? `Location: ${e.location_address}` : undefined,
+              photos: e.photos || undefined,
             }));
           }
         } catch (err) {
@@ -633,7 +634,23 @@ export default function AdminDashboard() {
           total_milestones: countByContract[milestone.contract_id] || 4,
           custom_verifier_fee_percent: undefined,
           officer_iot_readings: iotReadings,
-          farmer_activities: farmerActivitiesByContract[milestone.contract_id] || [],
+          // Prefer activities the farmer logged through MilestoneCard (stored in milestone.metadata.farmer_activities).
+          // Fall back to traceability events when present, otherwise empty array.
+          farmer_activities: (() => {
+            const fromMetadata = Array.isArray(metadata.farmer_activities)
+              ? metadata.farmer_activities.map((a: any) => ({
+                  type: a.entryType === 'observation' ? (a.type || 'observation') : (a.type || 'activity'),
+                  description: a.description || a.title || '',
+                  quantity: a.quantity,
+                  unit: a.unit,
+                  date: a.date || a.created_at || milestone.completed_date || new Date().toISOString(),
+                  notes: a.notes || a.recommendations,
+                  photos: a.evidencePhotos || a.photos || [],
+                }))
+              : [];
+            const fromTraceability = farmerActivitiesByContract[milestone.contract_id] || [];
+            return fromMetadata.length > 0 ? fromMetadata : fromTraceability;
+          })(),
           officer_ai_analysis: metadata.officer_ai_analysis || metadata.ai_analysis || null,
         };
       });
@@ -2216,6 +2233,31 @@ export default function AdminDashboard() {
 
                     if (findError) console.error('Error finding batch:', findError);
 
+                    // Compute the actual processed weight from packaging sizes if provided
+                    const totalProcessedKg = (processingData.packaging.sizes || []).reduce(
+                      (s, x) => s + (Number(x.sizeKg) || 0) * (Number(x.count) || 0),
+                      0
+                    );
+                    const fallbackKg = parseFloat(selectedBatch.quantity?.replace(/[^0-9.]/g, '') || '0');
+                    const finalTotalQuantity = totalProcessedKg > 0 ? totalProcessedKg : fallbackKg;
+
+                    // Persist warehouse processing details into batch metadata so the
+                    // public traceability view can render accurate dates, weight, packaging.
+                    const ipfsMetadata = JSON.stringify({
+                      productionDate: processingData.productionDate || null,
+                      expiryDate: processingData.expiryDate || null,
+                      productName: processingData.productName || null,
+                      productImage: processingData.productImage || null,
+                      packagingSizes: processingData.packaging.sizes || [],
+                      packageType: processingData.packaging.packageType,
+                      packageCount: processingData.packaging.packageCount,
+                      totalWeightKg: totalProcessedKg > 0 ? totalProcessedKg : null,
+                      qualityGrade: processingData.qualityCheck.grade,
+                      processingMethods: processingData.processing.methods || [],
+                      storageConditions: processingData.storageConditions || null,
+                      aiDefectScan: processingData.aiDefectScan || null,
+                    });
+
                     if (existingBatch) {
                       // Update existing batch
                       const { error } = await supabase
@@ -2224,6 +2266,10 @@ export default function AdminDashboard() {
                           blockchain_tx: processingData.nftTxHash,
                           quality_grade: processingData.qualityCheck.grade,
                           current_status: 'ready_for_distribution',
+                          total_quantity: finalTotalQuantity || null,
+                          unit: 'kg',
+                          harvest_date: processingData.productionDate || null,
+                          ipfs_metadata: ipfsMetadata,
                           updated_at: new Date().toISOString()
                         })
                         .eq('id', existingBatch.id);
@@ -2239,10 +2285,13 @@ export default function AdminDashboard() {
                           contract_id: selectedBatch.contractId,
                           farmer_id: selectedBatch.farmerId,
                           crop_type: selectedBatch.cropType,
-                          total_quantity: parseFloat(selectedBatch.quantity.replace(/[^0-9.]/g, '')),
+                          total_quantity: finalTotalQuantity || null,
+                          unit: 'kg',
+                          harvest_date: processingData.productionDate || null,
                           quality_grade: processingData.qualityCheck.grade,
                           blockchain_tx: processingData.nftTxHash,
                           current_status: 'ready_for_distribution',
+                          ipfs_metadata: ipfsMetadata,
                           public_url: `/trace/${processingData.batchCode}`
                         });
 

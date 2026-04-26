@@ -132,10 +132,10 @@ export default function OfficerVerificationModal({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="p-6" style={{ background: '#0C2D3A' }}>
+            <div className="p-4 sm:p-6 flex-shrink-0" style={{ background: '#0C2D3A' }}>
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#fff' }}>{milestone.name}</h2>
@@ -158,7 +158,7 @@ export default function OfficerVerificationModal({
             </div>
 
             {/* Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-250px)]">
+            <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
               {/* Farm Visit Info */}
               <div className="rounded-2xl p-4 mb-6" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.08)' }}>
                 <h3 className="mb-3" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Farm Visit Details</h3>
@@ -291,19 +291,21 @@ export default function OfficerVerificationModal({
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 flex items-center justify-between border-t" style={{ background: '#F7F9FB' }}>
+            <div className="px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t flex-shrink-0" style={{ background: '#F7F9FB', borderColor: 'rgba(12,45,58,0.1)' }}>
               <button
                 onClick={onCloseAction}
                 disabled={verifying}
-                className="btn-secondary"
+                className="px-5 py-2.5 rounded-xl transition-colors order-3 sm:order-1 disabled:opacity-40"
+                style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, border: '1px solid rgba(12,45,58,0.15)', color: '#0C2D3A', background: '#fff' }}
               >
                 Cancel
               </button>
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3 order-1 sm:order-2">
                 <button
                   onClick={handleReject}
                   disabled={verifying || !officerNotes.trim()}
-                  className="px-6 py-2 disabled:bg-gray-300 text-white rounded-xl font-semibold transition-colors flex items-center gap-2" style={{ background: '#0C2D3A', fontFamily: "'Manrope', sans-serif" }}
+                  className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 disabled:opacity-40 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                  style={{ background: '#DC2626', fontFamily: "'Manrope', sans-serif" }}
                 >
                   {verifying ? (
                     <>
@@ -320,7 +322,8 @@ export default function OfficerVerificationModal({
                 <button
                   onClick={handleApprove}
                   disabled={verifying || !evidence || !officerNotes.trim()}
-                  className="px-6 py-2 disabled:bg-gray-300 text-white rounded-xl font-semibold transition-colors flex items-center gap-2" style={{ background: '#BFFF00', color: '#0C2D3A', fontFamily: "'Manrope', sans-serif" }}
+                  className="flex-1 sm:flex-none px-4 sm:px-6 py-2.5 disabled:opacity-40 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                  style={{ background: '#0C2D3A', fontFamily: "'Manrope', sans-serif" }}
                 >
                   {verifying ? (
                     <>

@@ -31,6 +31,8 @@ interface FarmerProfile {
   status: string;
   nrc_id?: string | null;
   gender?: string | null;
+  profile_photo?: string | null;
+  bio?: string | null;
   rejection_reason?: string | null;
   created_at?: string;
   user_id?: string;
@@ -56,7 +58,10 @@ export default function FarmerDashboard() {
     farm_size: 0,
     nrc_id: '',
     gender: 'male',
+    profile_photo: '' as string,
+    bio: '' as string,
   });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showCreateListing, setShowCreateListing] = useState(false);
   const [listingForm, setListingForm] = useState({
     crop_type: '',
@@ -126,6 +131,8 @@ export default function FarmerDashboard() {
         farm_size: farmer.farm_size || 0,
         nrc_id: farmer.nrc_id || '',
         gender: farmer.gender || 'male',
+        profile_photo: farmer.profile_photo || '',
+        bio: farmer.bio || '',
       });
       await loadContracts(farmer.id);
       await loadMarketplaceListings(farmer.id);
@@ -396,9 +403,39 @@ export default function FarmerDashboard() {
         farm_size: farmerData.farm_size || 0,
         nrc_id: farmerData.nrc_id || '',
         gender: farmerData.gender || 'male',
+        profile_photo: farmerData.profile_photo || '',
+        bio: farmerData.bio || '',
       });
     }
     setIsEditingProfile(false);
+  };
+
+  const handleProfilePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type && !file.type.startsWith('image/') && !file.name.match(/\.(jpe?g|png|webp|heic|heif)$/i)) {
+      toast.error('Please pick an image file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Photo must be smaller than 10MB');
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      const { uploadImageToIPFS } = await import('@/lib/ipfsService');
+      const result = await uploadImageToIPFS(file);
+      setProfileForm(prev => ({ ...prev, profile_photo: result.url }));
+      toast.success('Profile photo uploaded');
+    } catch (err: any) {
+      console.error('Profile photo upload failed:', err);
+      toast.error(err?.message || 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+      if (e.target) e.target.value = '';
+    }
   };
 
   const handleCreateListing = async () => {
@@ -597,6 +634,57 @@ export default function FarmerDashboard() {
           </div>
 
           <div className="space-y-4">
+            {/* Profile Photo */}
+            <div>
+              <label className="text-sm font-medium text-gray-600 mb-2 block">Profile Photo</label>
+              <div className="flex items-center gap-4">
+                <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md ring-2 ring-white">
+                  {profileForm.profile_photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profileForm.profile_photo}
+                      alt={profileForm.name || 'Profile'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-white font-bold text-2xl">
+                      {(profileForm.name || farmerData?.name || '?')
+                        .split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map(s => s[0]?.toUpperCase())
+                        .join('') || '?'}
+                    </span>
+                  )}
+                </div>
+
+                {isEditingProfile && (
+                  <div className="flex flex-col gap-2">
+                    <label className={`px-4 py-2 rounded-xl font-semibold cursor-pointer text-sm flex items-center gap-2 transition-colors ${uploadingPhoto ? 'bg-gray-100 text-gray-500' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'}`}>
+                      {uploadingPhoto ? 'Uploading…' : (profileForm.profile_photo ? 'Change Photo' : 'Upload Photo')}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleProfilePhotoUpload}
+                        disabled={uploadingPhoto}
+                        className="hidden"
+                      />
+                    </label>
+                    {profileForm.profile_photo && (
+                      <button
+                        type="button"
+                        onClick={() => setProfileForm(prev => ({ ...prev, profile_photo: '' }))}
+                        className="text-xs text-red-600 hover:underline self-start"
+                      >
+                        Remove photo
+                      </button>
+                    )}
+                    <p className="text-xs text-gray-500 max-w-[260px]">This photo appears on the public traceability page so buyers can meet you.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Name */}
             <div>
               <label className="text-sm font-medium text-gray-600 mb-2 block">Full Name</label>

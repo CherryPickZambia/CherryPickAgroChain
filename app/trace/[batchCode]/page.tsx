@@ -58,7 +58,7 @@ function TraceShell({ children }: { children: React.ReactNode }) {
       <nav style={{ position: "relative", zIndex: 50, borderBottom: `1px solid ${C.border}` }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🍒</div>
+            <img src="/cherrypick-logo.png" alt="Cherry Pick logo" style={{ width: 32, height: 32, borderRadius: "50%", background: "#FFF", objectFit: "contain", padding: 3 }} />
             <span style={{ fontFamily: FD, fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.white }}>CHERRY PICK</span>
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 24 }}>

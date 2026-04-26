@@ -49,6 +49,11 @@ export interface Database {
           water_source?: string | null;
           farming_method?: 'conventional' | 'organic' | 'integrated' | 'conservation' | 'other' | null;
           compliance_standards?: string[];
+          profile_photo?: string | null;
+          bio?: string | null;
+          nrc_id?: string | null;
+          gender?: string | null;
+          verified?: boolean | null;
           created_at: string;
           updated_at: string;
         };

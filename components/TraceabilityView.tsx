@@ -11,6 +11,9 @@ interface TraceabilityViewProps {
     location_address?: string;
     farm_size?: number;
     verified?: boolean;
+    profile_photo?: string | null;
+    bio?: string | null;
+    years_farming?: number | null;
   };
   contract?: {
     contract_code: string;
@@ -28,7 +31,51 @@ const SOIL = "#8B5E3C";
 const DARK = "#18181B";
 
 const DEFAULT_IMG_HERO = "https://images.unsplash.com/photo-1610832958506-aa56368176cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80";
-const DEFAULT_IMG_FARMER = "https://images.unsplash.com/photo-1595844730298-b960fa25e9e3?ixlib=rb-4.0.3&auto=format&fit=crop&w=256&q=80";
+const LOGO_SRC = "/cherrypick-logo.png";
+
+function FarmerAvatar({ src, name }: { src?: string | null; name: string }) {
+  const [errored, setErrored] = useState(false);
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(s => s[0]?.toUpperCase())
+    .join("") || "?";
+
+  if (src && !errored) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        onError={() => setErrored(true)}
+        style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: `3px solid ${CREAM}`, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", flexShrink: 0 }}
+      />
+    );
+  }
+  return (
+    <div
+      aria-label={name}
+      style={{
+        width: 80,
+        height: 80,
+        borderRadius: "50%",
+        background: `linear-gradient(135deg, ${LEAF_GREEN}, #4A7C59)`,
+        color: "#fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'Playfair Display', Georgia, serif",
+        fontSize: 28,
+        fontWeight: 800,
+        border: `3px solid ${CREAM}`,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        flexShrink: 0,
+      }}
+    >
+      {initials}
+    </div>
+  );
+}
 
 const EVENT_EMOJIS: Record<string, string> = {
   planting: "🌱",
@@ -119,22 +166,47 @@ export default function TraceabilityView({
     console.error("Error parsing metadata", e);
   }
 
-  const heroImage = metadata.batch_image || DEFAULT_IMG_HERO;
-  const farmerImage = metadata.farmer_image || DEFAULT_IMG_FARMER;
-  const cropType = batch.crop_type || "Premium Produce";
+  const heroImage = metadata.batch_image || metadata.productImage || DEFAULT_IMG_HERO;
+  const farmerImage = farmer?.profile_photo || metadata.farmer_image || null;
+  const cropType = metadata.productName || batch.crop_type || "Premium Produce";
   const variety = batch.variety || "Premium Quality";
   const location = farmer?.location_address || "Eastern Province, Zambia";
   const farmerName = farmer?.name || "Verified Smallholder";
-  const farmSize = farmer?.farm_size || 3;
-  const farmerExp = metadata.farmer_experience || "12";
+  const farmSize = farmer?.farm_size || 0;
+  const farmerExp = farmer?.years_farming ?? metadata.farmer_experience ?? "";
   const impactIncrease = metadata.income_increase || "25";
 
+  // Compute accurate batch weight: prefer post-processing total weight from packaging info
+  const computedWeight = (() => {
+    if (typeof metadata.totalWeightKg === 'number' && metadata.totalWeightKg > 0) {
+      return `${metadata.totalWeightKg} kg`;
+    }
+    if (Array.isArray(metadata.packagingSizes) && metadata.packagingSizes.length > 0) {
+      const totalKg = metadata.packagingSizes.reduce((sum: number, p: any) => {
+        const sizeKg = parseFloat(String(p.sizeKg ?? p.size ?? 0));
+        const count = parseFloat(String(p.count ?? 0));
+        if (!isFinite(sizeKg) || !isFinite(count)) return sum;
+        return sum + sizeKg * count;
+      }, 0);
+      if (totalKg > 0) return `${totalKg.toFixed(2).replace(/\.0+$/, '')} kg`;
+    }
+    if (batch.total_quantity) return `${batch.total_quantity} ${batch.unit || 'kg'}`;
+    return 'Not set';
+  })();
+
   const specs = [
-    { icon: "🆔", label: "Batch ID", value: batch.batch_code },
-    { icon: "📅", label: "Production Date", value: metadata.productionDate ? formatDateDayMonth(metadata.productionDate) : (batch.harvest_date ? formatDateDayMonth(batch.harvest_date) : "Not set") },
-    { icon: "⌛", label: "Expiry Date", value: metadata.expiryDate ? formatDateDayMonth(metadata.expiryDate) : "Not set" },
-    { icon: "⚖️", label: "Total Batch Weight", value: `${batch.total_quantity || 0} ${batch.unit || 'kg'}` },
+    { icon: "\uD83C\uDD94", label: "Batch ID", value: batch.batch_code },
+    { icon: "\uD83D\uDCC5", label: "Production Date", value: metadata.productionDate ? formatDateDayMonth(metadata.productionDate) : (batch.harvest_date ? formatDateDayMonth(batch.harvest_date) : "Not set") },
+    { icon: "\u231B", label: "Expiry Date", value: metadata.expiryDate ? formatDateDayMonth(metadata.expiryDate) : "Not set" },
+    { icon: "\u2696\uFE0F", label: "Total Batch Weight", value: computedWeight },
   ];
+
+  // Sort events chronologically (oldest first) so the journey flows in order
+  const sortedEvents = [...events].sort((a, b) => {
+    const ta = new Date(a.created_at || 0).getTime();
+    const tb = new Date(b.created_at || 0).getTime();
+    return ta - tb;
+  });
 
   const impacts = [
     { icon: "👩🏾‍🌾", color: "#2D5A3D", bg: "#E8F5EE", label: "Community", value: "Supports smallholder families" },
@@ -145,10 +217,21 @@ export default function TraceabilityView({
   return (
     <div style={{ background: isPublic ? "#F4F4F5" : "transparent", minHeight: isPublic ? "100vh" : "auto", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      <div style={{ maxWidth: 680, margin: "0 auto", background: "#FAF9F6", minHeight: "100vh", boxShadow: isPublic ? "0 0 40px rgba(0,0,0,0.05)" : "none", paddingBottom: 40, borderRadius: isPublic ? 0 : 32, overflow: "hidden" }}>
+      <style>{`
+        @media (min-width: 900px) {
+          .cp-trace-container { max-width: 1100px !important; }
+          .cp-trace-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+          .cp-trace-grid > div { margin: 0 !important; }
+          .cp-trace-hero h1 { font-size: 56px !important; }
+        }
+        @media (min-width: 1280px) {
+          .cp-trace-container { max-width: 1240px !important; }
+        }
+      `}</style>
+      <div className="cp-trace-container" style={{ maxWidth: 680, margin: "0 auto", background: "#FAF9F6", minHeight: "100vh", boxShadow: isPublic ? "0 0 40px rgba(0,0,0,0.05)" : "none", paddingBottom: 40, borderRadius: isPublic ? 0 : 32, overflow: "hidden" }}>
 
         {/* HERO SECTION */}
-        <div style={{ position: "relative", overflow: "hidden", borderRadius: isPublic ? "0 0 32px 32px" : "32px", paddingBottom: 40, backgroundColor: DARK, boxShadow: "0 10px 30px rgba(0,0,0,0.15)" }}>
+        <div className="cp-trace-hero" style={{ position: "relative", overflow: "hidden", borderRadius: isPublic ? "0 0 32px 32px" : "32px", paddingBottom: 40, backgroundColor: DARK, boxShadow: "0 10px 30px rgba(0,0,0,0.15)" }}>
           <div style={{ position: "absolute", inset: 0, backgroundImage: `url(${heroImage})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.6 }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(24,24,27,0.2) 0%, rgba(24,24,27,0.95) 80%, rgba(24,24,27,1) 100%)" }} />
           <div style={{ position: "relative", padding: "20px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -156,14 +239,14 @@ export default function TraceabilityView({
               <button onClick={() => window.history.back()} style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, padding: "6px 12px", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, backdropFilter: "blur(8px)" }}>
                 ← Back
               </button>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🍒</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <img src={LOGO_SRC} alt="Cherry Pick logo" style={{ width: 28, height: 28, borderRadius: "50%", background: "#FFF", objectFit: "contain", padding: 2, boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }} />
                 <span style={{ color: "#FFF", fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700, letterSpacing: 1, fontSize: 13 }}>CHERRY PICK</span>
               </div>
             </div>
             <div style={{ background: "rgba(74,215,120,0.15)", border: "1px solid rgba(74,215,120,0.3)", borderRadius: 20, padding: "4px 12px", display: "flex", alignItems: "center", gap: 6 }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#4AD778", animation: "blink 2s infinite" }} />
-              <span style={{ color: "#4AD778", fontSize: 10, fontFamily: "monospace", fontWeight: 700, letterSpacing: 1 }}>VERIFIED</span>
+              <span style={{ color: "#4AD778", fontSize: 10, fontFamily: "monospace", fontWeight: 600, letterSpacing: 1 }}>VERIFIED</span>
             </div>
           </div>
           <div style={{ height: "120px" }} />
@@ -203,20 +286,22 @@ export default function TraceabilityView({
               <span style={{ color: "#fff", fontSize: 11, fontFamily: "monospace", letterSpacing: 3, textTransform: "uppercase", fontWeight: 600 }}>Meet Your Farmer</span>
             </div>
             <div style={{ padding: 24 }}>
-              <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 20 }}>
-                <img src={farmerImage} alt={farmerName} style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: `3px solid ${CREAM}`, boxShadow: "0 4px 12px rgba(0,0,0,0.1)", flexShrink: 0 }} />
-                <div style={{ flex: 1, paddingTop: 4 }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap" }}>
+                <FarmerAvatar src={farmerImage} name={farmerName} />
+                <div style={{ flex: 1, paddingTop: 4, minWidth: 180 }}>
                   <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, fontWeight: 900, color: DARK, margin: "0 0 4px" }}>{farmerName}</h2>
                   <p style={{ color: LEAF_GREEN, fontSize: 12, fontFamily: "monospace", letterSpacing: 0.5, marginBottom: 12, fontWeight: 600 }}>Lead Farmer · {location.split(',')[0]}</p>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <div style={{ textAlign: "center", background: "#F4F4F5", borderRadius: 12, padding: "8px 16px", border: "1px solid #E4E4E7" }}>
                       <div style={{ fontSize: 15, fontWeight: 800, color: DARK }}>{farmSize} ha</div>
                       <div style={{ fontSize: 10, color: "#71717A", textTransform: "uppercase", letterSpacing: 1, marginTop: 2 }}>Size</div>
                     </div>
-                    <div style={{ textAlign: "center", background: "#FFF7ED", borderRadius: 12, padding: "8px 16px", border: "1px solid #FFEDD5" }}>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: MANGO_ORANGE }}>{farmerExp} yrs</div>
-                      <div style={{ fontSize: 10, color: "#71717A", textTransform: "uppercase", letterSpacing: 1, marginTop: 2 }}>Exp</div>
-                    </div>
+                    {farmerExp !== "" && (
+                      <div style={{ textAlign: "center", background: "#FFF7ED", borderRadius: 12, padding: "8px 16px", border: "1px solid #FFEDD5" }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: MANGO_ORANGE }}>{farmerExp} yrs</div>
+                        <div style={{ fontSize: 10, color: "#71717A", textTransform: "uppercase", letterSpacing: 1, marginTop: 2 }}>Exp</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -289,15 +374,15 @@ export default function TraceabilityView({
               <span style={{ fontSize: 11, fontFamily: "monospace", letterSpacing: 3, color: "#71717A", textTransform: "uppercase" }}>The Full Journey</span>
               <div style={{ height: 1, flex: 1, background: "rgba(0,0,0,0.08)" }} />
             </div>
-            {events.length === 0 ? (
+            {sortedEvents.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 0" }}>
                 <p style={{ color: "#A1A1AA" }}>Tracking has just begun...</p>
               </div>
             ) : (
               <div style={{ position: "relative", paddingLeft: 28 }}>
                 <div style={{ position: "absolute", left: 11, top: 12, bottom: 12, width: 2, background: "#E4E4E7", borderRadius: 2 }} />
-                {events.map((m, i) => (
-                  <div key={m.id || i} style={{ position: "relative", marginBottom: i < events.length - 1 ? 24 : 0 }} onClick={() => setExpanded(expanded === i ? null : i)}>
+                {sortedEvents.map((m, i) => (
+                  <div key={m.id || i} style={{ position: "relative", marginBottom: i < sortedEvents.length - 1 ? 24 : 0 }} onClick={() => setExpanded(expanded === i ? null : i)}>
                     <div style={{ position: "absolute", left: -25, top: 2, width: 16, height: 16, borderRadius: "50%", background: expanded === i ? MANGO_ORANGE : "#fff", border: `2px solid ${expanded === i ? MANGO_ORANGE : "#D4D4D8"}`, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.3s", cursor: "pointer", zIndex: 2 }}>
                       {expanded === i && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />}
                     </div>
@@ -407,7 +492,7 @@ export default function TraceabilityView({
         {/* FOOTER */}
         <div style={{ background: DARK, padding: "32px 24px 48px", textAlign: "center", borderTop: "1px solid #27272A" }}>
           <div style={{ display: "flex", justifyItems: "center", justifyContent: "center", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", fontSize: 12 }}>🍒</div>
+            <img src={LOGO_SRC} alt="Cherry Pick logo" style={{ width: 24, height: 24, borderRadius: "50%", background: "#FFF", objectFit: "contain", padding: 2 }} />
             <span style={{ color: "#fff", fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 700, letterSpacing: 1 }}>Cherry Pick</span>
           </div>
           <p style={{ color: "#71717A", fontSize: 10, fontFamily: "monospace", letterSpacing: 2, textTransform: "uppercase", margin: 0 }}>Farm-to-Shelf Traceability Protocol</p>

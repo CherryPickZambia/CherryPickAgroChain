@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { X, Upload, Camera, Thermometer, Droplets, Wind, Plus, Trash2, Loader2, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { uploadToIPFS } from "@/lib/ipfsService";
-import { analyzeCropHealth, fileToBase64, type CropDiagnosisResult } from "@/lib/aiDiagnostics";
+import { analyzeCropHealth, fileToJpegDataUrl, type CropDiagnosisResult } from "@/lib/aiDiagnostics";
 
 export interface IoTReading {
   id: string;
@@ -62,6 +62,9 @@ export default function EvidenceUploadModal({
   const [iotType, setIoTType] = useState<IoTReading["type"]>("temperature");
   const [iotValue, setIoTValue] = useState("");
 
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
 
@@ -82,6 +85,9 @@ export default function EvidenceUploadModal({
     });
 
     setSelectedAiImageIndex((prev) => prev ?? images.length);
+
+    // Reset input value so same file can be re-picked
+    if (e.target) e.target.value = '';
   };
 
   const removeImage = (index: number) => {
@@ -113,7 +119,8 @@ export default function EvidenceUploadModal({
     setAiAnalyzing(true);
 
     try {
-      const imageBase64 = await fileToBase64(images[selectedAiImageIndex]);
+      // Re-encode to JPEG so iOS HEIC and oversized phone photos work reliably.
+      const imageBase64 = await fileToJpegDataUrl(images[selectedAiImageIndex], { maxDim: 1280, quality: 0.85 });
       const additionalContext = [
         `Verifier evidence for milestone: ${milestoneName}`,
         notes.trim() ? `Verifier notes: ${notes.trim()}` : "",
@@ -258,10 +265,10 @@ export default function EvidenceUploadModal({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+          className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[92vh] flex flex-col overflow-hidden"
         >
           {/* Header */}
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
+          <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0" style={{ background: '#F7F9FB' }}>
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-xl" style={{ background: '#0C2D3A' }}>
                 <Camera className="h-6 w-6" style={{ color: '#BFFF00' }} />
@@ -280,7 +287,7 @@ export default function EvidenceUploadModal({
           </div>
 
           {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+          <div className="p-4 sm:p-6 flex-1 min-h-0 overflow-y-auto">
             {/* Image Upload Section */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -325,21 +332,46 @@ export default function EvidenceUploadModal({
                   </div>
                 ))}
 
-                {/* Upload Button */}
+                {/* Add Image Tile (camera + gallery) */}
                 {images.length < 10 && (
-                  <label className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors">
-                    <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                    <span className="text-sm text-gray-600">Add Image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageSelect}
-                      className="hidden"
-                    />
-                  </label>
+                  <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-stretch justify-center gap-2 p-3 hover:border-green-500 hover:bg-green-50/40 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-md font-semibold text-xs px-2 shadow-sm"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Take Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => galleryInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2 border border-gray-300 bg-white text-gray-700 rounded-md font-semibold text-xs px-2 hover:bg-gray-50"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Upload
+                    </button>
+                  </div>
                 )}
               </div>
+
+              {/* Hidden inputs (one for camera, one for gallery) */}
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
 
               {images.length > 0 && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-4">
@@ -538,7 +570,7 @@ export default function EvidenceUploadModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-5 flex items-center justify-between border-t border-gray-100" style={{ background: '#F7F9FB' }}>
+          <div className="px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between border-t border-gray-100 flex-shrink-0" style={{ background: '#F7F9FB' }}>
             <div className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500, color: '#5A7684' }}>
               {images.length} image(s) • {iotReadings.length} reading(s) • {aiAnalysis ? "AI linked" : "No AI analysis"}
             </div>

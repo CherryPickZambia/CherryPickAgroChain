@@ -53,6 +53,11 @@ export interface ProcessingResult {
         packageCount: number;
         labelsPrinted: boolean;
         notes?: string;
+        /**
+         * Multiple package size variants in the same batch.
+         * e.g. [{ sizeLabel: '500g', sizeKg: 0.5, count: 100 }, { sizeLabel: '1kg', sizeKg: 1, count: 40 }]
+         */
+        sizes?: Array<{ sizeLabel: string; sizeKg: number; count: number }>;
     };
     productionDate: string;
     expiryDate: string;
@@ -136,7 +141,8 @@ export default function WarehouseProcessingModal({
             packageType: "",
             packageCount: 0,
             labelsPrinted: false,
-            notes: ""
+            notes: "",
+            sizes: []
         },
         productionDate: savedData?.productionDate || new Date().toISOString().split('T')[0],
         expiryDate: savedData?.expiryDate || "",
@@ -298,10 +304,10 @@ export default function WarehouseProcessingModal({
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+                    className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] sm:max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
                 >
                     {/* Header */}
-                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
+                    <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0" style={{ background: '#F7F9FB' }}>
                         <div className="flex items-center gap-3">
                             <div className="p-2.5 rounded-xl" style={{ background: '#0C2D3A' }}>
                                 <Package className="h-5 w-5" style={{ color: '#BFFF00' }} />
@@ -317,8 +323,8 @@ export default function WarehouseProcessingModal({
                     </div>
 
                     {/* Batch Info Bar */}
-                    <div className="bg-gray-50 border-b px-6 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-6 text-sm">
+                    <div className="bg-gray-50 border-b px-4 sm:px-6 py-3 flex items-center justify-between flex-shrink-0">
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs sm:text-sm">
                             <span><strong>Crop:</strong> {batch?.cropType}</span>
                             <span><strong>Farmer:</strong> {batch?.farmerName}</span>
                             <span><strong>Quantity:</strong> {batch?.quantity}</span>
@@ -326,8 +332,8 @@ export default function WarehouseProcessingModal({
                     </div>
 
                     {/* Step Progress */}
-                    <div className="px-6 py-4 border-b bg-white">
-                        <div className="flex items-center justify-between">
+                    <div className="px-4 sm:px-6 py-3 sm:py-4 border-b bg-white flex-shrink-0 overflow-x-auto">
+                        <div className="flex items-center justify-between min-w-[600px] sm:min-w-0">
                             {steps.map((step, index) => {
                                 const StepIcon = step.icon;
                                 const isActive = activeStep === step.id;
@@ -356,7 +362,7 @@ export default function WarehouseProcessingModal({
                     </div>
 
                     {/* Step Content */}
-                    <div className="p-6 overflow-y-auto max-h-[400px]">
+                    <div className="p-4 sm:p-6 flex-1 min-h-0 overflow-y-auto">
                         {/* Step 0: Quality Check */}
                         {activeStep === 0 && (
                             <div className="space-y-6">
@@ -657,7 +663,7 @@ export default function WarehouseProcessingModal({
                             <div className="space-y-6">
                                 <h3 className="text-lg font-bold text-gray-900">Final Packaging</h3>
 
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Package Type</label>
                                         <select
@@ -673,48 +679,143 @@ export default function WarehouseProcessingModal({
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Number of Packages</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Total Number of Packages (auto)</label>
                                         <input
                                             type="number"
-                                            value={processing.packaging.packageCount}
+                                            value={(processing.packaging.sizes || []).reduce((s, x) => s + (x.count || 0), 0) || processing.packaging.packageCount}
                                             onChange={(e) => setProcessing(prev => ({
                                                 ...prev,
                                                 packaging: { ...prev.packaging, packageCount: parseInt(e.target.value) || 0 }
                                             }))}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            disabled={(processing.packaging.sizes || []).length > 0}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-50 disabled:text-gray-700"
                                         />
                                     </div>
                                 </div>
 
-                                {processing.packaging.packageType === "Pack" && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="p-4 bg-teal-50 rounded-xl border border-teal-100"
-                                    >
-                                        <label className="block text-sm font-medium text-teal-900 mb-3">Select Pack Size</label>
-                                        <div className="flex flex-wrap gap-3">
-                                            {packSizes.map(size => (
-                                                <button
-                                                    key={size}
-                                                    type="button"
-                                                    onClick={() => setProcessing(prev => ({
-                                                        ...prev,
-                                                        packaging: { ...prev.packaging, notes: size }
-                                                    }))}
-                                                    className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${processing.packaging.notes === size
-                                                        ? 'bg-teal-600 text-white shadow-md'
-                                                        : 'bg-white text-teal-600 border border-teal-200 hover:bg-teal-100'
-                                                        }`}
-                                                >
-                                                    {size}
-                                                </button>
-                                            ))}
+                                {/* Multi-size packaging repeater */}
+                                <div className="p-4 bg-teal-50/40 rounded-xl border border-teal-100">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div>
+                                            <label className="block text-sm font-bold text-teal-900">Packaging Sizes in this Batch</label>
+                                            <p className="text-xs text-teal-700 mt-0.5">Add every variant you packed (e.g. 200g x 100, 1kg x 40). Total weight is auto-calculated.</p>
                                         </div>
-                                    </motion.div>
-                                )}
+                                        <button
+                                            type="button"
+                                            onClick={() => setProcessing(prev => ({
+                                                ...prev,
+                                                packaging: {
+                                                    ...prev.packaging,
+                                                    sizes: [...(prev.packaging.sizes || []), { sizeLabel: "", sizeKg: 0, count: 0 }]
+                                                }
+                                            }))}
+                                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
+                                        >
+                                            + Add Size
+                                        </button>
+                                    </div>
 
-                                <div className="flex items-center gap-8">
+                                    <div className="space-y-2">
+                                        {(processing.packaging.sizes || []).length === 0 && (
+                                            <p className="text-xs text-gray-500 italic px-1">No package sizes added yet. Click <span className="font-semibold text-teal-700">+ Add Size</span> to record at least one variant.</p>
+                                        )}
+
+                                        {(processing.packaging.sizes || []).map((row, idx) => (
+                                            <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-white rounded-lg p-2 border border-teal-100">
+                                                <div className="col-span-4">
+                                                    <select
+                                                        value={packSizes.includes(row.sizeLabel) ? row.sizeLabel : (row.sizeLabel ? "__custom" : "")}
+                                                        onChange={(e) => {
+                                                            const v = e.target.value;
+                                                            setProcessing(prev => {
+                                                                const sizes = [...(prev.packaging.sizes || [])];
+                                                                if (v === "__custom") {
+                                                                    sizes[idx] = { ...sizes[idx], sizeLabel: "" };
+                                                                } else {
+                                                                    const kg = v.endsWith('kg') ? parseFloat(v) : v.endsWith('g') ? parseFloat(v) / 1000 : 0;
+                                                                    sizes[idx] = { ...sizes[idx], sizeLabel: v, sizeKg: isFinite(kg) ? kg : sizes[idx].sizeKg };
+                                                                }
+                                                                return { ...prev, packaging: { ...prev.packaging, sizes } };
+                                                            });
+                                                        }}
+                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                    >
+                                                        <option value="">Preset size</option>
+                                                        {packSizes.map(s => <option key={s} value={s}>{s}</option>)}
+                                                        <option value="__custom">Custom...</option>
+                                                    </select>
+                                                </div>
+                                                <div className="col-span-3">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Label (e.g. 1kg)"
+                                                        value={row.sizeLabel}
+                                                        onChange={(e) => setProcessing(prev => {
+                                                            const sizes = [...(prev.packaging.sizes || [])];
+                                                            sizes[idx] = { ...sizes[idx], sizeLabel: e.target.value };
+                                                            return { ...prev, packaging: { ...prev.packaging, sizes } };
+                                                        })}
+                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                    />
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder="kg"
+                                                        value={row.sizeKg || ""}
+                                                        onChange={(e) => setProcessing(prev => {
+                                                            const sizes = [...(prev.packaging.sizes || [])];
+                                                            sizes[idx] = { ...sizes[idx], sizeKg: parseFloat(e.target.value) || 0 };
+                                                            return { ...prev, packaging: { ...prev.packaging, sizes } };
+                                                        })}
+                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                    />
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Qty"
+                                                        value={row.count || ""}
+                                                        onChange={(e) => setProcessing(prev => {
+                                                            const sizes = [...(prev.packaging.sizes || [])];
+                                                            sizes[idx] = { ...sizes[idx], count: parseInt(e.target.value) || 0 };
+                                                            const totalCount = sizes.reduce((s, x) => s + (x.count || 0), 0);
+                                                            return { ...prev, packaging: { ...prev.packaging, sizes, packageCount: totalCount } };
+                                                        })}
+                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                    />
+                                                </div>
+                                                <div className="col-span-1 flex justify-end">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setProcessing(prev => {
+                                                            const sizes = (prev.packaging.sizes || []).filter((_, i) => i !== idx);
+                                                            const totalCount = sizes.reduce((s, x) => s + (x.count || 0), 0);
+                                                            return { ...prev, packaging: { ...prev.packaging, sizes, packageCount: totalCount } };
+                                                        })}
+                                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-md"
+                                                        title="Remove size"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {(processing.packaging.sizes || []).length > 0 && (
+                                        <div className="mt-3 flex items-center justify-between text-xs bg-white rounded-lg px-3 py-2 border border-teal-100">
+                                            <span className="text-gray-600">Total batch weight</span>
+                                            <span className="font-bold text-teal-800">
+                                                {(processing.packaging.sizes || []).reduce((s, x) => s + (x.sizeKg || 0) * (x.count || 0), 0).toFixed(2)} kg
+                                                {" "}· {(processing.packaging.sizes || []).reduce((s, x) => s + (x.count || 0), 0)} packs
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-6">
                                     <label className="flex items-center cursor-pointer">
                                         <input
                                             type="checkbox"
@@ -901,7 +1002,7 @@ export default function WarehouseProcessingModal({
                     </div>
 
                     {/* Footer */}
-                    <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between" style={{ background: '#F7F9FB' }}>
+                    <div className="border-t border-gray-100 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between flex-shrink-0" style={{ background: '#F7F9FB' }}>
                         <button
                             onClick={() => activeStep > 0 && setActiveStep(activeStep - 1)}
                             disabled={activeStep === 0}

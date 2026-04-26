@@ -7,7 +7,7 @@ import {
   Leaf, ThermometerSun, Droplets, Bug, Sparkles, X,
   ChevronDown, ChevronUp, RefreshCw
 } from "lucide-react";
-import { analyzeCropHealth, fileToBase64, CropDiagnosisResult } from "@/lib/aiDiagnostics";
+import { analyzeCropHealth, fileToJpegDataUrl, CropDiagnosisResult } from "@/lib/aiDiagnostics";
 import toast from "react-hot-toast";
 
 interface CropDiagnosticsProps {
@@ -39,24 +39,36 @@ export default function CropDiagnostics({
   const [showDetails, setShowDetails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
+    if (file.type && !file.type.startsWith('image/') && !file.name.match(/\.(jpe?g|png|webp|heic|heif)$/i)) {
       toast.error('Please select an image file');
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Image size must be less than 10MB');
+    if (file.size > 15 * 1024 * 1024) {
+      toast.error('Image size must be less than 15MB');
       return;
     }
 
-    setSelectedFile(file);
-    const base64 = await fileToBase64(file);
-    setSelectedImage(base64);
-    setResult(null);
+    try {
+      setSelectedFile(file);
+      // Always convert to a normalized JPEG data URL so iOS HEIC and giant
+      // phone photos work reliably across all OS / browsers.
+      const jpegDataUrl = await fileToJpegDataUrl(file, { maxDim: 1280, quality: 0.85 });
+      setSelectedImage(jpegDataUrl);
+      setResult(null);
+    } catch (err: any) {
+      console.error('Failed to load image:', err);
+      toast.error(err?.message || 'Could not read this photo. Try another file.');
+    } finally {
+      // Reset input so picking the same file again still triggers onChange
+      if (e.target) e.target.value = '';
+    }
   };
 
   const handleAnalyze = async () => {
@@ -148,6 +160,7 @@ export default function CropDiagnostics({
       <div className="p-6">
         {/* Image Upload Area */}
         <div className="mb-6">
+          {/* Hidden gallery picker (no capture attribute => opens normal file chooser on all OS) */}
           <input
             ref={fileInputRef}
             type="file"
@@ -155,23 +168,52 @@ export default function CropDiagnostics({
             onChange={handleFileSelect}
             className="hidden"
           />
+          {/* Hidden camera input — capture="environment" forces the rear camera on
+              mobile while still falling back to the file picker on desktop. */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
 
           {!selectedImage ? (
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full h-64 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center gap-4 hover:border-green-400 hover:bg-green-50 transition-all cursor-pointer"
-            >
-              <div className="p-4 bg-gray-100 rounded-full">
-                <Camera className="w-8 h-8 text-gray-400" />
+            <div className="w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 hover:border-green-400 hover:bg-green-50/40 transition-all">
+              <div className="flex flex-col items-center text-center gap-3 mb-5">
+                <div className="p-4 bg-gray-100 rounded-full">
+                  <Camera className="w-8 h-8 text-gray-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-700">Upload Crop Photo</p>
+                  <p className="text-sm text-gray-500">Take a fresh photo or choose one from your device</p>
+                  <p className="text-xs text-gray-400 mt-1">JPG, PNG, HEIC up to 15MB</p>
+                </div>
               </div>
-              <div className="text-center">
-                <p className="font-semibold text-gray-700">Upload Crop Photo</p>
-                <p className="text-sm text-gray-500">Click to select or drag and drop</p>
-                <p className="text-xs text-gray-400 mt-1">JPG, PNG up to 10MB</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 shadow-md"
+                >
+                  <Camera className="w-5 h-5" />
+                  Take Photo
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full py-3 px-4 border-2 border-green-500 text-green-700 rounded-xl font-semibold flex items-center justify-center gap-2 bg-white hover:bg-green-50"
+                >
+                  <Upload className="w-5 h-5" />
+                  Choose from Device
+                </motion.button>
               </div>
-            </motion.button>
+            </div>
           ) : (
             <div className="relative">
               <img

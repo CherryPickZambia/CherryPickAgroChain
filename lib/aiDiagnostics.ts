@@ -106,3 +106,56 @@ export function fileToBase64(file: File): Promise<string> {
     reader.onerror = (error) => reject(error);
   });
 }
+
+/**
+ * Convert any browser-loadable image (HEIC/PNG/WebP/JPEG) into a normalized JPEG
+ * data URL with sensible max dimensions so the OpenAI Vision API receives a
+ * compact, well-formed payload.
+ *
+ * This is the root-cause fix for the iOS Safari error
+ * "Crop analysis failed: The string did not match the expected pattern" — that
+ * error is thrown when the API receives an oversized, HEIC, or otherwise
+ * malformed data URL. Re-encoding through a canvas guarantees a valid
+ * image/jpeg base64 string for every supported OS / browser.
+ */
+export async function fileToJpegDataUrl(
+  file: File,
+  options: { maxDim?: number; quality?: number } = {}
+): Promise<string> {
+  const maxDim = options.maxDim ?? 1280;
+  const quality = options.quality ?? 0.85;
+
+  // If we're not in a browser, fall back to raw base64 (e.g. for SSR/unit tests)
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return fileToBase64(file);
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Unsupported image format. Please use a JPG or PNG photo.'));
+      el.src = objectUrl;
+    });
+
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    if (!w || !h) throw new Error('Could not read image dimensions');
+
+    const scale = Math.min(1, maxDim / Math.max(w, h));
+    const targetW = Math.max(1, Math.round(w * scale));
+    const targetH = Math.max(1, Math.round(h * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Browser does not support canvas 2D context');
+    ctx.drawImage(img, 0, 0, targetW, targetH);
+
+    return canvas.toDataURL('image/jpeg', quality);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
