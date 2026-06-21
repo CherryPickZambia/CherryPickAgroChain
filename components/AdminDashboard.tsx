@@ -7,11 +7,11 @@ import {
   ShoppingBag, User, UserPlus, Shield, XCircle, AlertCircle, Eye,
   MoreVertical, Filter, Download, Calendar, Leaf, Globe, Phone, Mail,
   ChevronRight, ExternalLink, Landmark, Award, BarChart3, PieChart,
-  Wallet, Zap, Target, RefreshCw, QrCode, Truck, Loader2
+  Wallet, Zap, Target, RefreshCw, QrCode, Truck, Loader2, Layout
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
-import { getUsersByRole, getFarmers, getAllContracts } from "@/lib/supabaseService";
+import { getUsersByRole, getAllContracts } from "@/lib/supabaseService";
 import AdminApprovalModal from "./AdminApprovalModal";
 import { getVerificationEvidence } from "@/lib/ipfsService";
 import { STANDARD_MILESTONES, payMilestoneApproval, getUSDCBalance, calculateVerifierFee, getVerifierFeeBreakdown } from "@/lib/blockchain/contractInteractions";
@@ -31,181 +31,26 @@ import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { AuthButton } from "@coinbase/cdp-react";
 import WalletBalance from "./WalletBalance";
 import { dc } from "@/lib/dashboardTheme";
-
-// Sample jobs data
-const SAMPLE_JOBS: JobData[] = [
-  { id: "job-1", title: "Harrowing Season", description: "Prepare land for next planting", jobType: "harrowing", farmLocation: "ABY Farm - Bay Land", dueDate: "2024-12-05", priority: "high", status: "pending", createdAt: new Date().toISOString() },
-  { id: "job-2", title: "Harrowing Season", description: "Prepare land for next planting", jobType: "harrowing", farmLocation: "YNS Farm - ARD Land", dueDate: "2024-12-08", priority: "medium", status: "pending", createdAt: new Date().toISOString() },
-];
-
-// Comprehensive sample data for demo
-const SAMPLE_FARMERS = [
-  {
-    id: "1",
-    wallet: "0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1",
-    name: "John Mwale",
-    email: "john@farm.zm",
-    phone: "+260 97 123 4567",
-    role: "farmer",
-    location: "Lusaka",
-    locationLat: -15.4167,
-    locationLng: 28.2833,
-    farmSize: 12.5,
-    crops: ["Mangoes", "Tomatoes"],
-    joined: "Oct 15, 2024",
-    verified: true,
-    totalEarnings: 45000,
-    completedMilestones: 8,
-    pendingMilestones: 2,
-    contracts: [
-      {
-        id: "c1", cropType: "Mangoes", status: "active" as const, value: 25000, createdAt: "Oct 20, 2024", harvestDate: "Jan 15, 2025", milestones: [
-          { id: "m1", name: "Land Preparation", status: "verified" as const, payment: 5000, dueDate: "Oct 25" },
-          { id: "m2", name: "Planting Complete", status: "verified" as const, payment: 7500, dueDate: "Nov 10" },
-          { id: "m3", name: "Flowering Stage", status: "submitted" as const, payment: 5000, dueDate: "Dec 15" },
-          { id: "m4", name: "Harvest Ready", status: "pending" as const, payment: 7500, dueDate: "Jan 15" },
-        ]
-      },
-      {
-        id: "c2", cropType: "Tomatoes", status: "completed" as const, value: 20000, createdAt: "Aug 10, 2024", harvestDate: "Oct 5, 2024", milestones: [
-          { id: "m5", name: "Land Preparation", status: "verified" as const, payment: 5000, dueDate: "Aug 15" },
-          { id: "m6", name: "Seedling Stage", status: "verified" as const, payment: 5000, dueDate: "Sep 1" },
-          { id: "m7", name: "Harvest Complete", status: "verified" as const, payment: 10000, dueDate: "Oct 5" },
-        ]
-      },
-    ]
-  },
-  {
-    id: "2",
-    wallet: "0x8ba1F109551bD432803012645Ac136ddd64DBA72",
-    name: "Mary Banda",
-    email: "mary@farm.zm",
-    phone: "+260 96 234 5678",
-    role: "farmer",
-    location: "Kabwe",
-    locationLat: -14.4469,
-    locationLng: 28.4464,
-    farmSize: 8.2,
-    crops: ["Pineapples", "Cashews"],
-    joined: "Oct 20, 2024",
-    verified: true,
-    totalEarnings: 32000,
-    completedMilestones: 5,
-    pendingMilestones: 3,
-    contracts: [
-      {
-        id: "c3", cropType: "Pineapples", status: "active" as const, value: 18000, createdAt: "Nov 1, 2024", harvestDate: "Feb 20, 2025", milestones: [
-          { id: "m8", name: "Land Preparation", status: "verified" as const, payment: 4000, dueDate: "Nov 5" },
-          { id: "m9", name: "Planting Complete", status: "submitted" as const, payment: 6000, dueDate: "Nov 20" },
-          { id: "m10", name: "Growth Stage", status: "pending" as const, payment: 4000, dueDate: "Jan 10" },
-          { id: "m11", name: "Harvest Ready", status: "pending" as const, payment: 4000, dueDate: "Feb 20" },
-        ]
-      },
-    ]
-  },
-  {
-    id: "3",
-    wallet: "0x9f2dF0fed2C77648de5860a4dc508cd0572B6C1a",
-    name: "Peter Phiri",
-    email: "peter@farm.zm",
-    phone: "+260 95 345 6789",
-    role: "farmer",
-    location: "Kitwe",
-    locationLat: -12.8024,
-    locationLng: 28.2132,
-    farmSize: 15.0,
-    crops: ["Bananas", "Beetroot"],
-    joined: "Oct 25, 2024",
-    verified: false,
-    totalEarnings: 0,
-    completedMilestones: 0,
-    pendingMilestones: 4,
-    contracts: [
-      {
-        id: "c4", cropType: "Bananas", status: "pending" as const, value: 22000, createdAt: "Nov 10, 2024", harvestDate: "Mar 15, 2025", milestones: [
-          { id: "m12", name: "Land Preparation", status: "pending" as const, payment: 5000, dueDate: "Nov 15" },
-          { id: "m13", name: "Planting Complete", status: "pending" as const, payment: 7000, dueDate: "Dec 1" },
-          { id: "m14", name: "Growth Stage", status: "pending" as const, payment: 5000, dueDate: "Feb 1" },
-          { id: "m15", name: "Harvest Ready", status: "pending" as const, payment: 5000, dueDate: "Mar 15" },
-        ]
-      },
-    ]
-  },
-  {
-    id: "7",
-    wallet: "0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b",
-    name: "David Tembo",
-    email: "david@farm.zm",
-    phone: "+260 97 456 7890",
-    role: "farmer",
-    location: "Chipata",
-    locationLat: -13.6333,
-    locationLng: 32.6500,
-    farmSize: 20.0,
-    crops: ["Cashews", "Mangoes"],
-    joined: "Sep 10, 2024",
-    verified: true,
-    totalEarnings: 68000,
-    completedMilestones: 12,
-    pendingMilestones: 2,
-    contracts: [
-      {
-        id: "c5", cropType: "Cashews", status: "active" as const, value: 35000, createdAt: "Sep 15, 2024", harvestDate: "Jan 30, 2025", milestones: [
-          { id: "m16", name: "Land Preparation", status: "verified" as const, payment: 8000, dueDate: "Sep 20" },
-          { id: "m17", name: "Planting Complete", status: "verified" as const, payment: 10000, dueDate: "Oct 5" },
-          { id: "m18", name: "Growth Stage", status: "verified" as const, payment: 7000, dueDate: "Nov 30" },
-          { id: "m19", name: "Harvest Ready", status: "pending" as const, payment: 10000, dueDate: "Jan 30" },
-        ]
-      },
-    ]
-  },
-  {
-    id: "8",
-    wallet: "0x8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c",
-    name: "Agnes Mulenga",
-    email: "agnes@farm.zm",
-    phone: "+260 96 567 8901",
-    role: "farmer",
-    location: "Livingstone",
-    locationLat: -17.8419,
-    locationLng: 25.8544,
-    farmSize: 6.5,
-    crops: ["Tomatoes", "Beetroot"],
-    joined: "Nov 1, 2024",
-    verified: true,
-    totalEarnings: 18000,
-    completedMilestones: 3,
-    pendingMilestones: 1,
-    contracts: [
-      {
-        id: "c6", cropType: "Tomatoes", status: "active" as const, value: 12000, createdAt: "Nov 5, 2024", harvestDate: "Feb 10, 2025", milestones: [
-          { id: "m20", name: "Land Preparation", status: "verified" as const, payment: 3000, dueDate: "Nov 10" },
-          { id: "m21", name: "Planting Complete", status: "verified" as const, payment: 4000, dueDate: "Nov 25" },
-          { id: "m22", name: "Growth Stage", status: "submitted" as const, payment: 2500, dueDate: "Jan 10" },
-          { id: "m23", name: "Harvest Ready", status: "pending" as const, payment: 2500, dueDate: "Feb 10" },
-        ]
-      },
-    ]
-  },
-];
-
-const SAMPLE_USERS = [
-  ...SAMPLE_FARMERS,
-  { id: "4", wallet: "0x3c8a2b7e9F1dE6Ca4B5a3e7d9C1f2A8b4D6e5F7a", name: "Sarah Phiri", email: "sarah@buyer.zm", phone: "+260 97 111 2222", role: "buyer", location: "Ndola", locationLat: -12.9587, locationLng: 28.6366, farmSize: 0, crops: [], joined: "Nov 1, 2024", verified: true, totalEarnings: 0, completedMilestones: 0, pendingMilestones: 0, contracts: [] },
-  { id: "5", wallet: "0x5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e", name: "James Mwamba", email: "james@buyer.zm", phone: "+260 96 333 4444", role: "buyer", location: "Lusaka", locationLat: -15.3875, locationLng: 28.3228, farmSize: 0, crops: [], joined: "Nov 5, 2024", verified: true, totalEarnings: 0, completedMilestones: 0, pendingMilestones: 0, contracts: [] },
-  { id: "6", wallet: "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b", name: "Grace Zulu", email: "grace@verify.zm", phone: "+260 95 555 6666", role: "officer", location: "Lusaka", locationLat: -15.4000, locationLng: 28.3000, farmSize: 0, crops: [], joined: "Sep 15, 2024", verified: true, totalEarnings: 0, completedMilestones: 0, pendingMilestones: 0, contracts: [] },
-];
-
-// Map marker positions (Zambia-centric)
-const MAP_POSITIONS = {
-  "Lusaka": { x: 55, y: 65 },
-  "Kabwe": { x: 54, y: 52 },
-  "Kitwe": { x: 48, y: 38 },
-  "Ndola": { x: 50, y: 40 },
-  "Livingstone": { x: 40, y: 85 },
-  "Chipata": { x: 80, y: 55 },
-  "Mansa": { x: 52, y: 30 },
-};
+import LandingPageEditor from "./LandingPageEditor";
+import {
+  getAdminDashboardStats,
+  getCropDistribution,
+  getMonthlyPaymentTrend,
+  getFarmersWithStats,
+  getBuyersWithStats,
+  getRecentPayments,
+  getRecentGrowthActivities,
+  getRecentMarketplaceOrders,
+  formatRevenue,
+  computeAnalyticsGrowth,
+  type AdminDashboardStats,
+  type CropDistributionItem,
+  type MonthlyTrendPoint,
+  type BuyerDashboardRow,
+  type PaymentDashboardRow,
+  type GrowthActivityRow,
+  type MarketplaceOrderRow,
+} from "@/lib/adminDashboardData";
 
 // Pending verification interface
 interface VerifiedProduct {
@@ -304,7 +149,6 @@ export default function AdminDashboard() {
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerUI | null>(null);
   const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
   const [showNewJobModal, setShowNewJobModal] = useState(false);
-  const [jobs, setJobs] = useState<JobData[]>(SAMPLE_JOBS);
   const [showContractModal, setShowContractModal] = useState(false);
   const [showContractDetailModal, setShowContractDetailModal] = useState(false);
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
@@ -337,11 +181,26 @@ export default function AdminDashboard() {
     farmerId?: string;
   } | null>(null);
   const [savedProcessingData, setSavedProcessingData] = useState<Record<string, Partial<ProcessingResult>>>({});
-  const [verifiedProducts, setVerifiedProducts] = useState<VerifiedProduct[]>([
-    // Sample verified products
-    { batchCode: "CP-MAN-241115-A2B3", cropType: "Mangoes", farmerName: "Grace Zulu", quantity: "450 kg", grade: "Premium", nftTxHash: "0x1a2b3c4d5e6f7890", verifiedAt: "2024-11-28" },
-    { batchCode: "CP-CAS-241120-D2T6", cropType: "Cashews", farmerName: "David Tembo", quantity: "320 kg", grade: "Grade A", nftTxHash: "0xabcdef1234567890", verifiedAt: "2024-11-25" },
-  ]);
+  const [verifiedProducts, setVerifiedProducts] = useState<VerifiedProduct[]>([]);
+
+  // Live dashboard metrics (Supabase)
+  const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats>({
+    totalFarmers: 0,
+    activeFarmers: 0,
+    activeContracts: 0,
+    marketplaceListings: 0,
+    totalRevenue: 0,
+    pendingVerifications: 0,
+    completedVerifications: 0,
+  });
+  const [cropData, setCropData] = useState<CropDistributionItem[]>([]);
+  const [costData, setCostData] = useState<MonthlyTrendPoint[]>([]);
+  const [recentPayments, setRecentPayments] = useState<PaymentDashboardRow[]>([]);
+  const [recentActivities, setRecentActivities] = useState<GrowthActivityRow[]>([]);
+  const [buyersList, setBuyersList] = useState<BuyerDashboardRow[]>([]);
+  const [buyerOrders, setBuyerOrders] = useState<MarketplaceOrderRow[]>([]);
+  const [loadingBuyers, setLoadingBuyers] = useState(false);
+  const [loadingDashboard, setLoadingDashboard] = useState(false);
 
   // Traceability data state
   const [allBatches, setAllBatches] = useState<(Batch & { farmer_name?: string })[]>([]);
@@ -388,6 +247,8 @@ export default function AdminDashboard() {
           verifiedAt: new Date(item.updated_at).toLocaleDateString()
         }));
         setVerifiedProducts(transformed);
+      } else {
+        setVerifiedProducts([]);
       }
     } catch (error) {
       console.error('Error loading verified products:', error);
@@ -412,43 +273,60 @@ export default function AdminDashboard() {
     }
   };
 
-  // Load farmers from database
+  // Load farmers from database with contract/payment stats
   const loadFarmers = async () => {
     try {
       setLoadingFarmers(true);
-      const data = await getFarmers();
-
-      if (data && data.length > 0) {
-        // Transform DB farmers to match UI expectations
-        const mappedFarmers = data.map((f: any) => ({
-          id: f.id as string,
-          wallet: f.wallet_address as string,
-          name: f.name as string,
-          email: (f.email as string) || "",
-          phone: (f.phone as string) || "",
-          role: "farmer",
-          location: (f.location_address as string) || "Unknown Location",
-          locationLat: (f.location_lat as number) || -15.4,
-          locationLng: (f.location_lng as number) || 28.3,
-          farmSize: (f.farm_size as number) || 0,
-          crops: [] as string[],
-          joined: new Date(f.created_at).toLocaleDateString(),
-          verified: f.status === 'approved',
-          totalEarnings: 0,
-          completedMilestones: 0,
-          pendingMilestones: 0,
-          contracts: [] as any[]
-        }));
-
-        setFarmersList(mappedFarmers);
-        // Also set users list for admin views
-        setUsers(mappedFarmers);
-      }
+      const mappedFarmers = await getFarmersWithStats();
+      setFarmersList(mappedFarmers);
+      setUsers(mappedFarmers);
     } catch (error) {
       console.error("Error loading farmers:", error);
       toast.error("Failed to load farmers");
+      setFarmersList([]);
+      setUsers([]);
     } finally {
       setLoadingFarmers(false);
+    }
+  };
+
+  const loadDashboardMetrics = async () => {
+    try {
+      setLoadingDashboard(true);
+      const [stats, crops, trend, payments, activities] = await Promise.all([
+        getAdminDashboardStats(),
+        getCropDistribution(),
+        getMonthlyPaymentTrend(),
+        getRecentPayments(20),
+        getRecentGrowthActivities(5),
+      ]);
+      setDashboardStats(stats);
+      setCropData(crops);
+      setCostData(trend);
+      setRecentPayments(payments);
+      setRecentActivities(activities);
+    } catch (error) {
+      console.error("Error loading dashboard metrics:", error);
+    } finally {
+      setLoadingDashboard(false);
+    }
+  };
+
+  const loadBuyersData = async () => {
+    try {
+      setLoadingBuyers(true);
+      const [buyers, orders] = await Promise.all([
+        getBuyersWithStats(),
+        getRecentMarketplaceOrders(10),
+      ]);
+      setBuyersList(buyers);
+      setBuyerOrders(orders);
+    } catch (error) {
+      console.error("Error loading buyers:", error);
+      setBuyersList([]);
+      setBuyerOrders([]);
+    } finally {
+      setLoadingBuyers(false);
     }
   };
 
@@ -694,6 +572,8 @@ export default function AdminDashboard() {
     loadContracts();
     loadPendingVerifications();
     loadVerifiedProducts();
+    loadDashboardMetrics();
+    loadOfficersFromDB();
   }, []);
 
   useEffect(() => {
@@ -714,11 +594,20 @@ export default function AdminDashboard() {
     if (selectedView === 'contracts') {
       loadContracts();
     }
+    if (selectedView === 'buyers') {
+      loadBuyersData();
+    }
+    if (selectedView === 'payments') {
+      getRecentPayments(20).then(setRecentPayments);
+    }
+    if (selectedView === 'analytics' || selectedView === 'dashboard') {
+      loadDashboardMetrics();
+    }
   }, [selectedView]);
 
-  // Handle creating a new job
-  const handleCreateJob = (newJob: JobData) => {
-    setJobs([newJob, ...jobs]);
+  // Handle creating a new job (local only — growth activities come from farmer logs)
+  const handleCreateJob = (_newJob: JobData) => {
+    toast.success("Job logged locally. Farm activities sync from farmer milestone logs.");
   };
 
   // Handle creating a new contract
@@ -738,36 +627,20 @@ export default function AdminDashboard() {
   };
 
   // Handle farmer card click
-  const handleFarmerClick = (farmer: typeof SAMPLE_FARMERS[0]) => {
+  const handleFarmerClick = (farmer: FarmerUI) => {
     setSelectedFarmer(farmer);
     setShowFarmerModal(true);
   };
 
-  // Cost analysis data
-  const costData = [
-    { month: "Jan", cost: 150 },
-    { month: "Feb", cost: 180 },
-    { month: "Mar", cost: 220 },
-    { month: "Apr", cost: 310 },
-    { month: "May", cost: 280 },
-    { month: "Jun", cost: 300 },
-    { month: "Jul", cost: 350 },
-    { month: "Aug", cost: 386.5 },
-  ];
-
-  // Crop distribution data
-  const cropData = [
-    { name: "Mangoes", value: 8500, percentage: 35, color: "#10b981" },
-    { name: "Tomatoes", value: 6200, percentage: 28, color: "#f59e0b" },
-    { name: "Pineapples", value: 4800, percentage: 22, color: "#ef4444" },
-    { name: "Cashews", value: 3200, percentage: 15, color: "#8b5cf6" },
-  ];
+  const analyticsGrowth = computeAnalyticsGrowth(costData);
+  const totalCropValue = cropData.reduce((sum, c) => sum + c.value, 0);
+  const latestPaymentVolume = costData.length ? costData[costData.length - 1].cost : 0;
 
   const stats = {
-    totalFarmers: { value: 156, subtitle: "Active Farmers" },
-    activeContracts: { value: 89, subtitle: "Active Contracts" },
-    marketplaceListings: { value: 234, subtitle: "Active Listings" },
-    totalRevenue: { value: "ZK 2.5M", subtitle: "Platform Revenue" },
+    totalFarmers: { value: dashboardStats.activeFarmers, subtitle: "Approved Farmers" },
+    activeContracts: { value: dashboardStats.activeContracts, subtitle: "Active Contracts" },
+    marketplaceListings: { value: dashboardStats.marketplaceListings, subtitle: "Active Listings" },
+    totalRevenue: { value: formatRevenue(dashboardStats.totalRevenue), subtitle: "Completed Payments" },
   };
 
   const menuItems = [
@@ -782,13 +655,14 @@ export default function AdminDashboard() {
     { icon: TrendingUp, label: "Analytics", id: "analytics" },
     { icon: DollarSign, label: "Payments", id: "payments" },
     { icon: Award, label: "Bidding", id: "bidding" },
+    { icon: Layout, label: "Landing Page", id: "landing" },
     { icon: Settings, label: "Settings", id: "settings" },
   ];
 
   const activeMenuItem = menuItems.find((item) => item.id === selectedView) || menuItems[0];
 
   // Handle promoting a user to officer
-  const handlePromoteToOfficer = async (user: typeof SAMPLE_USERS[0]) => {
+  const handlePromoteToOfficer = async (user: FarmerUI) => {
     try {
       if (supabase) {
         await supabase.from('users').update({ role: 'officer' }).eq('id', user.id);
@@ -799,13 +673,15 @@ export default function AdminDashboard() {
       toast.success(`${user.name} has been promoted to Extension Officer!`);
       setShowPromoteModal(false);
       setSelectedUser(null);
+      loadOfficersFromDB();
+      loadFarmers();
     } catch (error) {
       toast.error("Failed to promote user");
     }
   };
 
   // Handle demoting an officer
-  const handleDemoteOfficer = async (user: typeof SAMPLE_USERS[0]) => {
+  const handleDemoteOfficer = async (user: FarmerUI) => {
     try {
       if (supabase) {
         await supabase.from('users').update({ role: 'farmer' }).eq('id', user.id);
@@ -814,6 +690,8 @@ export default function AdminDashboard() {
         u.id === user.id ? { ...u, role: "farmer" } : u
       ));
       toast.success(`${user.name} has been demoted from Officer role.`);
+      loadOfficersFromDB();
+      loadFarmers();
     } catch (error) {
       toast.error("Failed to demote officer");
     }
@@ -912,7 +790,11 @@ export default function AdminDashboard() {
         <main className="flex-1 overflow-y-auto px-6 py-6" style={{ background: "#F7F9FB" }}>
           <div className="mb-6">
             <h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, letterSpacing: "-0.03em" }} className="text-3xl text-[#0C2D3A]">{activeMenuItem.label}</h1>
-            <p style={{ fontFamily: "'Manrope', sans-serif" }} className="text-[#5A7684] mt-1 text-sm">Manage farmers, contracts, verifications, payments, and marketplace activity from one place.</p>
+            <p style={{ fontFamily: "'Manrope', sans-serif" }} className="text-[#5A7684] mt-1 text-sm">
+              {selectedView === "landing"
+                ? "Edit homepage images, copy, metrics, and farmer reviews — saved changes appear on the public site."
+                : "Manage farmers, contracts, verifications, payments, and marketplace activity from one place."}
+            </p>
           </div>
           {selectedView === "dashboard" && (
             <>
@@ -1012,20 +894,34 @@ export default function AdminDashboard() {
                       />
                     </div>
                     <button
-                      onClick={() => setShowNewJobModal(true)}
-                      className="dashboard-button-primary flex items-center space-x-2 px-4 py-2.5 text-white rounded-xl transition-all"
+                      onClick={() => { loadFarmers(); loadDashboardMetrics(); }}
+                      disabled={loadingDashboard}
+                      className="dashboard-button-secondary flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all"
                     >
-                      <Plus className="h-4 w-4" />
-                      <span className="text-sm font-semibold">New Job</span>
+                      <RefreshCw className={`h-4 w-4 ${loadingDashboard ? 'animate-spin' : ''}`} />
+                      <span className="text-sm font-semibold">Refresh</span>
                     </button>
-                    <div className="ml-2 flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg">
-                      <Sun className="h-4 w-4 text-orange-500" />
-                      <span className="text-sm font-medium text-gray-700">18°C</span>
-                    </div>
                   </div>
                   <div className="relative h-96 rounded-xl overflow-hidden">
-                    {/* Real Interactive Map */}
-                    <FarmMap />
+                    <FarmMap
+                      farms={farmersList.map(f => ({
+                        id: f.id,
+                        name: `${f.name}'s Farm`,
+                        farmer: f.name,
+                        phone: f.phone || "—",
+                        location: f.location || "Zambia",
+                        lat: f.locationLat,
+                        lng: f.locationLng,
+                        crops: f.crops,
+                        hectares: f.farmSize,
+                        status: f.verified ? "active" as const : "pending" as const,
+                        color: f.verified ? "#BFFF00" : "#f59e0b",
+                      }))}
+                      onFarmClick={(farm) => {
+                        const farmer = farmersList.find(x => x.id === farm.id);
+                        if (farmer) handleFarmerClick(farmer);
+                      }}
+                    />
                   </div>
                 </motion.div>
 
@@ -1037,58 +933,30 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className={dc.heading}>Crop Distribution</h3>
-                    <select className={dc.select}>
-                      <option>2022</option>
-                      <option>2023</option>
-                      <option>2024</option>
-                    </select>
+                    <span className={dc.sub}>By contract value</span>
                   </div>
+                  {cropData.length === 0 ? (
+                    <div className="text-center py-12 text-[#5A7684]">
+                      <Leaf className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No contract data yet</p>
+                    </div>
+                  ) : (
+                  <>
                   <div className="flex items-center justify-center mb-6">
                     <div className="relative w-48 h-48">
-                      <svg className="w-full h-full transform -rotate-90">
-                        <circle
-                          cx="96"
-                          cy="96"
-                          r="80"
-                          fill="none"
-                          stroke="#10b981"
-                          strokeWidth="24"
-                          strokeDasharray="251 503"
-                        />
-                        <circle
-                          cx="96"
-                          cy="96"
-                          r="80"
-                          fill="none"
-                          stroke="#f59e0b"
-                          strokeWidth="24"
-                          strokeDasharray="78 503"
-                          strokeDashoffset="-251"
-                        />
-                        <circle
-                          cx="96"
-                          cy="96"
-                          r="80"
-                          fill="none"
-                          stroke="#ef4444"
-                          strokeWidth="24"
-                          strokeDasharray="52 503"
-                          strokeDashoffset="-329"
-                        />
-                        <circle
-                          cx="96"
-                          cy="96"
-                          r="80"
-                          fill="none"
-                          stroke="#8b5cf6"
-                          strokeWidth="24"
-                          strokeDasharray="34 503"
-                          strokeDashoffset="-381"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <p className="text-3xl font-bold text-gray-800">54,862</p>
-                        <p className="text-sm text-gray-500">Hectares</p>
+                      <ResponsiveContainer width="100%" height={192}>
+                        <RePieChart>
+                          <Pie data={cropData as { name: string; value: number }[]} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={2}>
+                            {cropData.map((crop) => (
+                              <Cell key={crop.name} fill={crop.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v: number) => [`ZK ${Number(v).toLocaleString()}`, "Value"]} />
+                        </RePieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <p className="text-2xl font-bold text-gray-800">{formatRevenue(totalCropValue)}</p>
+                        <p className="text-xs text-gray-500">Total value</p>
                       </div>
                     </div>
                   </div>
@@ -1101,11 +969,13 @@ export default function AdminDashboard() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-bold text-gray-800">({crop.percentage}%)</p>
-                          <p className="text-xs text-gray-500">{crop.value.toLocaleString()} Ha</p>
+                          <p className="text-xs text-gray-500">ZK {crop.value.toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
                   </div>
+                  </>
+                  )}
                 </motion.div>
               </div>
 
@@ -1119,13 +989,16 @@ export default function AdminDashboard() {
                   className={`lg:col-span-2 ${dc.panel} p-6`}
                 >
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className={dc.heading}>Cost Analysis</h3>
-                    <select className={dc.select}>
-                      <option>Monthly</option>
-                      <option>Weekly</option>
-                      <option>Yearly</option>
-                    </select>
+                    <h3 className={dc.heading}>Payment Volume</h3>
+                    <span className={dc.sub}>Last 8 months</span>
                   </div>
+                  {costData.length === 0 ? (
+                    <div className="text-center py-12 text-[#5A7684]">
+                      <DollarSign className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No completed payments yet</p>
+                    </div>
+                  ) : (
+                  <>
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={costData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -1151,12 +1024,14 @@ export default function AdminDashboard() {
                   </ResponsiveContainer>
                   <div className="mt-4 flex items-center justify-center">
                     <div className={dc.metricBadge}>
-                      <p>ZK 386.50</p>
+                      <p>{formatRevenue(latestPaymentVolume)}</p>
                     </div>
                   </div>
+                  </>
+                  )}
                 </motion.div>
 
-                {/* Recent Due Jobs */}
+                {/* Recent farm activities */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1164,21 +1039,19 @@ export default function AdminDashboard() {
                   className={`${dc.panel} p-6`}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className={dc.heading}>Recent Due Jobs</h3>
-                    <button className={dc.link}>See All</button>
+                    <h3 className={dc.heading}>Recent Farm Activity</h3>
                   </div>
                   <div className="space-y-3">
-                    {[
-                      { title: "Harrowing Season", location: "ABY Farm - Bay Land" },
-                      { title: "Harrowing Season", location: "YNS Farm - ARD Land" },
-                    ].map((job, index) => (
-                      <div key={index} className={dc.listItem}>
+                    {recentActivities.length === 0 ? (
+                      <p className={dc.sub + " text-center py-6"}>No logged farm activities yet</p>
+                    ) : recentActivities.map((job) => (
+                      <div key={job.id} className={dc.listItem}>
                         <div className={dc.iconBox}>
                           <Clock className={dc.icon} />
                         </div>
                         <div className="flex-1">
                           <p className={dc.valueSm}>{job.title}</p>
-                          <p className={dc.sub}>{job.location}</p>
+                          <p className={dc.sub}>{job.location} • {job.date}</p>
                         </div>
                       </div>
                     ))}
@@ -1379,7 +1252,7 @@ export default function AdminDashboard() {
                     <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "1rem", color: "#0C2D3A" }}>Farm Locations Map</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, fontFamily: "'Manrope',sans-serif", fontSize: "0.75rem", color: "#5A7684" }}>
-                    <span>{SAMPLE_FARMERS.length} farmers</span>
+                    <span>{farmersList.length} farmers</span>
                     <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#BFFF00" }} />Verified</span>
                     <span style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b" }} />Pending</span>
                   </div>
@@ -1486,7 +1359,7 @@ export default function AdminDashboard() {
                           <p className="text-xs text-gray-500">Contracts</p>
                         </div>
                         <div className="text-center p-2 bg-white rounded-lg border border-gray-100">
-                          <p className="text-lg font-bold" style={{ color: '#0C2D3A' }}>ZK {(farmer.totalEarnings / 1000).toFixed(0)}k</p>
+                          <p className="text-lg font-bold" style={{ color: '#0C2D3A' }}>ZK {farmer.totalEarnings.toLocaleString()}</p>
                           <p className="text-xs text-gray-500">Earned</p>
                         </div>
                       </div>
@@ -1506,7 +1379,7 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {!farmer.verified && !farmer.id.startsWith('sample') && (
+                          {!farmer.verified && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1540,12 +1413,18 @@ export default function AdminDashboard() {
             const secLabel: React.CSSProperties = { ...manrope, fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: BK.sub, borderBottom: `1px solid rgba(12,45,58,0.1)`, paddingBottom: 8, marginBottom: 16 };
             const bodySpec: React.CSSProperties = { ...manrope, fontSize: "1rem", color: BK.sub, lineHeight: 1.6, maxWidth: "50ch" };
 
-            const BUYERS = [
-              { name: "Fresh Foods Ltd", orders: 12, spent: "ZK 45,000", location: "Lusaka", contact: "john@freshfoods.zm", status: "active" },
-              { name: "Market Suppliers Co", orders: 8, spent: "ZK 32,000", location: "Ndola", contact: "info@marketsuppliers.zm", status: "active" },
-              { name: "Agro Exports", orders: 15, spent: "ZK 68,000", location: "Kitwe", contact: "sales@agroexports.zm", status: "active" },
-              { name: "Farm Fresh Zambia", orders: 6, spent: "ZK 28,000", location: "Lusaka", contact: "orders@farmfresh.zm", status: "pending" },
-            ];
+            const BUYERS = buyersList;
+            const totalOrders = BUYERS.reduce((s, b) => s + b.orders, 0);
+            const totalSpent = BUYERS.reduce((s, b) => s + b.spent, 0);
+            const avgOrder = totalOrders > 0 ? Math.round(totalSpent / totalOrders) : 0;
+
+            if (loadingBuyers) {
+              return (
+                <div className="flex items-center justify-center py-24">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#0C2D3A]" />
+                </div>
+              );
+            }
 
             return (
               <>
@@ -1566,10 +1445,10 @@ export default function AdminDashboard() {
                     <div style={secLabel}>01. Key Metrics</div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24, marginBottom: 48 }}>
                       {[
-                        { label: "Total Buyers", value: String(BUYERS.length), bg: BK.lime, color: BK.deep, name: "Active Network" },
-                        { label: "Total Orders", value: String(BUYERS.reduce((s, b) => s + b.orders, 0)), bg: BK.deep, color: "#fff", name: "Completed" },
-                        { label: "Total Spent", value: `ZK ${(45000 + 32000 + 68000 + 28000).toLocaleString()}`, bg: BK.stone, color: BK.deep, name: "Revenue" },
-                        { label: "Avg Order Value", value: "ZK 4,220", bg: "#fff", color: BK.deep, name: "Per Transaction" },
+                        { label: "Total Buyers", value: String(BUYERS.length), bg: BK.lime, color: BK.deep, name: "Registered" },
+                        { label: "Total Orders", value: String(totalOrders), bg: BK.deep, color: "#fff", name: "Marketplace" },
+                        { label: "Total Spent", value: `ZK ${totalSpent.toLocaleString()}`, bg: BK.stone, color: BK.deep, name: "Revenue" },
+                        { label: "Avg Order Value", value: avgOrder > 0 ? `ZK ${avgOrder.toLocaleString()}` : "—", bg: "#fff", color: BK.deep, name: "Per Transaction" },
                       ].map((s, i) => (
                         <motion.div key={i} whileHover={{ scale: 1.02 }} transition={{ duration: 0.3 }}
                           style={{ background: s.bg, color: s.color, borderRadius: BK.rd, padding: 28, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 200, position: "relative", overflow: "hidden", border: s.bg === "#fff" ? "1px solid rgba(0,0,0,0.05)" : "none", cursor: "default" }}>
@@ -1587,12 +1466,17 @@ export default function AdminDashboard() {
                   <div style={{ padding: "0 40px" }}>
                     <div style={secLabel}>02. Registered Buyers</div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24, marginBottom: 48 }}>
-                      {BUYERS.map((buyer, i) => (
-                        <motion.div key={i} whileHover={{ y: -3 }} transition={{ duration: 0.25 }}
-                          style={{ background: "#fff", padding: 32, borderRadius: BK.rd, border: "1px solid rgba(12,45,58,0.06)", display: "flex", flexDirection: "column", gap: 16, cursor: "pointer" }}>
+                      {BUYERS.length === 0 ? (
+                        <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 0", background: "#fff", borderRadius: BK.rd, border: "1px dashed rgba(12,45,58,0.15)" }}>
+                          <User className="h-12 w-12 mx-auto mb-3" style={{ color: "rgba(12,45,58,0.2)" }} />
+                          <p style={{ ...manrope, color: BK.sub }}>No buyer profiles registered yet</p>
+                        </div>
+                      ) : BUYERS.map((buyer) => (
+                        <motion.div key={buyer.id} whileHover={{ y: -3 }} transition={{ duration: 0.25 }}
+                          style={{ background: "#fff", padding: 32, borderRadius: BK.rd, border: "1px solid rgba(12,45,58,0.06)", display: "flex", flexDirection: "column", gap: 16 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                             <div>
-                              <h3 style={{ ...syne, fontSize: "1.25rem", color: BK.deep, marginBottom: 4 }}>{buyer.name}</h3>
+                              <h3 style={{ ...syne, fontSize: "1.25rem", color: BK.deep, marginBottom: 4 }}>{buyer.company || buyer.name}</h3>
                               <p style={{ ...manrope, fontSize: "0.85rem", color: BK.sub }}>{buyer.location}</p>
                             </div>
                             <span style={{ display: "inline-flex", padding: "6px 16px", background: buyer.status === "active" ? `rgba(191,255,0,0.15)` : "rgba(44,82,99,0.05)", color: buyer.status === "active" ? BK.deep : BK.mid, borderRadius: BK.pill, fontWeight: 600, fontSize: "0.8rem", ...manrope }}>
@@ -1601,83 +1485,35 @@ export default function AdminDashboard() {
                           </div>
                           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                             <span style={{ display: "inline-flex", padding: "6px 16px", background: "rgba(44,82,99,0.05)", color: BK.deep, borderRadius: BK.pill, fontWeight: 600, fontSize: "0.8rem", border: "1px solid rgba(44,82,99,0.1)", ...manrope }}>{buyer.orders} Orders</span>
-                            <span style={{ display: "inline-flex", padding: "6px 16px", background: "rgba(44,82,99,0.05)", color: BK.deep, borderRadius: BK.pill, fontWeight: 600, fontSize: "0.8rem", border: "1px solid rgba(44,82,99,0.1)", ...manrope }}>{buyer.spent}</span>
+                            <span style={{ display: "inline-flex", padding: "6px 16px", background: "rgba(44,82,99,0.05)", color: BK.deep, borderRadius: BK.pill, fontWeight: 600, fontSize: "0.8rem", border: "1px solid rgba(44,82,99,0.1)", ...manrope }}>ZK {buyer.spent.toLocaleString()}</span>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
                             <Mail className="h-4 w-4" style={{ color: BK.sub }} />
-                            <span style={{ ...manrope, fontSize: "0.85rem", color: BK.sub }}>{buyer.contact}</span>
-                          </div>
-                          <div style={{ borderTop: "1px solid rgba(12,45,58,0.06)", paddingTop: 12, marginTop: 4 }}>
-                            <span style={{ ...syne, fontWeight: 700, fontSize: "0.85rem", color: BK.deep, textDecoration: "none", position: "relative", cursor: "pointer" }}>
-                              View Details →
-                            </span>
+                            <span style={{ ...manrope, fontSize: "0.85rem", color: BK.sub }}>{buyer.email || buyer.phone || "No contact"}</span>
                           </div>
                         </motion.div>
                       ))}
                     </div>
                   </div>
 
-                  {/* ── Interface Mockup: Recent Activity ── */}
                   <div style={{ padding: "0 40px 48px" }}>
-                    <div style={secLabel}>03. Activity Overview</div>
-                    <div style={{ background: BK.deep, borderRadius: BK.rd, padding: 40, color: "#fff", position: "relative", overflow: "hidden" }}>
-                      {/* Decorative glow */}
-                      <div style={{ position: "absolute", top: "-50%", right: "-20%", width: 600, height: 600, background: "radial-gradient(circle, rgba(191,255,0,0.1) 0%, rgba(191,255,0,0) 70%)", borderRadius: "50%", pointerEvents: "none" }} />
-
-                      {/* Mock nav */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 24, marginBottom: 32 }}>
-                        <span style={{ ...syne, fontWeight: 800, fontSize: "1.25rem" }}>AGROCHAIN 360<span style={{ color: BK.lime }}>.</span></span>
-                        <div style={{ display: "flex", gap: 20, ...manrope, fontSize: "0.85rem", fontWeight: 500 }}>
-                          <span style={{ opacity: 0.8 }}>Buyers</span>
-                          <span style={{ opacity: 0.8 }}>Orders</span>
-                          <span style={{ opacity: 0.8 }}>Analytics</span>
-                        </div>
-                      </div>
-
-                      {/* Mock hero */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 40, alignItems: "center" }}>
-                        <div>
-                          <h2 style={{ ...syne, fontWeight: 800, fontSize: "clamp(1.5rem, 3vw, 2.75rem)", lineHeight: 1, marginBottom: 16 }}>
-                            VERIFIED<br /><span style={{ color: BK.lime }}>SUPPLY CHAIN.</span>
-                          </h2>
-                          <p style={{ ...manrope, fontSize: "0.95rem", color: "rgba(255,255,255,0.65)", marginBottom: 24, maxWidth: 380 }}>
-                            Direct access to traceable, quality-verified agricultural produce from trusted Zambian farmers.
-                          </p>
-                          <button style={{ display: "inline-flex", alignItems: "center", background: BK.lime, color: BK.deep, ...syne, fontWeight: 700, fontSize: "0.9rem", padding: "14px 32px", borderRadius: BK.pill, border: "none", cursor: "pointer", boxShadow: "0 4px 20px rgba(191,255,0,0.3)", transition: "all 0.3s" }}
-                            onMouseEnter={e => { e.currentTarget.style.background = BK.limeHover; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 30px rgba(191,255,0,0.5)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = BK.lime; e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(191,255,0,0.3)"; }}>
-                            Browse Marketplace
-                          </button>
-                        </div>
-                        <div style={{ background: "rgba(255,255,255,0.05)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: BK.rd, padding: 28, minHeight: 240, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-                          <div style={{ ...syne, fontWeight: 700, fontSize: "1.25rem", marginBottom: 4 }}>Top Buyer</div>
-                          <div style={{ ...manrope, fontSize: "0.85rem", opacity: 0.7, marginBottom: 4 }}>Agro Exports · ZK 68,000</div>
-                          <div style={{ ...manrope, fontSize: "0.8rem", opacity: 0.5 }}>15 orders • Kitwe, Zambia</div>
-                          <div style={{ marginTop: 16 }}>
-                            <span style={{ display: "inline-flex", padding: "6px 16px", background: "rgba(191,255,0,0.2)", color: BK.lime, borderRadius: BK.pill, fontWeight: 600, fontSize: "0.8rem", ...manrope }}>Top Performer</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Recent orders strip */}
-                      <div style={{ marginTop: 32, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24 }}>
-                        <div style={{ ...manrope, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: "rgba(255,255,255,0.4)", marginBottom: 16 }}>Recent Orders</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-                          {[
-                            { buyer: "Fresh Foods Ltd", crop: "Mangoes", amount: "ZK 8,500", date: "Mar 7" },
-                            { buyer: "Agro Exports", crop: "Cashews", amount: "ZK 12,000", date: "Mar 6" },
-                            { buyer: "Market Suppliers", crop: "Tomatoes", amount: "ZK 5,200", date: "Mar 5" },
-                          ].map((o, i) => (
-                            <div key={i} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={secLabel}>03. Recent Orders</div>
+                    <div style={{ background: BK.deep, borderRadius: BK.rd, padding: 32, color: "#fff" }}>
+                      {buyerOrders.length === 0 ? (
+                        <p style={{ ...manrope, opacity: 0.7, textAlign: "center", padding: "24px 0" }}>No marketplace orders recorded yet</p>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          {buyerOrders.map((o) => (
+                            <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
                               <div>
-                                <div style={{ ...manrope, fontWeight: 600, fontSize: "0.85rem" }}>{o.buyer}</div>
-                                <div style={{ ...manrope, fontSize: "0.75rem", opacity: 0.5 }}>{o.crop} • {o.date}</div>
+                                <div style={{ ...syne, fontWeight: 700, fontSize: "0.95rem" }}>{o.buyer}</div>
+                                <div style={{ ...manrope, fontSize: "0.75rem", opacity: 0.6 }}>{o.crop} • {o.date}</div>
                               </div>
                               <span style={{ ...syne, fontWeight: 700, fontSize: "0.9rem", color: BK.lime }}>{o.amount}</span>
                             </div>
                           ))}
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1694,7 +1530,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#0C2D3A', opacity: 0.7 }}>Active Officers</p>
-                      <p className="text-3xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>{users.filter(u => u.role === 'officer').length}</p>
+                      <p className="text-3xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>{dbOfficers.length}</p>
                     </div>
                     <div className="p-3 rounded-xl" style={{ background: '#0C2D3A' }}>
                       <Shield className="h-6 w-6" style={{ color: '#BFFF00' }} />
@@ -1705,7 +1541,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: 'rgba(255,255,255,0.7)' }}>Eligible for Promotion</p>
-                      <p className="text-3xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#fff' }}>{users.filter(u => u.role === 'farmer' && u.verified).length}</p>
+                      <p className="text-3xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#fff' }}>{farmersList.filter(f => f.verified).length}</p>
                     </div>
                     <div className="p-3 rounded-xl" style={{ background: 'rgba(191,255,0,0.2)' }}>
                       <UserPlus className="h-6 w-6" style={{ color: '#BFFF00' }} />
@@ -1716,7 +1552,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>Total Verifications</p>
-                      <p className="text-3xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>176</p>
+                      <p className="text-3xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>{dashboardStats.completedVerifications}</p>
                     </div>
                     <div className="p-3 rounded-xl" style={{ background: 'rgba(12,45,58,0.08)' }}>
                       <CheckCircle2 className="h-6 w-6" style={{ color: '#0C2D3A' }} />
@@ -1781,6 +1617,33 @@ export default function AdminDashboard() {
                         <p className="text-xs" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>{officer.phone || 'No phone'}</p>
                         <p className="text-xs font-mono mt-1" style={{ color: '#5A7684' }}>{officer.wallet_address?.slice(0, 10)}...{officer.wallet_address?.slice(-6)}</p>
                         <p className="text-xs mt-1" style={{ fontFamily: "'Manrope', sans-serif", color: '#BFFF00' }}>Joined: {officer.created_at ? new Date(officer.created_at).toLocaleDateString() : 'Unknown'}</p>
+                        <div className="mt-4 pt-3 border-t border-gray-100">
+                          <button
+                            onClick={() => handleDemoteOfficer({
+                              id: officer.id,
+                              wallet: officer.wallet_address || '',
+                              name: officer.name || 'Officer',
+                              email: officer.email || '',
+                              phone: officer.phone || '',
+                              role: 'officer',
+                              location: '',
+                              locationLat: 0,
+                              locationLng: 0,
+                              farmSize: 0,
+                              crops: [],
+                              joined: '',
+                              verified: true,
+                              totalEarnings: 0,
+                              completedMilestones: 0,
+                              pendingMilestones: 0,
+                              contracts: [],
+                            })}
+                            className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center space-x-1"
+                          >
+                            <XCircle className="h-4 w-4" />
+                            <span>Demote Officer</span>
+                          </button>
+                        </div>
                       </div>
                     ))}
                     {dbOfficers.length === 0 && (
@@ -1791,53 +1654,6 @@ export default function AdminDashboard() {
                     )}
                   </div>
                 )}
-              </div>
-
-              {/* Local/Sample Officers */}
-              <div className="rounded-2xl shadow-sm p-8" style={{ background: '#fff', border: '1px solid rgba(12,45,58,0.06)' }}>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Session Officers</h2>
-                    <p className="mt-1" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>Officers promoted during this session (local state)</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {users.filter(u => u.role === 'officer').map((officer, index) => (
-                    <div key={officer.id} className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 transition-colors">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-lg font-bold text-blue-700">{officer.name.charAt(0)}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Shield className="h-4 w-4 text-blue-600" />
-                          <span className="text-xs font-medium text-blue-600">Officer</span>
-                        </div>
-                      </div>
-                      <h3 className="font-semibold text-gray-900">{officer.name}</h3>
-                      <p className="text-sm text-gray-600 flex items-center mt-1">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {officer.location}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-2">{officer.email}</p>
-                      <p className="text-xs font-mono text-gray-400 mt-1">{officer.wallet.slice(0, 10)}...{officer.wallet.slice(-6)}</p>
-                      <div className="mt-4 pt-3 border-t border-gray-100">
-                        <button
-                          onClick={() => handleDemoteOfficer(officer)}
-                          className="w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center space-x-1"
-                        >
-                          <XCircle className="h-4 w-4" />
-                          <span>Demote Officer</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {users.filter(u => u.role === 'officer').length === 0 && (
-                    <div className="col-span-full text-center py-8">
-                      <Shield className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500">No session officers. Promote verified users above.</p>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           )}
@@ -2420,7 +2236,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="space-y-3">
-                  {users.filter(u => u.role === 'farmer' && u.verified).map((user) => (
+                  {farmersList.filter(f => f.verified).map((user) => (
                     <div
                       key={user.id}
                       onClick={() => setSelectedUser(user)}
@@ -2443,7 +2259,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   ))}
-                  {users.filter(u => u.role === 'farmer' && u.verified).length === 0 && (
+                  {farmersList.filter(f => f.verified).length === 0 && (
                     <div className="text-center py-8">
                       <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-gray-500">No eligible users to promote</p>
@@ -2485,9 +2301,9 @@ export default function AdminDashboard() {
                 <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>01. Key Metrics</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24, marginBottom: 48 }}>
                   {[
-                    { label: "Growth Rate", value: "+23%", bg: "#BFFF00", color: "#0C2D3A", sub: "vs last month" },
-                    { label: "User Engagement", value: "87%", bg: "#0C2D3A", color: "#fff", sub: "active users" },
-                    { label: "Revenue Growth", value: "+31%", bg: "#E6E2D6", color: "#0C2D3A", sub: "this quarter" },
+                    { label: "Approved Farmers", value: String(dashboardStats.activeFarmers), bg: "#BFFF00", color: "#0C2D3A", sub: "registered & approved" },
+                    { label: "Active Contracts", value: String(dashboardStats.activeContracts), bg: "#0C2D3A", color: "#fff", sub: "in progress" },
+                    { label: "Payment Volume Trend", value: analyticsGrowth.revenueLabel, bg: "#E6E2D6", color: "#0C2D3A", sub: "month over month" },
                   ].map((s, i) => (
                     <motion.div key={i} whileHover={{ scale: 1.02 }} style={{ background: s.bg, color: s.color, borderRadius: 24, padding: 28, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 200, cursor: "default" }}>
                       <span style={{ fontFamily: "'Manrope',sans-serif", fontWeight: 600, fontSize: "0.85rem", opacity: 0.8 }}>{s.label}</span>
@@ -2500,8 +2316,11 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div style={{ padding: "0 40px 48px" }}>
-                <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>02. Cost Analysis</div>
+                <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>02. Payment Volume</div>
                 <div style={{ background: "#fff", borderRadius: 24, border: "1px solid rgba(12,45,58,0.06)", padding: 32 }}>
+                  {costData.length === 0 ? (
+                    <p style={{ fontFamily: "'Manrope',sans-serif", color: "#5A7684", textAlign: "center", padding: "48px 0" }}>No completed payment history yet</p>
+                  ) : (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={costData}>
@@ -2513,6 +2332,7 @@ export default function AdminDashboard() {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2541,12 +2361,12 @@ export default function AdminDashboard() {
               <div style={{ padding: "0 40px 48px" }}>
                 <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>02. Recent Transactions</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {[
-                    { id: "TXN001", from: "Fresh Foods Ltd", to: "John Mwale", amount: "K15,000", status: "completed", date: "2024-11-07", hash: "0x742d35..." },
-                    { id: "TXN002", from: "Market Suppliers", to: "Mary Banda", amount: "K12,000", status: "completed", date: "2024-11-07", hash: "0x8ba1f1..." },
-                    { id: "TXN003", from: "Agro Exports", to: "Peter Phiri", amount: "K8,500", status: "processing", date: "2024-11-07", hash: "0x9f2df0..." },
-                    { id: "TXN004", from: "Farm Fresh", to: "Sarah Phiri", amount: "K10,000", status: "completed", date: "2024-11-06", hash: "0x3c8a2b..." },
-                  ].map((p) => (
+                  {recentPayments.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "48px 0", background: "#fff", borderRadius: 16, border: "1px dashed rgba(12,45,58,0.15)" }}>
+                      <DollarSign className="h-12 w-12 mx-auto mb-3" style={{ color: "rgba(12,45,58,0.2)" }} />
+                      <p style={{ fontFamily: "'Manrope',sans-serif", color: "#5A7684" }}>No payment transactions recorded yet</p>
+                    </div>
+                  ) : recentPayments.map((p) => (
                     <div key={p.id} style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "border-color .2s" }}
                       onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(191,255,0,0.4)")}
                       onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(12,45,58,0.06)")}>
@@ -2571,6 +2391,10 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+          )}
+
+          {selectedView === "landing" && (
+            <LandingPageEditor />
           )}
 
           {/* Settings View — ARKTOS */}
@@ -2630,7 +2454,7 @@ export default function AdminDashboard() {
         isOpen={showNewJobModal}
         onCloseAction={() => setShowNewJobModal(false)}
         onCreateJobAction={handleCreateJob}
-        farmers={SAMPLE_FARMERS.map(f => ({ id: f.id, name: f.name, location: f.location }))}
+        farmers={farmersList.map(f => ({ id: f.id, name: f.name, location: f.location }))}
       />
 
       {/* Create Contract Modal */}

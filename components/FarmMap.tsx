@@ -3,76 +3,20 @@
 import { useEffect, useState } from "react";
 import { MapPin, Leaf, User, Phone, TrendingUp } from "lucide-react";
 
-// Real Zambian farm locations for testing
-export const SAMPLE_FARMS = [
-  {
-    id: "farm-1",
-    name: "Mkushi Farm Block",
-    farmer: "John Mwale",
-    phone: "+260 97 123 4567",
-    location: "Mkushi, Central Province",
-    lat: -13.6167,
-    lng: 29.4000,
-    crops: ["Maize", "Soybeans", "Wheat"],
-    hectares: 150,
-    status: "active" as const,
-    color: "#22c55e",
-  },
-  {
-    id: "farm-2", 
-    name: "Chisamba Agricultural Estate",
-    farmer: "Mary Banda",
-    phone: "+260 96 234 5678",
-    location: "Chisamba, Central Province",
-    lat: -14.9833,
-    lng: 28.0667,
-    crops: ["Tomatoes", "Onions", "Cabbage"],
-    hectares: 85,
-    status: "active" as const,
-    color: "#eab308",
-  },
-  {
-    id: "farm-3",
-    name: "Mazabuka Sugar Plantation",
-    farmer: "Peter Phiri",
-    phone: "+260 95 345 6789",
-    location: "Mazabuka, Southern Province",
-    lat: -15.8667,
-    lng: 27.7500,
-    crops: ["Sugarcane", "Mangoes"],
-    hectares: 320,
-    status: "active" as const,
-    color: "#ef4444",
-  },
-  {
-    id: "farm-4",
-    name: "Mpongwe Wheat Farm",
-    farmer: "Grace Tembo",
-    phone: "+260 97 456 7890",
-    location: "Mpongwe, Copperbelt Province",
-    lat: -13.5167,
-    lng: 28.1500,
-    crops: ["Wheat", "Barley", "Sunflower"],
-    hectares: 200,
-    status: "pending" as const,
-    color: "#f97316",
-  },
-  {
-    id: "farm-5",
-    name: "Chipata Groundnut Cooperative",
-    farmer: "David Zulu",
-    phone: "+260 96 567 8901",
-    location: "Chipata, Eastern Province",
-    lat: -13.6333,
-    lng: 32.6500,
-    crops: ["Groundnuts", "Cotton", "Sunflower"],
-    hectares: 175,
-    status: "active" as const,
-    color: "#8b5cf6",
-  },
-];
-
-export type Farm = typeof SAMPLE_FARMS[0];
+// Default empty — pass real farms from AdminDashboard
+export type Farm = {
+  id: string;
+  name: string;
+  farmer: string;
+  phone: string;
+  location: string;
+  lat: number;
+  lng: number;
+  crops: string[];
+  hectares: number;
+  status: "active" | "pending";
+  color: string;
+};
 
 interface FarmMapProps {
   farms?: Farm[];
@@ -80,7 +24,7 @@ interface FarmMapProps {
   selectedFarmId?: string;
 }
 
-export default function FarmMap({ farms = SAMPLE_FARMS, onFarmClick, selectedFarmId }: FarmMapProps) {
+export default function FarmMap({ farms = [], onFarmClick, selectedFarmId }: FarmMapProps) {
   const [isClient, setIsClient] = useState(false);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
   const [MapComponent, setMapComponent] = useState<React.ComponentType<any> | null>(null);

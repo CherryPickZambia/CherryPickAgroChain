@@ -813,6 +813,20 @@ CREATE TABLE IF NOT EXISTS processing_records (
 );
 
 -- ---------------------------------------------------------------------------
+-- LANDING PAGE CMS (single-row JSON document)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS landing_page_content (
+  id TEXT PRIMARY KEY DEFAULT 'main',
+  content JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_by TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO landing_page_content (id, content)
+VALUES ('main', '{}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
 -- RPC: decrement listing quantity after order
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION update_listing_quantity(listing_id UUID, quantity_sold NUMERIC)
@@ -909,6 +923,10 @@ DROP TRIGGER IF EXISTS trg_verification_requests_updated_at ON verification_requ
 CREATE TRIGGER trg_verification_requests_updated_at
   BEFORE UPDATE ON verification_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_landing_page_content_updated_at ON landing_page_content;
+CREATE TRIGGER trg_landing_page_content_updated_at
+  BEFORE UPDATE ON landing_page_content FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- ---------------------------------------------------------------------------
 -- ROW LEVEL SECURITY (permissive — app uses wallet auth, not Supabase Auth)
 -- ---------------------------------------------------------------------------
@@ -924,7 +942,7 @@ BEGIN
     'growth_activities', 'payments', 'escrow_wallets', 'escrow_transactions',
     'iot_readings', 'ratings', 'farmer_updates',
     'crop_production_logs', 'field_inspections', 'harvest_records',
-    'transport_records', 'processing_records'
+    'transport_records', 'processing_records', 'landing_page_content'
   ]
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);

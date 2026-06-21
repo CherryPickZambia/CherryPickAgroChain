@@ -12,9 +12,13 @@ import BuyerDashboard from "./BuyerDashboard";
 import OfficerDashboard from "./OfficerDashboard";
 import AdminDashboard from "./AdminDashboard";
 import PublicPageLoader from "./PublicPageLoader";
+import Logo from "./Logo";
 import { getOrCreateUser, getUserByWallet } from "@/lib/supabaseService";
 import VerifierOnboarding, { VerifierData } from "./VerifierOnboarding";
 import toast from "react-hot-toast";
+import { AuthButton } from "@coinbase/cdp-react";
+import { Sprout, ShoppingBag, Search, ChevronRight, AlertTriangle, Check } from "lucide-react";
+import { dc, D, syne, manrope } from "@/lib/dashboardTheme";
 
 // Role handling is now managed securely via Supabase DB. Admin/Officer assignments are managed in the database directly.
 
@@ -165,126 +169,113 @@ export default function Dashboard() {
     );
   }
 
+  const roleCards = [
+    {
+      key: "farmer" as const,
+      title: "Farmer",
+      description: "Create contracts, track milestones, and receive secure payments for your produce.",
+      features: ["Create smart contracts", "List produce on marketplace", "Receive crypto payments"],
+      cta: "Get Started as Farmer",
+      icon: Sprout,
+      onClick: () => handleRoleSelection("farmer"),
+    },
+    {
+      key: "buyer" as const,
+      title: "Buyer",
+      description: "Browse the marketplace and purchase fresh produce directly from verified farmers.",
+      features: ["Browse verified listings", "Place bulk orders", "Track deliveries"],
+      cta: "Start Shopping",
+      icon: ShoppingBag,
+      onClick: () => handleRoleSelection("buyer"),
+    },
+    {
+      key: "verifier" as const,
+      title: "Verifier",
+      description: "Verify farmer milestones, conduct field inspections, and earn rewards.",
+      features: ["Professional or freelance", "Verify crop milestones", "Earn verification fees"],
+      cta: "Become a Verifier",
+      icon: Search,
+      onClick: () => setShowVerifierOnboarding(true),
+    },
+  ];
+
   // ONLY show role selection if we are DEFINITELY not loading AND have no role
   if (!userRole) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#f0f7f4] via-white to-[#f0f7f4]">
-        <Header />
-        <div className="max-w-6xl mx-auto px-4 py-16">
-          <div className="text-center mb-16 fade-in">
-            <div className="inline-flex items-center space-x-2 bg-[#f0f7f4] px-4 py-2 rounded-full mb-6">
-              <span className="text-sm font-semibold text-[#2d5f3f]">Welcome to Cherry Pick!</span>
+      <div className="min-h-screen dashboard-shell" style={{ background: D.surface }}>
+        <header
+          className="sticky top-0 z-40 border-b px-4 sm:px-6 py-3 flex items-center justify-between"
+          style={{ background: D.white, borderColor: "rgba(12,45,58,0.08)" }}
+        >
+          <div className="flex items-center gap-3">
+            <Logo size={36} />
+            <div>
+              <p className="text-sm font-bold" style={{ ...syne, color: D.deep }}>Cherry Pick</p>
+              <p className="text-xs" style={{ ...manrope, color: D.muted }}>AgroChain platform</p>
             </div>
-            <h1 className="text-5xl font-bold text-[#1a1a1a] mb-4">Choose Your Role</h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-4">Select how you'll use Cherry Pick</p>
-            <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-full border border-amber-200">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <span className="text-sm font-medium">This is a one-time choice and cannot be changed later</span>
+          </div>
+          <AuthButton />
+        </header>
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+          <div className="text-center mb-12 fade-in">
+            <span className={dc.badgeLime}>Welcome to Cherry Pick</span>
+            <h1
+              className="text-4xl sm:text-5xl font-bold mt-6 mb-3"
+              style={{ ...syne, color: D.deep }}
+            >
+              Choose Your Role
+            </h1>
+            <p className="text-lg max-w-2xl mx-auto" style={{ ...manrope, color: D.muted }}>
+              Select how you will use Cherry Pick on the platform
+            </p>
+            <div className={`${dc.alertBox} inline-flex items-center gap-2 mt-6 text-left max-w-xl mx-auto`}>
+              <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: D.deep }} />
+              <span className="text-sm font-medium" style={{ ...manrope, color: D.deep }}>
+                This is a one-time choice and cannot be changed later
+              </span>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            <button
-              onClick={() => handleRoleSelection("farmer")}
-              className="card-premium group text-left relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7fb069]/10 to-transparent rounded-full -mr-16 -mt-16"></div>
-              <div className="relative">
-                <div className="bg-gradient-to-br from-[#7fb069] to-[#2d5f3f] w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
-                  <span className="text-4xl">🌾</span>
-                </div>
-                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-3">Farmer</h3>
-                <p className="text-gray-600 leading-relaxed mb-6">
-                  Create contracts, track milestones, and receive secure payments for your produce
-                </p>
-                <ul className="text-sm text-gray-500 space-y-2 mb-6">
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span> Create smart contracts
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span> List produce on marketplace
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span> Receive crypto payments
-                  </li>
-                </ul>
-                <div className="flex items-center text-[#2d5f3f] font-semibold group-hover:translate-x-2 transition-transform">
-                  <span>Get Started as Farmer</span>
-                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => handleRoleSelection("buyer")}
-              className="card-premium group text-left relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7fb069]/10 to-transparent rounded-full -mr-16 -mt-16"></div>
-              <div className="relative">
-                <div className="bg-gradient-to-br from-[#7fb069] to-[#2d5f3f] w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
-                  <span className="text-4xl">🛒</span>
-                </div>
-                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-3">Buyer</h3>
-                <p className="text-gray-600 leading-relaxed mb-6">
-                  Browse marketplace, purchase fresh produce directly from verified farmers
-                </p>
-                <ul className="text-sm text-gray-500 space-y-2 mb-6">
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span> Browse verified listings
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span> Place bulk orders
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span> Track deliveries
-                  </li>
-                </ul>
-                <div className="flex items-center text-[#2d5f3f] font-semibold group-hover:translate-x-2 transition-transform">
-                  <span>Start Shopping</span>
-                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </button>
-
-            {/* Verifier Option */}
-            <button
-              onClick={() => setShowVerifierOnboarding(true)}
-              className="card-premium group text-left relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7fb069]/10 to-transparent rounded-full -mr-16 -mt-16"></div>
-              <div className="relative">
-                <div className="bg-gradient-to-br from-[#7fb069] to-[#2d5f3f] w-16 h-16 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
-                  <span className="text-4xl">🔍</span>
-                </div>
-                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-3">Verifier</h3>
-                <p className="text-gray-600 leading-relaxed mb-6">
-                  Verify farmer milestones, conduct field inspections, and earn rewards
-                </p>
-                <ul className="text-sm text-gray-500 space-y-2 mb-6">
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span> Professional or Freelance
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span> Verify crop milestones
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="text-emerald-500">✓</span> Earn verification fees
-                  </li>
-                </ul>
-                <div className="flex items-center text-[#2d5f3f] font-semibold group-hover:translate-x-2 transition-transform">
-                  <span>Become a Verifier</span>
-                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </button>
+          <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+            {roleCards.map((role) => {
+              const Icon = role.icon;
+              return (
+                <button
+                  key={role.key}
+                  type="button"
+                  onClick={role.onClick}
+                  className={`${dc.statCard} group text-left p-6 border border-transparent hover:border-[#BFFF00]/40 hover:shadow-md transition-all`}
+                  style={{ background: D.white }}
+                >
+                  <div className={`${dc.iconBoxLime} w-14 h-14 mb-5 group-hover:scale-105 transition-transform`}>
+                    <Icon className={dc.iconLime} style={{ width: 24, height: 24 }} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2" style={{ ...syne, color: D.deep }}>
+                    {role.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed mb-5" style={{ ...manrope, color: D.muted }}>
+                    {role.description}
+                  </p>
+                  <ul className="space-y-2 mb-6">
+                    {role.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-center gap-2 text-sm"
+                        style={{ ...manrope, color: D.secondary }}
+                      >
+                        <Check className="h-4 w-4 shrink-0" style={{ color: D.deep }} />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className={`${dc.link} flex items-center group-hover:translate-x-1 transition-transform`}>
+                    <span>{role.cta}</span>
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -292,7 +283,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen dashboard-shell" style={{ background: D.surface }}>
       {userRole !== "admin" && <Header userRole={userRole} />}
       <div className="fade-in">
         <ErrorBoundary fallbackMessage="An error occurred loading this dashboard. Please refresh.">
