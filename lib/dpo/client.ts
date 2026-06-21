@@ -2,6 +2,8 @@
  * Client-side helpers for DPO hosted card checkout.
  */
 
+export type DpoCallbackContext = 'marketplace' | 'wallet';
+
 export interface DpoCreateTokenRequest {
   reference: string;
   amount: number;
@@ -10,6 +12,8 @@ export interface DpoCreateTokenRequest {
   email?: string;
   phone?: string;
   description?: string;
+  /** Where DPO should redirect after payment (defaults to marketplace checkout). */
+  callback?: DpoCallbackContext;
 }
 
 export interface DpoCreateTokenResponse {
@@ -61,3 +65,4 @@ export async function verifyDpoCardPayment(transToken: string): Promise<DpoVerif
 }
 
 export const DPO_PENDING_CHECKOUT_KEY = 'agrochain_dpo_pending_checkout';
+export const DPO_PENDING_WALLET_DEPOSIT_KEY = 'agrochain_dpo_pending_wallet_deposit';

@@ -31,6 +31,7 @@ import { supabase } from "@/lib/supabase";
 import { encodeFunctionData } from "viem";
 import { lencoService, type Bank } from "@/lib/lenco-service";
 import { pay, getPaymentStatus } from "@base-org/account";
+import { DPO_PENDING_WALLET_DEPOSIT_KEY, startDpoCardPayment } from "@/lib/dpo/client";
 
 // USDC contract on Base Mainnet
 const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string}`;
@@ -124,10 +125,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
   const [depositAmount, setDepositAmount] = useState('');
   const [depositOperator, setDepositOperator] = useState<'mtn' | 'airtel' | 'zamtel'>('mtn');
   const [depositPhone, setDepositPhone] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCVC, setCardCVC] = useState('');
+  const [cardContact, setCardContact] = useState({ fullName: '', email: '', phone: '' });
   const [depositing, setDepositing] = useState(false);
   const [cryptoAmount, setCryptoAmount] = useState('');
 
@@ -553,66 +551,53 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           toast.error('Please enter a valid amount');
           return;
         }
-        if (!cardName || !cardNumber || !cardExpiry || !cardCVC) {
-          toast.error('Please fill in all card details');
+        if (!walletAddress) {
+          toast.error('Connect wallet first');
           return;
         }
 
-        const [expiryMonth, expiryYear] = cardExpiry.split('/');
         const cardReference = `DEP-CARD-${Date.now()}`;
-        const [firstName, ...lastNameParts] = (cardName || userName || 'Cherry Pick Admin').trim().split(/\s+/);
-        const result = await lencoService.collectCard({
-          amount: parseFloat(depositAmount),
-          email: userEmail || 'admin@cherrypick.africa',
-          reference: cardReference,
-          currency: 'ZMW',
-          customer: {
-            firstName: firstName || 'Cherry',
-            lastName: lastNameParts.join(' ') || 'Pick',
-          },
-          billing: {
-            streetAddress: 'Cherry Pick Platform Treasury',
-            city: 'Lusaka',
-            postalCode: '10101',
-            country: 'ZM',
-          },
-          card: {
-            number: cardNumber,
-            expiryMonth: expiryMonth || '12',
-            expiryYear: expiryYear || '25',
-            cvv: cardCVC,
-          },
-        });
+        const amount = parseFloat(depositAmount);
+        const nameParts = (cardContact.fullName || userName || 'Wallet User').trim().split(/\s+/, 2);
+        const firstName = nameParts[0];
+        const lastName = nameParts[1] || nameParts[0];
 
-        const transactionReference = result.reference || result.id || cardReference;
-        const normalizedStatus = normalizePaymentStatus(result.status);
-
-        if (supabase && walletAddress) {
-          await supabase.from('payments').insert({
-            from_address: `card-${cardNumber.slice(-4)}`,
-            to_address: walletAddress,
-            amount: parseFloat(depositAmount),
-            currency: 'ZMW',
-            transaction_hash: transactionReference,
-            status: normalizedStatus === 'confirmed' ? 'confirmed' : 'pending',
-            confirmed_at: normalizedStatus === 'confirmed' ? new Date().toISOString() : null,
+        toast.loading('Redirecting to secure card payment...', { id: 'dpo-deposit' });
+        try {
+          const result = await startDpoCardPayment({
+            reference: cardReference,
+            amount,
+            firstName,
+            lastName,
+            email: cardContact.email || userEmail || 'admin@cherrypick.africa',
+            phone: cardContact.phone || userPhone || undefined,
+            description: `AgroChain wallet deposit ${cardReference}`,
+            callback: 'wallet',
           });
-        }
 
-        if (normalizedStatus === 'confirmed') {
-          toast.success(`Successfully deposited K${depositAmount} using card ending in ${cardNumber.slice(-4) || 'XXXX'}.`);
-          await loadBalances();
-        } else {
-          toast.success(`Card deposit initiated for K${depositAmount}. Balance updates after payment is confirmed.`);
-          void watchPaymentConfirmation(transactionReference);
-        }
+          if (!result.success || !result.paymentUrl || !result.transToken) {
+            throw new Error(result.error || 'Could not start card payment.');
+          }
 
-        setShowDepositModal(false);
-        setDepositAmount('');
-        setCardNumber('');
-        setCardExpiry('');
-        setCardCVC('');
-        setCardName('');
+          sessionStorage.setItem(
+            DPO_PENDING_WALLET_DEPOSIT_KEY,
+            JSON.stringify({
+              reference: cardReference,
+              transToken: result.transToken,
+              walletAddress,
+              amount,
+              returnPath: `${window.location.pathname}${window.location.search}`,
+            }),
+          );
+
+          toast.dismiss('dpo-deposit');
+          window.location.href = result.paymentUrl;
+          return;
+        } catch (err: unknown) {
+          toast.error(err instanceof Error ? err.message : 'Card payment failed');
+          toast.dismiss('dpo-deposit');
+          return;
+        }
       }
 
     } catch (error: any) {
@@ -1150,53 +1135,31 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                   </>
                 )}
 
-                {/* Bank Card fields */}
+                {/* Bank Card — DPO hosted checkout */}
                 {depositMethod === 'deposit-card' && (
                   <>
+                    <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-900">
+                      You&apos;ll be redirected to <span className="font-semibold">DPO Pay</span> to enter your card securely. Card details are never stored on AgroChain.
+                    </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Name on Card</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Full name (optional)</label>
                       <input
                         type="text"
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value)}
-                        placeholder="John Doe"
+                        value={cardContact.fullName}
+                        onChange={(e) => setCardContact({ ...cardContact, fullName: e.target.value })}
+                        placeholder={userName || 'John Doe'}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={cardNumber}
-                          onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
-                          placeholder="0000 0000 0000 0000"
-                          className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                        />
-                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Expiry</label>
-                        <input
-                          type="text"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value.slice(0, 5))}
-                          placeholder="MM/YY"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">CVC</label>
-                        <input
-                          type="text"
-                          value={cardCVC}
-                          onChange={(e) => setCardCVC(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                          placeholder="123"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                        />
-                      </div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email (optional)</label>
+                      <input
+                        type="email"
+                        value={cardContact.email}
+                        onChange={(e) => setCardContact({ ...cardContact, email: e.target.value })}
+                        placeholder={userEmail || 'you@example.com'}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
                     </div>
                   </>
                 )}
@@ -1211,6 +1174,8 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                   >
                     {depositing ? (
                       <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
+                    ) : depositMethod === 'deposit-card' ? (
+                      <><CreditCard className="h-5 w-5" /> Proceed to DPO Pay — K{depositAmount || '0.00'}</>
                     ) : (
                       <><ArrowDownLeft className="h-5 w-5" /> Deposit K{depositAmount || '0.00'}</>
                     )}
@@ -1221,7 +1186,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                   <p className="text-xs text-amber-700 text-center">
                     {depositMethod === 'collect-momo' ? '📲 You will receive a prompt on your phone to authorize the deposit.' :
                       depositMethod === 'crypto' ? '🔐 Base Pay: one-tap USDC deposit. No cards, no FX fees, settles in seconds.' :
-                      '💳 Funds will be securely deposited from your bank card.'}
+                      '💳 You will be redirected to DPO Pay to complete your card deposit securely.'}
                   </p>
                 </div>
               </div>

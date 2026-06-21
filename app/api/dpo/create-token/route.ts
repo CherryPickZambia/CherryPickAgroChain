@@ -21,6 +21,15 @@ export async function POST(request: NextRequest) {
   }
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin).replace(/\/$/, '');
+  const callbackContext = body.callback === 'wallet' ? 'wallet' : 'marketplace';
+  const callbackBase =
+    callbackContext === 'wallet'
+      ? `${appUrl}/wallet/dpo-callback`
+      : `${appUrl}/marketplace/dpo-callback`;
+  const defaultDescription =
+    callbackContext === 'wallet'
+      ? `AgroChain wallet deposit ${reference}`
+      : `AgroChain marketplace ${reference}`;
 
   const result = await createDpoToken({
     reference,
@@ -29,9 +38,9 @@ export async function POST(request: NextRequest) {
     lastName: body.lastName ? String(body.lastName) : undefined,
     email: body.email ? String(body.email) : undefined,
     phone: body.phone ? String(body.phone) : undefined,
-    description: body.description ? String(body.description) : `AgroChain marketplace ${reference}`,
-    redirectUrl: `${appUrl}/marketplace/dpo-callback?ref=${encodeURIComponent(reference)}`,
-    backUrl: `${appUrl}/marketplace/dpo-callback?cancelled=1&ref=${encodeURIComponent(reference)}`,
+    description: body.description ? String(body.description) : defaultDescription,
+    redirectUrl: `${callbackBase}?ref=${encodeURIComponent(reference)}`,
+    backUrl: `${callbackBase}?cancelled=1&ref=${encodeURIComponent(reference)}`,
   });
 
   if (!result.success || !result.transToken) {
