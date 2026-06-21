@@ -49,7 +49,7 @@ export default function PaymentHistory({ farmerId }: PaymentHistoryProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
+        return <CheckCircle className="h-5 w-5 text-emerald-600" />;
       case "pending":
       case "processing":
         return <Clock className="h-5 w-5 text-yellow-600" />;
@@ -87,7 +87,7 @@ export default function PaymentHistory({ farmerId }: PaymentHistoryProps) {
         <div className="card-premium">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-gray-600">Completed Payments</p>
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CheckCircle className="h-5 w-5 text-emerald-600" />
           </div>
           <p className="text-3xl font-bold text-[#1a1a1a]">
             {payments.filter((p) => p.status === "completed").length}

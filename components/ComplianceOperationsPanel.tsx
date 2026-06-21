@@ -230,10 +230,10 @@ export default function ComplianceOperationsPanel() {
               disabled={!selectedBatch || runningAction !== null}
               className="dashboard-list-item rounded-2xl p-5 text-left disabled:opacity-60"
             >
-              <Download className="h-6 w-6 text-violet-600 mb-4" />
+              <Download className="h-6 w-6 text-emerald-600 mb-4" />
               <p className="font-semibold text-slate-900">Generate audit pack</p>
               <p className="text-sm text-slate-600 mt-2">Assemble an ISO/HACCP/GMP readiness bundle from logged compliance events.</p>
-              {runningAction === "audit" && <Loader2 className="h-4 w-4 animate-spin text-violet-600 mt-4" />}
+              {runningAction === "audit" && <Loader2 className="h-4 w-4 animate-spin text-emerald-600 mt-4" />}
             </button>
           </div>
 

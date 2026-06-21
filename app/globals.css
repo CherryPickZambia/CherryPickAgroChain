@@ -647,6 +647,130 @@
   background: rgba(248, 250, 252, 0.9);
 }
 
+/* ============================================
+   ARKTOS DASHBOARD COMPONENTS
+   ============================================ */
+
+.dashboard-arktos-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem;
+  border-radius: 0.75rem;
+  background: rgba(12, 45, 58, 0.06);
+  border: 1px solid rgba(12, 45, 58, 0.1);
+  flex-shrink: 0;
+}
+
+.dashboard-arktos-icon-box--lime {
+  background: #0C2D3A;
+  border-color: rgba(12, 45, 58, 0.2);
+}
+
+.dashboard-arktos-status {
+  background: linear-gradient(135deg, rgba(12, 45, 58, 0.04) 0%, rgba(191, 255, 0, 0.06) 100%);
+  border: 1px solid rgba(12, 45, 58, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.dashboard-arktos-field {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(12, 45, 58, 0.08);
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.dashboard-arktos-field:hover {
+  border-color: rgba(191, 255, 0, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.dashboard-arktos-alert {
+  background: rgba(12, 45, 58, 0.04);
+  border: 1px solid rgba(12, 45, 58, 0.12);
+}
+
+.dashboard-arktos-info {
+  background: linear-gradient(135deg, rgba(12, 45, 58, 0.03) 0%, rgba(191, 255, 0, 0.05) 100%);
+  border: 1px solid rgba(12, 45, 58, 0.1);
+}
+
+.dashboard-shell .bg-orange-50,
+.dashboard-shell .bg-orange-100 {
+  background: rgba(12, 45, 58, 0.04) !important;
+}
+
+.dashboard-shell .text-orange-600,
+.dashboard-shell .text-orange-700 {
+  color: #0C2D3A !important;
+}
+
+.dashboard-shell .bg-emerald-50:not(.dashboard-keep-emerald) {
+  background: rgba(12, 45, 58, 0.04) !important;
+}
+
+.dashboard-shell .bg-emerald-100:not(.dashboard-keep-emerald) {
+  background: rgba(12, 45, 58, 0.08) !important;
+}
+
+.dashboard-shell .text-emerald-600:not(.dashboard-keep-emerald),
+.dashboard-shell .text-emerald-700:not(.dashboard-keep-emerald) {
+  color: #0C2D3A !important;
+}
+
+.dashboard-shell .border-emerald-100:not(.dashboard-keep-emerald),
+.dashboard-shell .border-emerald-200:not(.dashboard-keep-emerald) {
+  border-color: rgba(12, 45, 58, 0.12) !important;
+}
+
+.dashboard-shell .text-gray-800 {
+  color: #0C2D3A !important;
+}
+
+.dashboard-shell .text-gray-700 {
+  color: #0C2D3A !important;
+}
+
+.dashboard-shell .text-gray-600,
+.dashboard-shell .text-gray-500 {
+  color: #5A7684 !important;
+}
+
+.dashboard-shell .text-gray-400 {
+  color: #94B3C1 !important;
+}
+
+.dashboard-shell .bg-blue-50,
+.dashboard-shell .bg-yellow-50 {
+  background: rgba(12, 45, 58, 0.04) !important;
+}
+
+.dashboard-shell .text-blue-600,
+.dashboard-shell .text-blue-700 {
+  color: #0C2D3A !important;
+}
+
+.dashboard-shell .border-gray-100 {
+  border-color: rgba(12, 45, 58, 0.08) !important;
+}
+
+.dashboard-shell .border-gray-200 {
+  border-color: rgba(12, 45, 58, 0.1) !important;
+}
+
+.dashboard-shell .bg-gray-50,
+.dashboard-shell .bg-gray-50\/80 {
+  background: rgba(255, 255, 255, 0.72) !important;
+}
+
+.dashboard-shell .bg-white.rounded-xl.shadow-sm.border.border-gray-100,
+.dashboard-shell .bg-white.rounded-xl.p-6.shadow-sm.border.border-gray-100 {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(247, 249, 251, 0.82) 100%) !important;
+  border-color: rgba(12, 45, 58, 0.08) !important;
+  box-shadow: 0 22px 48px -34px rgba(12, 45, 58, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
 .admin-premium .bg-white.rounded-xl.shadow-sm.border.border-gray-100,
 .admin-premium .bg-white.rounded-2xl.shadow-sm.border.border-gray-100 {
   box-shadow: 0 22px 48px -34px rgba(15, 23, 42, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.72);

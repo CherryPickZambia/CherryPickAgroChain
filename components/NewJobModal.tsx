@@ -27,12 +27,12 @@ export interface JobData {
 }
 
 const JOB_TYPES = [
-  { value: "planting", label: "Planting", color: "bg-green-100 text-green-700" },
+  { value: "planting", label: "Planting", color: "bg-emerald-100 text-emerald-700" },
   { value: "harrowing", label: "Harrowing", color: "bg-amber-100 text-amber-700" },
   { value: "weeding", label: "Weeding", color: "bg-lime-100 text-lime-700" },
   { value: "fertilizing", label: "Fertilizing", color: "bg-blue-100 text-blue-700" },
   { value: "harvesting", label: "Harvesting", color: "bg-orange-100 text-orange-700" },
-  { value: "inspection", label: "Inspection", color: "bg-purple-100 text-purple-700" },
+  { value: "inspection", label: "Inspection", color: "bg-emerald-100 text-emerald-700" },
   { value: "other", label: "Other", color: "bg-gray-100 text-gray-700" },
 ];
 

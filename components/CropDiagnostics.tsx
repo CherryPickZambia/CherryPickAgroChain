@@ -122,14 +122,14 @@ export default function CropDiagnostics({
   };
 
   const getHealthColor = (score: number) => {
-    if (score >= 80) return 'text-green-500';
+    if (score >= 80) return 'text-emerald-500';
     if (score >= 60) return 'text-yellow-500';
     if (score >= 40) return 'text-orange-500';
     return 'text-red-500';
   };
 
   const getHealthBg = (score: number) => {
-    if (score >= 80) return 'bg-green-500';
+    if (score >= 80) return 'bg-emerald-500';
     if (score >= 60) return 'bg-yellow-500';
     if (score >= 40) return 'bg-orange-500';
     return 'bg-red-500';
@@ -145,14 +145,14 @@ export default function CropDiagnostics({
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white">
+      <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-white/20 rounded-xl">
             <Sparkles className="w-6 h-6" />
           </div>
           <div>
             <h2 className="text-xl font-bold">AI Crop Diagnostics</h2>
-            <p className="text-green-100 text-sm">Upload a photo to analyze crop health</p>
+            <p className="text-emerald-100 text-sm">Upload a photo to analyze crop health</p>
           </div>
         </div>
       </div>
@@ -180,7 +180,7 @@ export default function CropDiagnostics({
           />
 
           {!selectedImage ? (
-            <div className="w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 hover:border-green-400 hover:bg-green-50/40 transition-all">
+            <div className="w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 hover:border-emerald-400 hover:bg-emerald-50/40 transition-all">
               <div className="flex flex-col items-center text-center gap-3 mb-5">
                 <div className="p-4 bg-gray-100 rounded-full">
                   <Camera className="w-8 h-8 text-gray-400" />
@@ -197,7 +197,7 @@ export default function CropDiagnostics({
                   whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 shadow-md"
+                  className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 shadow-md"
                 >
                   <Camera className="w-5 h-5" />
                   Take Photo
@@ -207,7 +207,7 @@ export default function CropDiagnostics({
                   whileTap={{ scale: 0.98 }}
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full py-3 px-4 border-2 border-green-500 text-green-700 rounded-xl font-semibold flex items-center justify-center gap-2 bg-white hover:bg-green-50"
+                  className="w-full py-3 px-4 border-2 border-emerald-500 text-emerald-700 rounded-xl font-semibold flex items-center justify-center gap-2 bg-white hover:bg-emerald-50"
                 >
                   <Upload className="w-5 h-5" />
                   Choose from Device
@@ -251,7 +251,7 @@ export default function CropDiagnostics({
               <select
                 value={cropType}
                 onChange={(e) => setCropType(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors"
               >
                 <option value="">Auto-detect</option>
                 {CROP_TYPES.map(type => (
@@ -268,7 +268,7 @@ export default function CropDiagnostics({
                 value={additionalContext}
                 onChange={(e) => setAdditionalContext(e.target.value)}
                 placeholder="e.g., Leaves started yellowing 3 days ago, recent heavy rainfall..."
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors resize-none"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors resize-none"
                 rows={2}
               />
             </div>
@@ -278,7 +278,7 @@ export default function CropDiagnostics({
               whileTap={{ scale: 0.98 }}
               onClick={handleAnalyze}
               disabled={isAnalyzing}
-              className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             >
               {isAnalyzing ? (
                 <>
@@ -308,7 +308,7 @@ export default function CropDiagnostics({
               <div className="bg-gray-50 rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-gray-900">Health Assessment</h3>
-                  <span className={`text-sm font-semibold px-3 py-1 rounded-full ${result.healthScore >= 80 ? 'bg-green-100 text-green-700' :
+                  <span className={`text-sm font-semibold px-3 py-1 rounded-full ${result.healthScore >= 80 ? 'bg-emerald-100 text-emerald-700' :
                       result.healthScore >= 60 ? 'bg-yellow-100 text-yellow-700' :
                         result.healthScore >= 40 ? 'bg-orange-100 text-orange-700' :
                           'bg-red-100 text-red-700'
@@ -381,14 +381,14 @@ export default function CropDiagnostics({
 
               {/* Recommendations */}
               {result.recommendations.length > 0 && (
-                <div className="bg-green-50 rounded-2xl p-6">
-                  <h3 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+                <div className="bg-emerald-50 rounded-2xl p-6">
+                  <h3 className="font-bold text-emerald-900 mb-3 flex items-center gap-2">
                     <CheckCircle className="w-5 h-5" />
                     Recommendations
                   </h3>
                   <ul className="space-y-2">
                     {result.recommendations.map((rec, index) => (
-                      <li key={index} className="flex items-start gap-2 text-green-800">
+                      <li key={index} className="flex items-start gap-2 text-emerald-800">
                         <Leaf className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <span>{rec}</span>
                       </li>
@@ -408,7 +408,7 @@ export default function CropDiagnostics({
                 </button>
                 <button
                   onClick={() => setShowDetails(!showDetails)}
-                  className="flex-1 py-3 border-2 border-green-500 text-green-600 rounded-xl font-semibold hover:bg-green-50 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 border-2 border-emerald-500 text-emerald-600 rounded-xl font-semibold hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2"
                 >
                   {showDetails ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                   {showDetails ? 'Hide' : 'Show'} Details
@@ -424,7 +424,7 @@ export default function CropDiagnostics({
                     exit={{ opacity: 0, height: 0 }}
                     className="bg-gray-900 rounded-xl p-4 overflow-hidden"
                   >
-                    <pre className="text-xs text-green-400 overflow-x-auto">
+                    <pre className="text-xs text-emerald-400 overflow-x-auto">
                       {JSON.stringify(result, null, 2)}
                     </pre>
                   </motion.div>

@@ -97,7 +97,7 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
     if (loading) {
         return (
             <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+                <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
             </div>
         );
     }
@@ -111,7 +111,7 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+                    className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2"
                 >
                     <Plus className="w-5 h-5" />
                     New Batch
@@ -120,8 +120,8 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
 
             {batches.length === 0 ? (
                 <div className="bg-white rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
-                    <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Sprout className="w-8 h-8 text-green-600" />
+                    <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Sprout className="w-8 h-8 text-emerald-600" />
                     </div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">No Batches Yet</h3>
                     <p className="text-gray-500 mb-6 max-w-md mx-auto">
@@ -129,7 +129,7 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
                     </p>
                     <button
                         onClick={() => setShowCreateModal(true)}
-                        className="text-green-600 font-semibold hover:text-green-700"
+                        className="text-emerald-600 font-semibold hover:text-emerald-700"
                     >
                         + Create First Batch
                     </button>
@@ -149,7 +149,7 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
                         const isIndependent = !batch.contract_id;
                         const traceScore = batch.id ? batchScores[batch.id] : { score: 0, level: 'basic' };
                         const scoreColor = traceScore?.level === 'premium' ? 'text-yellow-500' : 
-                                          traceScore?.level === 'excellent' ? 'text-green-500' : 
+                                          traceScore?.level === 'excellent' ? 'text-emerald-500' : 
                                           traceScore?.level === 'good' ? 'text-blue-500' : 'text-gray-400';
 
                         return (
@@ -173,9 +173,9 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-60"></div>
                                         {/* Status Badge */}
-                                        <span className={`absolute bottom-3 right-3 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${batch.current_status === 'growing' ? 'bg-green-100/90 text-green-800' :
+                                        <span className={`absolute bottom-3 right-3 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-sm ${batch.current_status === 'growing' ? 'bg-emerald-100/90 text-emerald-800' :
                                             batch.current_status === 'harvested' ? 'bg-yellow-100/90 text-yellow-800' :
-                                            batch.current_status === 'stored' ? 'bg-purple-100/90 text-purple-800' :
+                                            batch.current_status === 'stored' ? 'bg-emerald-100/90 text-emerald-800' :
                                                 'bg-gray-100/90 text-gray-800'
                                             }`}>
                                             {batch.current_status}
@@ -196,9 +196,9 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
                                         {!metadata.batch_image && (
-                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${batch.current_status === 'growing' ? 'bg-green-100 text-green-700' :
+                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${batch.current_status === 'growing' ? 'bg-emerald-100 text-emerald-700' :
                                                 batch.current_status === 'harvested' ? 'bg-yellow-100 text-yellow-700' :
-                                                batch.current_status === 'stored' ? 'bg-purple-100 text-purple-700' :
+                                                batch.current_status === 'stored' ? 'bg-emerald-100 text-emerald-700' :
                                                     'bg-gray-100 text-gray-700'
                                                 }`}>
                                                 {batch.current_status}
@@ -224,7 +224,7 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
                                         <div 
                                             className={`h-full rounded-full transition-all ${
                                                 traceScore?.level === 'premium' ? 'bg-yellow-400' :
-                                                traceScore?.level === 'excellent' ? 'bg-green-500' :
+                                                traceScore?.level === 'excellent' ? 'bg-emerald-500' :
                                                 traceScore?.level === 'good' ? 'bg-blue-500' : 'bg-gray-400'
                                             }`}
                                             style={{ width: `${traceScore?.score || 0}%` }}
@@ -296,7 +296,7 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleLogEvent(batch.id!)}
-                                        className="flex-1 bg-green-50 text-green-700 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+                                        className="flex-1 bg-emerald-50 text-emerald-700 py-2 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors"
                                     >
                                         Log Activity
                                     </button>
@@ -337,6 +337,7 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
                     farmerId={farmerId}
                     userId={userId}
                     isContract={!!batches.find(b => b.id === selectedBatchId)?.contract_id}
+                    defaultUnit={batches.find(b => b.id === selectedBatchId)?.unit || "kg"}
                     onSuccessAction={() => {
                         fetchBatches();
                         // Optional: refresh specific batch data

@@ -202,7 +202,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                     <div className="flex flex-col items-center justify-center flex-1 min-h-[250px]">
                                         <div
                                             onClick={() => fileInputRef.current?.click()}
-                                            className="relative w-full h-full bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-all overflow-hidden group min-h-[250px]"
+                                            className="relative w-full h-full bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-all overflow-hidden group min-h-[250px]"
                                         >
                                             {previewUrl ? (
                                                 <>
@@ -215,7 +215,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                                 </>
                                             ) : (
                                                 <div className="text-center p-4">
-                                                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500 group-hover:bg-green-200 group-hover:text-green-600 transition-colors">
+                                                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500 group-hover:bg-emerald-200 group-hover:text-emerald-600 transition-colors">
                                                         <Upload className="w-8 h-8" />
                                                     </div>
                                                     <p className="font-semibold text-gray-900 text-lg mb-1">Upload Batch Photo</p>
@@ -239,7 +239,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                                 <div className="relative">
                                                     <select
                                                         required
-                                                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm appearance-none"
+                                                        className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm appearance-none"
                                                         value={formData.crop_type}
                                                         onChange={(e) => setFormData({ ...formData, crop_type: e.target.value, contract_id: "" })}
                                                     >
@@ -259,7 +259,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                                 <input
                                                     type="text"
                                                     placeholder="e.g. Cherry"
-                                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm"
+                                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
                                                     value={formData.variety}
                                                     onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
                                                 />
@@ -273,7 +273,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                             </label>
                                             <div className="relative">
                                                 <select
-                                                    className="w-full p-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm appearance-none"
+                                                    className="w-full p-2.5 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm appearance-none"
                                                     value={formData.contract_id}
                                                     onChange={(e) => setFormData({ ...formData, contract_id: e.target.value })}
                                                     disabled={loadingContracts}
@@ -316,7 +316,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                                 type="number"
                                                 min="0"
                                                 placeholder="0"
-                                                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm"
+                                                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
                                                 value={formData.seeding_count}
                                                 onChange={(e) => setFormData({ ...formData, seeding_count: e.target.value })}
                                             />
@@ -330,7 +330,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                                     min="0"
                                                     step="0.1"
                                                     placeholder="0.0"
-                                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm"
+                                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
                                                     value={formData.field_size}
                                                     onChange={(e) => setFormData({ ...formData, field_size: e.target.value })}
                                                 />
@@ -353,7 +353,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                             <input
                                                 type="date"
                                                 required
-                                                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm pl-9"
+                                                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm pl-9"
                                                 value={formData.planting_date}
                                                 onChange={(e) => setFormData({ ...formData, planting_date: e.target.value })}
                                             />
@@ -371,7 +371,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                                 required
                                                 min="0"
                                                 placeholder="0.00"
-                                                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm"
+                                                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
                                                 value={formData.total_quantity}
                                                 onChange={(e) => setFormData({ ...formData, total_quantity: e.target.value })}
                                             />
@@ -399,7 +399,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                             <div className="relative">
                                                 <input
                                                     type="date"
-                                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm pl-9"
+                                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm pl-9"
                                                     value={formData.est_harvest_date}
                                                     onChange={(e) => setFormData({ ...formData, est_harvest_date: e.target.value })}
                                                 />
@@ -411,7 +411,7 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                             <input
                                                 type="checkbox"
                                                 id="organic"
-                                                className="w-5 h-5 text-green-600 rounded focus:ring-green-500 border-gray-300 mr-2"
+                                                className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500 border-gray-300 mr-2"
                                                 checked={formData.is_organic}
                                                 onChange={(e) => setFormData({ ...formData, is_organic: e.target.checked })}
                                             />

@@ -76,7 +76,7 @@ app.post('/api/transfers/mobile-money', async (req, res) => {
             amount: parseFloat(amount),
             phone,
             operator: network.toLowerCase(),
-            narration: narration || 'Payment',
+            narration: narration || 'Cherry Pick Payment',
             reference: reference || `REF-${Date.now()}`
         });
 
@@ -102,7 +102,7 @@ app.post('/api/transfers/bank-account', async (req, res) => {
         const data = await lencoRequest('/transfers/bank-account', 'POST', {
             accountId: LENCO_ACCOUNT_ID,
             amount: parseFloat(amount),
-            narration: narration || 'Bank Transfer',
+            narration: narration || 'Cherry Pick Bank Transfer',
             reference,
             accountNumber,
             bankId,
@@ -128,7 +128,7 @@ app.post('/api/transfers/account', async (req, res) => {
         const data = await lencoRequest('/transfers/account', 'POST', {
             accountId: LENCO_ACCOUNT_ID,
             amount: parseFloat(amount),
-            narration: narration || 'Internal Transfer',
+            narration: narration || 'Cherry Pick Transfer',
             reference,
             creditAccountId
         });

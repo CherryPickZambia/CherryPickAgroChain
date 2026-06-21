@@ -310,7 +310,7 @@ export default function BuyerDashboard() {
   });
 
   return (
-    <div className="min-h-screen" style={{ background: "#F7F9FB" }}>
+    <div className="min-h-screen dashboard-shell" style={{ background: "#F7F9FB" }}>
       {/* Header — ARKTOS */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -425,7 +425,7 @@ export default function BuyerDashboard() {
                           <p className="text-lg font-bold text-gray-900">ZK {order.total_amount.toLocaleString()}</p>
                           <div className="flex items-center space-x-2 mt-2">
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.payment_status === "completed"
-                              ? "bg-green-100 text-green-700"
+                              ? "bg-emerald-100 text-emerald-700"
                               : order.payment_status === "pending"
                                 ? "bg-orange-100 text-orange-700"
                                 : "bg-blue-100 text-blue-700"
@@ -433,7 +433,7 @@ export default function BuyerDashboard() {
                               {order.payment_status}
                             </span>
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${order.delivery_status === "delivered"
-                              ? "bg-green-100 text-green-700"
+                              ? "bg-emerald-100 text-emerald-700"
                               : order.delivery_status === "in_transit"
                                 ? "bg-blue-100 text-blue-700"
                                 : "bg-gray-100 text-gray-700"
@@ -442,7 +442,7 @@ export default function BuyerDashboard() {
                             </span>
                           </div>
                         </div>
-                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-emerald-600 transition-colors" />
                       </div>
                     </div>
                   </motion.div>
@@ -475,11 +475,11 @@ export default function BuyerDashboard() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-white rounded-xl border-2 border-gray-100 hover:border-green-300 hover:shadow-lg transition-all overflow-hidden group"
+                    className="bg-white rounded-xl border-2 border-gray-100 hover:border-emerald-300 hover:shadow-lg transition-all overflow-hidden group"
                   >
                     {/* Listing Image Placeholder */}
-                    <div className="h-48 bg-gradient-to-br from-green-100 to-emerald-50 flex items-center justify-center">
-                      <Leaf className="h-16 w-16 text-green-600 opacity-50" />
+                    <div className="h-48 bg-gradient-to-br from-emerald-100 to-emerald-50 flex items-center justify-center">
+                      <Leaf className="h-16 w-16 text-emerald-600 opacity-50" />
                     </div>
 
                     <div className="p-5">
@@ -493,9 +493,9 @@ export default function BuyerDashboard() {
                           </p>
                         </div>
                         {listing.organic && (
-                          <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
-                            <Leaf className="h-3 w-3 text-green-600" />
-                            <span className="text-xs font-medium text-green-700">Organic</span>
+                          <div className="flex items-center gap-1 px-2 py-1 bg-emerald-100 rounded-full">
+                            <Leaf className="h-3 w-3 text-emerald-600" />
+                            <span className="text-xs font-medium text-emerald-700">Organic</span>
                           </div>
                         )}
                       </div>
@@ -535,7 +535,7 @@ export default function BuyerDashboard() {
                         <div className="flex items-end justify-between mb-3">
                           <div>
                             <p className="text-xs text-gray-500">Price per kg</p>
-                            <p className="text-2xl font-bold text-green-600">ZK {listing.price_per_unit}</p>
+                            <p className="text-2xl font-bold text-emerald-600">ZK {listing.price_per_unit}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-gray-500">Total Value</p>
@@ -548,7 +548,7 @@ export default function BuyerDashboard() {
                             setSelectedListing(listing);
                             setOrderQuantity(Math.min(1, listing.available_quantity));
                           }}
-                          className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                          className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                         >
                           <ShoppingCart className="h-4 w-4" />
                           <span>Order Now</span>
@@ -583,7 +583,7 @@ export default function BuyerDashboard() {
                     placeholder="Search orders..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div className="flex items-center space-x-3">
@@ -591,7 +591,7 @@ export default function BuyerDashboard() {
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="all">All Orders</option>
                     <option value="pending">Pending Payment</option>
@@ -651,7 +651,7 @@ export default function BuyerDashboard() {
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Payment Status</p>
                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${order.payment_status === "completed"
-                          ? "bg-green-100 text-green-700"
+                          ? "bg-emerald-100 text-emerald-700"
                           : order.payment_status === "pending"
                             ? "bg-orange-100 text-orange-700"
                             : "bg-blue-100 text-blue-700"
@@ -662,7 +662,7 @@ export default function BuyerDashboard() {
                       <div>
                         <p className="text-xs text-gray-500 mb-1">Delivery Status</p>
                         <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${order.delivery_status === "delivered"
-                          ? "bg-green-100 text-green-700"
+                          ? "bg-emerald-100 text-emerald-700"
                           : order.delivery_status === "in_transit"
                             ? "bg-blue-100 text-blue-700"
                             : "bg-gray-100 text-gray-700"
@@ -689,7 +689,7 @@ export default function BuyerDashboard() {
                         {order.payment_status === "pending" && order.farmer_address && (
                           <button
                             onClick={() => handlePayNow(order)}
-                            className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center space-x-2"
+                            className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors flex items-center space-x-2"
                           >
                             <DollarSign className="h-4 w-4" />
                             <span>Pay Now</span>
@@ -721,7 +721,7 @@ export default function BuyerDashboard() {
                       type="text"
                       value={profile.name}
                       onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <div>
@@ -733,7 +733,7 @@ export default function BuyerDashboard() {
                       type="email"
                       value={profile.email}
                       onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <div>
@@ -745,7 +745,7 @@ export default function BuyerDashboard() {
                       type="tel"
                       value={profile.phone}
                       onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <div>
@@ -757,7 +757,7 @@ export default function BuyerDashboard() {
                       type="text"
                       value={profile.company_name}
                       onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -769,13 +769,13 @@ export default function BuyerDashboard() {
                       value={profile.delivery_address}
                       onChange={(e) => setProfile({ ...profile, delivery_address: e.target.value })}
                       rows={3}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
                 <button
                   onClick={handleSaveProfile}
-                  className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                  className="mt-6 px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors"
                 >
                   Save Changes
                 </button>
@@ -800,7 +800,7 @@ export default function BuyerDashboard() {
 
       {/* Order Modal */}
       {selectedListing && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -841,15 +841,15 @@ export default function BuyerDashboard() {
                   max={selectedListing.available_quantity}
                   value={orderQuantity}
                   onChange={(e) => setOrderQuantity(Math.max(1, Math.min(selectedListing.available_quantity, parseInt(e.target.value) || 1)))}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
               {/* Total */}
-              <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700 font-medium">Total Amount:</span>
-                  <span className="text-2xl font-bold text-green-600">
+                  <span className="text-2xl font-bold text-emerald-600">
                     K{(orderQuantity * selectedListing.price_per_unit).toLocaleString()}
                   </span>
                 </div>
@@ -859,7 +859,7 @@ export default function BuyerDashboard() {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={() => handlePlaceOrder(selectedListing)}
-                  className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                  className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
                 >
                   Confirm Order
                 </button>

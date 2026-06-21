@@ -21,6 +21,11 @@ export const SUPPORTED_CROPS = [
   "Bananas",
   "Pawpaw",
   "Strawberries",
+  "Oranges",
+  "Apples",
+  "Lemons",
+  "Grapefruits",
+  "Other",
 ] as const;
 
 export type CropType = typeof SUPPORTED_CROPS[number];
@@ -86,5 +91,63 @@ export const CROP_MILESTONES: Record<string, string[]> = {
     "First flowering",
     "First harvest milestone",
     "Final harvest and delivery"
+  ],
+  "Oranges": [
+    "Land preparation completed",
+    "Planting verified",
+    "Flowering/fruit set confirmed",
+    "Pest/disease inspection passed",
+    "Pre-harvest quality inspection approved",
+    "Harvest and delivery"
+  ],
+  "Apples": [
+    "Land preparation completed",
+    "Planting verified",
+    "Flowering/fruit set confirmed",
+    "Pest/disease inspection passed",
+    "Pre-harvest quality inspection approved",
+    "Harvest and delivery"
+  ],
+  "Lemons": [
+    "Land preparation completed",
+    "Planting verified",
+    "Flowering/fruit set confirmed",
+    "Pest/disease inspection passed",
+    "Pre-harvest quality inspection approved",
+    "Harvest and delivery"
+  ],
+  "Grapefruits": [
+    "Land preparation completed",
+    "Planting verified",
+    "Flowering/fruit set confirmed",
+    "Pest/disease inspection passed",
+    "Pre-harvest quality inspection approved",
+    "Harvest and delivery"
+  ],
+  "Other": [
+    "Land preparation completed",
+    "Planting verified",
+    "Mid-cycle inspection",
+    "Pre-harvest quality inspection approved",
+    "Harvest and delivery"
   ]
 };
+
+/**
+ * Canonical list of measurement units used across the platform.
+ * Contract creation, bidding, growth activity logs and milestone entries
+ * should all pull from this single source so units stay consistent.
+ */
+export const CONTRACT_UNITS = [
+  { value: "kg", label: "Kilograms (kg)" },
+  { value: "tonnes", label: "Tonnes" },
+  { value: "bags", label: "Bags" },
+  { value: "crates", label: "Crates" },
+  { value: "pieces", label: "Pieces" },
+  { value: "units", label: "Units" },
+  { value: "liters", label: "Liters" },
+  { value: "seedlings", label: "Seedlings" },
+  { value: "hours", label: "Hours" },
+] as const;
+
+export type ContractUnit = typeof CONTRACT_UNITS[number]["value"];

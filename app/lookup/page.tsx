@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Search, Shield, ArrowRight, Package, MapPin, Scan, Leaf, ChevronRight } from "lucide-react";
+import { Search, Shield, ArrowRight, Package, MapPin, Scan, Leaf, FlaskConical, Link2, Truck, QrCode, CheckCircle2, TrendingUp, Users, Globe2, Sparkles } from "lucide-react";
 import Link from "next/link";
 
-/* ── palette + fonts (matches LandingPage) ── */
+/* palette + fonts (matches Landing Page) */
 const C = {
     deep: "#020503",
     surface: "#07120a",
@@ -18,10 +18,15 @@ const C = {
     accentDim: "#7a9c7b",
     border: "rgba(255,255,255,0.08)",
     borderG: "rgba(74,222,128,0.15)",
+    green: "#2d5a41",
 };
 const FD = "'Playfair Display', serif";
 const FS = "'Inter', sans-serif";
 const FM = "'Space Mono', monospace";
+
+const meta: React.CSSProperties = { fontFamily: FM, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted };
+const serif: React.CSSProperties = { fontFamily: FD, fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", color: C.white };
+const body: React.CSSProperties = { fontFamily: FS, fontSize: "1rem", lineHeight: 1.65, color: C.secondary, fontWeight: 300 };
 
 const injectStyles = () => {
     if (typeof window === "undefined") return;
@@ -29,12 +34,14 @@ const injectStyles = () => {
     const s = document.createElement("style");
     s.id = "cp-lookup-v2";
     s.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,900;1,400&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
     .cp-lookup *{box-sizing:border-box}
     @keyframes pulseDot{0%,100%{opacity:.3}50%{opacity:1}}
-    @keyframes slowPan{0%{transform:scale(1.05) translate(0,0)}100%{transform:scale(1.12) translate(-1%,2%)}}
+    @keyframes spin{to{transform:rotate(360deg)}}
     .cp-lookup .cp-dot{width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;animation:pulseDot 2s infinite}
-    .cp-lookup .cp-btn{display:inline-flex;align-items:center;justify-content:center;padding:1rem 2.5rem;background:transparent;color:#fff;font-family:'Inter',sans-serif;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;text-decoration:none;border:1px solid #fff;cursor:pointer;position:relative;overflow:hidden;transition:color .4s cubic-bezier(.19,1,.22,1)}
+    .cp-lookup .cp-nav-link{position:relative;text-decoration:none;color:#9aa89d;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;font-family:'Inter',sans-serif;font-weight:500;transition:color .3s}
+    .cp-lookup .cp-nav-link:hover{color:#fff}
+    .cp-lookup .cp-btn{display:inline-flex;align-items:center;justify-content:center;padding:1rem 2.5rem;background:transparent;color:#fff;font-family:'Inter',sans-serif;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;text-decoration:none;border:1px solid #fff;cursor:pointer;position:relative;overflow:hidden;transition:color .4s cubic-bezier(.19,1,.22,1);font-weight:600}
     .cp-lookup .cp-btn::before{content:'';position:absolute;inset:0;background:#fff;transform:scaleY(0);transform-origin:bottom;transition:transform .4s cubic-bezier(.19,1,.22,1);z-index:0}
     .cp-lookup .cp-btn:hover{color:#020503}
     .cp-lookup .cp-btn:hover::before{transform:scaleY(1)}
@@ -44,8 +51,32 @@ const injectStyles = () => {
     .cp-lookup .cp-btn-accent:hover{color:#020503}
     .cp-lookup input::placeholder{color:#5b6b5e}
     .cp-lookup input:focus{outline:none}
+    @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+    .cp-lookup .cp-marquee{display:flex;gap:24px;width:max-content;animation:marquee 45s linear infinite}
+    .cp-lookup .cp-marquee:hover{animation-play-state:paused}
+    .cp-lookup .cp-farmer-card{position:relative;flex-shrink:0;width:260px;height:340px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);border-radius:12px;transition:all .5s cubic-bezier(.19,1,.22,1)}
+    .cp-lookup .cp-farmer-card:hover{border-color:rgba(74,222,128,0.3);transform:translateY(-4px)}
+    .cp-lookup .cp-farmer-card img{width:100%;height:100%;object-fit:cover;filter:grayscale(10%) brightness(0.9);transition:all .6s ease}
+    .cp-lookup .cp-farmer-card:hover img{filter:grayscale(0%) brightness(1);transform:scale(1.05)}
+    .cp-lookup .cp-farmer-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(2,5,3,0.95) 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:24px}
+    .cp-lookup .cp-stat-num{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3.5rem);font-weight:500;line-height:1;color:#4ade80;letter-spacing:-0.02em}
+    .cp-lookup .cp-step{position:relative;padding:32px 28px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);border-radius:12px;transition:all .4s ease}
+    .cp-lookup .cp-step:hover{border-color:rgba(74,222,128,0.2);background:rgba(255,255,255,0.04)}
+    .cp-lookup .cp-step-num{position:absolute;top:16px;right:20px;font-family:'Playfair Display',serif;font-size:40px;font-weight:500;color:rgba(255,255,255,0.06)}
+    .cp-lookup .cp-search-row{display:flex;gap:0}
+    .cp-lookup .cp-search-btn{border-left:1px solid rgba(255,255,255,0.08)}
+    @media(max-width:1024px){
+      .cp-lookup .cp-impact-grid{grid-template-columns:repeat(2,1fr) !important}
+      .cp-lookup .cp-steps-grid{grid-template-columns:1fr !important}
+    }
     @media(max-width:768px){
-      .cp-lookup .cp-demo-grid{grid-template-columns:1fr !important}
+      .cp-lookup .cp-features-grid{grid-template-columns:1fr !important}
+      .cp-lookup .cp-impact-grid{grid-template-columns:1fr !important}
+      .cp-lookup .cp-farmer-card{width:220px;height:300px}
+      .cp-lookup .cp-hero{padding:48px 24px 32px !important}
+      .cp-lookup .cp-section{padding-left:24px !important;padding-right:24px !important}
+      .cp-lookup .cp-search-row{flex-direction:column !important}
+      .cp-lookup .cp-search-btn{width:100% !important;min-width:unset !important;border-left:none !important;border-top:1px solid rgba(255,255,255,0.08) !important;padding:18px 32px !important}
     }
     `;
     document.head.appendChild(s);
@@ -75,58 +106,66 @@ export default function LookupPage() {
         }, 500);
     };
 
-    const demoBatches = [
-        { code: "CP-A3K9M2", crop: "Mangoes", farmer: "John Mwale", region: "Eastern Province" },
-        { code: "B-M4R9P7Q3", crop: "Tomatoes", farmer: "Mary Banda", region: "Lusaka Province" },
-        { code: "CP-P7Q3N8", crop: "Pineapples", farmer: "Peter Phiri", region: "Northern Province" },
+    const features = [
+        { Icon: Leaf, label: "Farm Origin", desc: "See exactly where your food was grown" },
+        { Icon: FlaskConical, label: "Quality Data", desc: "AI-verified crop health diagnostics" },
+        { Icon: Link2, label: "Blockchain", desc: "Immutable records on Base L2" },
+        { Icon: Truck, label: "Full Journey", desc: "Track every step to your table" },
     ];
 
-    const features = [
-        { icon: "🌿", label: "Farm Origin", desc: "See exactly where your food was grown" },
-        { icon: "🔬", label: "Quality Data", desc: "AI-verified crop health diagnostics" },
-        { icon: "⛓️", label: "Blockchain", desc: "Immutable records on Base L2" },
-        { icon: "🚛", label: "Full Journey", desc: "Track every step to your table" },
+    const farmers = [
+        { name: "John Mwale", crop: "Mangoes", region: "Eastern Province", img: "https://images.unsplash.com/photo-1595397551630-8a3d9eb9cf8c?auto=format&fit=crop&w=600&q=80" },
+        { name: "Mary Banda", crop: "Tomatoes", region: "Lusaka Province", img: "https://images.unsplash.com/photo-1592982537447-6f2a6a0c8b1b?auto=format&fit=crop&w=600&q=80" },
+        { name: "Peter Phiri", crop: "Pineapples", region: "Northern Province", img: "https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?auto=format&fit=crop&w=600&q=80" },
+        { name: "Grace Tembo", crop: "Maize", region: "Central Province", img: "https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&w=600&q=80" },
+        { name: "Joseph Zulu", crop: "Groundnuts", region: "Southern Province", img: "https://images.unsplash.com/photo-1523741543316-beb7fc7023d8?auto=format&fit=crop&w=600&q=80" },
+        { name: "Esther Ngoma", crop: "Cassava", region: "Luapula Province", img: "https://images.unsplash.com/photo-1621264448270-9ef00e88a987?auto=format&fit=crop&w=600&q=80" },
+        { name: "Samuel Chanda", crop: "Soya Beans", region: "Muchinga Province", img: "https://images.unsplash.com/photo-1621460248083-6271cc4437a8?auto=format&fit=crop&w=600&q=80" },
+        { name: "Ruth Mulenga", crop: "Sweet Potato", region: "Copperbelt", img: "https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=600&q=80" },
+    ];
+
+    const impact = [
+        { Icon: Users, num: "2,400+", label: "Farmers Empowered" },
+        { Icon: Package, num: "18,900", label: "Batches Traced" },
+        { Icon: Globe2, num: "10", label: "Provinces Covered" },
+        { Icon: CheckCircle2, num: "99.7%", label: "Verification Rate" },
+    ];
+
+    const steps = [
+        { Icon: QrCode, title: "Scan or Enter Code", desc: "Find the batch code printed on your product's packaging or scan the QR label." },
+        { Icon: Sparkles, title: "Reveal the Story", desc: "Watch the complete farm-to-shelf journey unfold, from planting to your plate." },
+        { Icon: Shield, title: "Verified on Chain", desc: "Every milestone is cryptographically signed and stored immutably on Base L2." },
     ];
 
     return (
-        <div className="cp-lookup" style={{ background: C.deep, minHeight: "100vh", color: C.white, fontFamily: FS, position: "relative", overflow: "hidden" }}>
-            {/* Subtle background image */}
-            <div style={{ position: "fixed", inset: 0, backgroundImage: "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=2000&q=40')", backgroundSize: "cover", backgroundPosition: "center", opacity: 0.04, pointerEvents: "none" }} />
-            <div style={{ position: "fixed", inset: 0, background: `linear-gradient(180deg, ${C.deep} 0%, transparent 40%, transparent 60%, ${C.deep} 100%)`, pointerEvents: "none" }} />
+        <div className="cp-lookup" style={{ background: C.deep, minHeight: "100vh", color: C.white, fontFamily: FS, position: "relative", overflowX: "hidden" }}>
+            <div style={{ position: "fixed", inset: 0, backgroundImage: "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=2000&q=40')", backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.14, pointerEvents: "none" }} />
+            <div style={{ position: "fixed", inset: 0, background: `linear-gradient(180deg, rgba(2,5,3,0.5) 0%, rgba(2,5,3,0.28) 28%, rgba(2,5,3,0.42) 55%, ${C.deep} 100%)`, pointerEvents: "none" }} />
 
             {/* Navigation */}
             <nav style={{ position: "relative", zIndex: 50, borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🍒</div>
-                        <span style={{ fontFamily: FD, fontWeight: 700, fontSize: 14, letterSpacing: 2, color: C.white }}>CHERRY PICK</span>
+                    <Link href="/" style={{ textDecoration: "none" }}>
+                        <img src="/logo-new.png" alt="AgroChain 360" style={{ height: 36, width: "auto", objectFit: "contain" }} />
                     </Link>
                     <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-                        <Link href="/" style={{ fontFamily: FS, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", color: C.secondary, textDecoration: "none", fontWeight: 500 }}>Home</Link>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(74,222,128,0.08)", border: `1px solid ${C.borderG}`, borderRadius: 20, padding: "6px 14px" }}>
-                            <div className="cp-dot" />
-                            <span style={{ fontFamily: FM, fontSize: 10, letterSpacing: 2, color: C.accent }}>VERIFIED</span>
-                        </div>
+                        <Link href="/" className="cp-nav-link">Home</Link>
+                        <Link href="/signin" className="cp-nav-link" style={{ border: "1px solid rgba(255,255,255,0.3)", padding: "8px 20px", fontSize: "0.7rem", color: C.white }}>Join Network</Link>
                     </div>
                 </div>
             </nav>
 
             {/* Hero Section */}
-            <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>
+            <div className="cp-hero" style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>
                 <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
-                    {/* Label */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-                        <div style={{ width: 40, height: 1, background: C.accent }} />
-                        <span style={{ fontFamily: FM, fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", color: C.accent }}>Traceability Portal</span>
-                    </div>
+                    <span style={{ ...meta, color: C.accent, display: "block", marginBottom: 24 }}>Traceability Portal</span>
 
-                    {/* Title */}
-                    <h1 style={{ fontFamily: FD, fontSize: "clamp(42px, 6vw, 72px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.02em", color: C.white, margin: "0 0 24px", maxWidth: 700 }}>
+                    <h1 style={{ ...serif, fontSize: "clamp(2.5rem, 6vw, 4.5rem)", margin: "0 0 24px", maxWidth: 700 }}>
                         Trace Your<br />
-                        <span style={{ fontStyle: "italic", color: C.accent }}>Product Journey</span>
+                        <em style={{ fontStyle: "italic", color: C.accent }}>Product Journey</em>
                     </h1>
 
-                    <p style={{ fontFamily: FS, fontSize: 17, lineHeight: 1.7, color: C.secondary, fontWeight: 300, maxWidth: 520, margin: "0 0 48px" }}>
+                    <p style={{ ...body, maxWidth: 520, margin: "0 0 48px" }}>
                         Enter the batch code from your product packaging to reveal its complete farm-to-shelf story, verified on blockchain.
                     </p>
                 </motion.div>
@@ -134,8 +173,8 @@ export default function LookupPage() {
                 {/* Search Form */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.7 }}>
                     <form onSubmit={handleSearch} style={{ maxWidth: 640, marginBottom: 16 }}>
-                        <div style={{ display: "flex", gap: 0, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 0, overflow: "hidden" }}>
-                            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
+                        <div className="cp-search-row" style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", minWidth: 0 }}>
                                 <Scan style={{ position: "absolute", left: 20, width: 18, height: 18, color: C.muted }} />
                                 <input
                                     type="text"
@@ -152,13 +191,13 @@ export default function LookupPage() {
                             <button
                                 type="submit"
                                 disabled={isSearching}
-                                className="cp-btn cp-btn-accent"
-                                style={{ borderRadius: 0, border: "none", borderLeft: `1px solid ${C.border}`, padding: "22px 32px", minWidth: 160 }}
+                                className="cp-btn cp-btn-accent cp-search-btn"
+                                style={{ borderRadius: 0, border: "none", padding: "22px 32px", minWidth: 160 }}
                             >
                                 <span>
                                     {isSearching ? (
                                         <>
-                                            <div style={{ width: 14, height: 14, border: "2px solid rgba(74,222,128,0.3)", borderTop: "2px solid #4ade80", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                                            <div style={{ width: 14, height: 14, border: "2px solid rgba(2,5,3,0.3)", borderTop: "2px solid #020503", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
                                             Tracing
                                         </>
                                     ) : (
@@ -178,76 +217,145 @@ export default function LookupPage() {
                     )}
                 </motion.div>
 
-                {/* Divider */}
-                <div style={{ maxWidth: 640, display: "flex", alignItems: "center", gap: 16, margin: "48px 0 40px" }}>
-                    <div style={{ height: 1, flex: 1, background: C.border }} />
-                    <span style={{ fontFamily: FM, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: C.muted }}>Or Try a Demo</span>
-                    <div style={{ height: 1, flex: 1, background: C.border }} />
-                </div>
-
-                {/* Demo Batches */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.7 }}>
-                    <div className="cp-demo-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, maxWidth: 640 }}>
-                        {demoBatches.map((batch, i) => (
-                            <motion.button
-                                key={batch.code}
-                                whileHover={{ y: -2 }}
-                                onClick={() => setBatchCode(batch.code)}
-                                style={{
-                                    background: "transparent",
-                                    border: `1px solid ${C.border}`,
-                                    padding: "20px",
-                                    cursor: "pointer",
-                                    textAlign: "left",
-                                    transition: "all 0.4s cubic-bezier(0.19, 1, 0.22, 1)",
-                                    position: "relative",
-                                    overflow: "hidden",
-                                }}
-                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.borderG; e.currentTarget.style.background = "rgba(74,222,128,0.03)"; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = "transparent"; }}
-                            >
-                                <p style={{ fontFamily: FM, fontSize: 12, color: C.accent, letterSpacing: "0.05em", marginBottom: 10, fontWeight: 700 }}>{batch.code}</p>
-                                <p style={{ fontFamily: FD, fontSize: 18, color: C.white, fontWeight: 500, marginBottom: 8 }}>{batch.crop}</p>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <MapPin style={{ width: 10, height: 10, color: C.muted }} />
-                                    <span style={{ fontFamily: FS, fontSize: 11, color: C.muted }}>{batch.farmer}</span>
-                                </div>
-                                <ChevronRight style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: C.muted, opacity: 0.3 }} />
-                            </motion.button>
-                        ))}
-                    </div>
-                </motion.div>
-
                 {/* Features Grid */}
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6, duration: 0.8 }} style={{ marginTop: 80, maxWidth: 640 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
-                        <span style={{ fontFamily: FM, fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: C.muted }}>What You'll Discover</span>
-                        <div style={{ height: 1, flex: 1, background: C.border }} />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: C.border }}>
-                        {features.map((f, i) => (
-                            <div key={i} style={{ background: C.deep, padding: "28px 24px" }}>
-                                <span style={{ fontSize: 24, display: "block", marginBottom: 14 }}>{f.icon}</span>
-                                <p style={{ fontFamily: FS, fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 6, letterSpacing: "0.02em" }}>{f.label}</p>
-                                <p style={{ fontFamily: FS, fontSize: 12, color: C.muted, lineHeight: 1.5, fontWeight: 300 }}>{f.desc}</p>
-                            </div>
-                        ))}
+                    <span style={{ ...meta, display: "block", marginBottom: 24 }}>What You&apos;ll Discover</span>
+                    <div className="cp-features-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, background: C.border }}>
+                        {features.map((f, i) => {
+                            const Icon = f.Icon;
+                            return (
+                                <div key={i} style={{ background: C.deep, padding: "28px 24px", transition: "background 0.3s" }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(74,222,128,0.04)"; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = C.deep; }}>
+                                    <Icon style={{ width: 22, height: 22, color: C.accent, marginBottom: 14, strokeWidth: 1.5 }} />
+                                    <p style={{ fontFamily: FS, fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 6, letterSpacing: "0.02em" }}>{f.label}</p>
+                                    <p style={{ fontFamily: FS, fontSize: 12, color: C.muted, lineHeight: 1.5, fontWeight: 300 }}>{f.desc}</p>
+                                </div>
+                            );
+                        })}
                     </div>
                 </motion.div>
             </div>
 
-            {/* Footer */}
-            <footer style={{ position: "relative", zIndex: 10, borderTop: `1px solid ${C.border}`, marginTop: 80 }}>
-                <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>🍒</div>
-                        <span style={{ fontFamily: FD, fontWeight: 700, fontSize: 11, letterSpacing: 1.5, color: C.muted }}>CHERRY PICK</span>
+            {/* Farmer Carousel */}
+            <div style={{ position: "relative", zIndex: 10, marginTop: 80, paddingBottom: 20, background: C.surface, borderTop: `1px solid ${C.border}` }}>
+                <div className="cp-section" style={{ maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
+                        <div>
+                            <span style={{ ...meta, color: C.accent, display: "block", marginBottom: 16 }}>Meet the Growers</span>
+                            <h2 style={{ ...serif, fontSize: "clamp(2rem, 4vw, 3rem)", margin: 0, maxWidth: 560 }}>
+                                The Hands Behind<br /><em style={{ fontStyle: "italic", color: C.accent }}>Every Harvest</em>
+                            </h2>
+                        </div>
+                        <p style={{ ...body, fontSize: 14, maxWidth: 320, margin: 0 }}>
+                            Real smallholder farmers across Zambia, verified on-chain and directly connected to your table.
+                        </p>
                     </div>
-                    <div style={{ display: "flex", gap: 12 }}>
-                        {["BASE L2", "IPFS", "AGROCHAIN 360"].map((t) => (
-                            <span key={t} style={{ fontFamily: FM, fontSize: 9, letterSpacing: "0.1em", color: C.muted, background: "rgba(255,255,255,0.03)", border: `1px solid ${C.border}`, padding: "4px 10px" }}>{t}</span>
+                </div>
+
+                <div style={{ position: "relative", overflow: "hidden", maskImage: "linear-gradient(90deg, transparent, #020503 8%, #020503 92%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, #020503 8%, #020503 92%, transparent)" }}>
+                    <div className="cp-marquee">
+                        {[...farmers, ...farmers].map((f, i) => (
+                            <div key={i} className="cp-farmer-card">
+                                <img src={f.img} alt={f.name} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80"; }} />
+                                <div className="cp-farmer-overlay">
+                                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(74,222,128,0.1)", border: `1px solid ${C.borderG}`, borderRadius: 20, padding: "4px 10px", marginBottom: 12, alignSelf: "flex-start" }}>
+                                        <span className="cp-dot" style={{ width: 5, height: 5 }} />
+                                        <span style={{ fontFamily: FM, fontSize: 9, letterSpacing: 1.5, color: C.accent }}>VERIFIED</span>
+                                    </div>
+                                    <p style={{ fontFamily: FD, fontSize: 22, color: C.white, fontWeight: 500, margin: "0 0 4px" }}>{f.name}</p>
+                                    <p style={{ fontFamily: FS, fontSize: 12, color: C.accent, margin: "0 0 8px", letterSpacing: "0.05em" }}>{f.crop.toUpperCase()}</p>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                        <MapPin style={{ width: 11, height: 11, color: C.muted }} />
+                                        <span style={{ fontFamily: FS, fontSize: 11, color: C.secondary }}>{f.region}</span>
+                                    </div>
+                                </div>
+                            </div>
                         ))}
                     </div>
+                </div>
+            </div>
+
+            {/* Our Impact */}
+            <div className="cp-section" style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>
+                <span style={{ ...meta, color: C.accent, display: "block", marginBottom: 16 }}>Our Impact</span>
+                <h2 style={{ ...serif, fontSize: "clamp(2rem, 4vw, 3rem)", margin: "0 0 48px", maxWidth: 640 }}>
+                    Building trust,<br /><em style={{ fontStyle: "italic", color: C.accent }}>one batch at a time.</em>
+                </h2>
+                <div className="cp-impact-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, background: C.border, border: `1px solid ${C.border}` }}>
+                    {impact.map((s, i) => {
+                        const Icon = s.Icon;
+                        return (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: i * 0.1, duration: 0.6 }}
+                                style={{ background: C.deep, padding: "32px 24px", display: "flex", flexDirection: "column", gap: 12 }}
+                            >
+                                <Icon style={{ width: 20, height: 20, color: C.accentDim, strokeWidth: 1.5 }} />
+                                <p className="cp-stat-num">{s.num}</p>
+                                <p style={{ fontFamily: FS, fontSize: 12, color: C.secondary, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 500, margin: 0 }}>{s.label}</p>
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* How It Works */}
+            <div className="cp-section" style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px", background: C.surface, borderTop: `1px solid ${C.border}` }}>
+                <span style={{ ...meta, color: C.accent, display: "block", marginBottom: 16 }}>How It Works</span>
+                <h2 style={{ ...serif, fontSize: "clamp(2rem, 4vw, 3rem)", margin: "0 0 48px", maxWidth: 640 }}>
+                    Three steps to full<br /><em style={{ fontStyle: "italic", color: C.accent }}>transparency.</em>
+                </h2>
+                <div className="cp-steps-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+                    {steps.map((s, i) => {
+                        const Icon = s.Icon;
+                        return (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ delay: i * 0.15, duration: 0.6 }}
+                                className="cp-step"
+                            >
+                                <span className="cp-step-num">0{i + 1}</span>
+                                <Icon style={{ width: 24, height: 24, color: C.accent, strokeWidth: 1.5, marginBottom: 20 }} />
+                                <p style={{ fontFamily: FD, fontSize: 22, color: C.white, fontWeight: 500, margin: "0 0 10px" }}>{s.title}</p>
+                                <p style={{ ...body, fontSize: 13, margin: 0 }}>{s.desc}</p>
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* CTA Strip */}
+            <div className="cp-section" style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>
+                <div style={{ border: `1px solid ${C.borderG}`, background: "rgba(74,222,128,0.04)", padding: "48px 40px", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32, flexWrap: "wrap" }}>
+                    <div style={{ maxWidth: 560 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                            <TrendingUp style={{ width: 14, height: 14, color: C.accent }} />
+                            <span style={{ ...meta, color: C.accent, fontSize: 10 }}>For Brands &amp; Retailers</span>
+                        </div>
+                        <h3 style={{ ...serif, fontSize: "clamp(1.5rem, 3vw, 2rem)", margin: "0 0 12px" }}>
+                            Source with <em style={{ fontStyle: "italic", color: C.accent }}>confidence.</em>
+                        </h3>
+                        <p style={{ ...body, fontSize: 14, margin: 0 }}>
+                            Bring verified provenance to your shelves. Join the cooperatives, aggregators and retailers already using Cherry Pick.
+                        </p>
+                    </div>
+                    <Link href="/" className="cp-btn cp-btn-accent"><span>Partner with us <ArrowRight style={{ width: 14, height: 14 }} /></span></Link>
+                </div>
+            </div>
+
+            {/* Footer */}
+            <footer style={{ position: "relative", zIndex: 10, borderTop: `1px solid ${C.border}`, marginTop: 40 }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 32px" }}>
+                    <Link href="/" style={{ textDecoration: "none" }}>
+                        <img src="/logo-new.png" alt="AgroChain 360" style={{ height: 28, width: "auto", objectFit: "contain" }} />
+                    </Link>
                 </div>
             </footer>
         </div>

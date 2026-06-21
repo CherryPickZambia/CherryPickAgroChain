@@ -212,11 +212,11 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
                     <button
                       onClick={() => setPaymentMethod('smart')}
                       className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center ${paymentMethod === 'smart'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-200 hover:border-green-200 text-gray-600'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                        : 'border-gray-200 hover:border-emerald-200 text-gray-600'
                         }`}
                     >
-                      <Wallet className={`h-6 w-6 mb-2 ${paymentMethod === 'smart' ? 'text-green-600' : 'text-gray-400'}`} />
+                      <Wallet className={`h-6 w-6 mb-2 ${paymentMethod === 'smart' ? 'text-emerald-600' : 'text-gray-400'}`} />
                       <span className="text-sm font-bold">Platform Wallet</span>
                       <span className="text-xs opacity-75">Gasless • Instant</span>
                     </button>
@@ -256,7 +256,7 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
                       <div className="pt-3 border-t border-gray-200">
                         <div className="flex justify-between items-center">
                           <span className="text-gray-900 font-medium">Total Amount</span>
-                          <span className="text-2xl font-bold text-green-600">
+                          <span className="text-2xl font-bold text-emerald-600">
                             ZK {order.total_amount.toLocaleString()}
                           </span>
                         </div>
@@ -272,11 +272,11 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
                     </div>
 
                     {/* Sender Balance */}
-                    <div className={`p-4 rounded-lg flex justify-between items-center ${usdcBalance >= order.total_amount ? 'bg-green-50' : 'bg-red-50'
+                    <div className={`p-4 rounded-lg flex justify-between items-center ${usdcBalance >= order.total_amount ? 'bg-emerald-50' : 'bg-red-50'
                       }`}>
                       <div>
                         <p className="text-sm font-medium text-gray-700">Your Wallet Balance</p>
-                        <p className={`text-xl font-bold ${usdcBalance >= order.total_amount ? 'text-green-700' : 'text-red-700'
+                        <p className={`text-xl font-bold ${usdcBalance >= order.total_amount ? 'text-emerald-700' : 'text-red-700'
                           }`}>
                           ${usdcBalance.toFixed(2)} USDC
                         </p>
@@ -324,9 +324,9 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", duration: 0.5 }}
-                      className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4"
+                      className="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 rounded-full mb-4"
                     >
-                      <CheckCircle className="h-8 w-8 text-green-600" />
+                      <CheckCircle className="h-8 w-8 text-emerald-600" />
                     </motion.div>
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Successful!</h3>
                     <p className="text-gray-600 mb-4">

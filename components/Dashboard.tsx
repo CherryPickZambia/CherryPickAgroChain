@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { useEvmAddress } from "@coinbase/cdp-hooks";
+import { useEvmAddress, useIsInitialized } from "@coinbase/cdp-hooks";
 import Header from "./Header";
 import LandingPage from "./LandingPage";
 import ErrorBoundary from "./ErrorBoundary";
@@ -11,6 +11,7 @@ import FarmerDashboard from "./FarmerDashboard";
 import BuyerDashboard from "./BuyerDashboard";
 import OfficerDashboard from "./OfficerDashboard";
 import AdminDashboard from "./AdminDashboard";
+import PublicPageLoader from "./PublicPageLoader";
 import { getOrCreateUser, getUserByWallet } from "@/lib/supabaseService";
 import VerifierOnboarding, { VerifierData } from "./VerifierOnboarding";
 import toast from "react-hot-toast";
@@ -19,6 +20,7 @@ import toast from "react-hot-toast";
 
 export default function Dashboard() {
   const { evmAddress } = useEvmAddress();
+  const { isInitialized } = useIsInitialized();
   const searchParams = useSearchParams();
   const [userRole, setUserRole] = useState<"farmer" | "buyer" | "officer" | "admin" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,26 +34,27 @@ export default function Dashboard() {
   // Load role from URL parameter or database
   useEffect(() => {
     const loadUserRole = async () => {
-      // Allow more time for the CDP wallet hook to resolve the address
       if (!evmAddress) {
+        if (isInitialized) {
+          setIsLoading(false);
+          setIsInitialCheck(false);
+          return;
+        }
         const timer = setTimeout(() => {
-          if (!evmAddress) {
-            setIsLoading(false);
-            setIsInitialCheck(false);
-          }
-        }, 2500);
+          setIsLoading(false);
+          setIsInitialCheck(false);
+        }, 900);
         return () => clearTimeout(timer);
       }
 
       console.log("🔐 Authenticator checking wallet:", evmAddress);
 
-      // Immediately check localStorage for cached role to reduce flash
       const cachedRole = localStorage.getItem(`cherrypick_role_${evmAddress}`);
       if (cachedRole && ['farmer', 'buyer', 'officer', 'admin'].includes(cachedRole)) {
-        setUserRole(cachedRole as any);
+        setUserRole(cachedRole as "farmer" | "buyer" | "officer" | "admin");
         if (cachedRole === 'admin') setIsAdmin(true);
         setIsInitialCheck(false);
-        // Don't set isLoading false yet — verify with DB in background
+        setIsLoading(false);
       }
 
       // Check if user exists in database
@@ -95,7 +98,7 @@ export default function Dashboard() {
     };
 
     loadUserRole();
-  }, [evmAddress, searchParams]);
+  }, [evmAddress, isInitialized, searchParams]);
 
   // Save role to localStorage and database when it changes - PERMANENT, no role change allowed
   // Users can only choose farmer, buyer, or verifier (officer)
@@ -138,14 +141,7 @@ export default function Dashboard() {
   };
 
   if (isLoading || isInitialCheck) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Syncing with blockchain...</p>
-        </div>
-      </div>
-    );
+    return <PublicPageLoader label="Loading dashboard..." />;
   }
 
   if (!evmAddress) {
@@ -205,13 +201,13 @@ export default function Dashboard() {
                 </p>
                 <ul className="text-sm text-gray-500 space-y-2 mb-6">
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span> Create smart contracts
+                    <span className="text-emerald-500">✓</span> Create smart contracts
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span> List produce on marketplace
+                    <span className="text-emerald-500">✓</span> List produce on marketplace
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span> Receive crypto payments
+                    <span className="text-emerald-500">✓</span> Receive crypto payments
                   </li>
                 </ul>
                 <div className="flex items-center text-[#2d5f3f] font-semibold group-hover:translate-x-2 transition-transform">
@@ -238,13 +234,13 @@ export default function Dashboard() {
                 </p>
                 <ul className="text-sm text-gray-500 space-y-2 mb-6">
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span> Browse verified listings
+                    <span className="text-emerald-500">✓</span> Browse verified listings
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span> Place bulk orders
+                    <span className="text-emerald-500">✓</span> Place bulk orders
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span> Track deliveries
+                    <span className="text-emerald-500">✓</span> Track deliveries
                   </li>
                 </ul>
                 <div className="flex items-center text-[#2d5f3f] font-semibold group-hover:translate-x-2 transition-transform">
@@ -272,13 +268,13 @@ export default function Dashboard() {
                 </p>
                 <ul className="text-sm text-gray-500 space-y-2 mb-6">
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span> Professional or Freelance
+                    <span className="text-emerald-500">✓</span> Professional or Freelance
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span> Verify crop milestones
+                    <span className="text-emerald-500">✓</span> Verify crop milestones
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-green-500">✓</span> Earn verification fees
+                    <span className="text-emerald-500">✓</span> Earn verification fees
                   </li>
                 </ul>
                 <div className="flex items-center text-[#2d5f3f] font-semibold group-hover:translate-x-2 transition-transform">

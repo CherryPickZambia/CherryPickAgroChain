@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { uploadToIPFS } from "@/lib/ipfsService";
 import CropDiagnostics from "./CropDiagnostics";
 import { getLatestAIDiagnostic } from "@/lib/traceabilityService";
+import { CONTRACT_UNITS } from "@/lib/config";
 import { useEffect } from "react";
 
 interface IoTReading {
@@ -61,6 +62,8 @@ interface FarmerMilestoneEntryModalProps {
   onSubmitAction: (entries: FarmActivity[]) => Promise<void>;
   hasContract?: boolean;
   batchId?: string;
+  /** Unit from the contract (e.g. "kg", "bags"). When provided it is the default and preferred unit. */
+  defaultUnit?: string;
 }
 
 // @ts-ignore - Next.js client component props warning
@@ -72,6 +75,7 @@ export default function FarmerMilestoneEntryModal({
   onSubmitAction,
   hasContract = true,
   batchId,
+  defaultUnit,
 }: FarmerMilestoneEntryModalProps) {
   const [activities, setActivities] = useState<FarmActivity[]>([]);
   const [showActivityForm, setShowActivityForm] = useState(false);
@@ -101,7 +105,11 @@ export default function FarmerMilestoneEntryModal({
   const [uploadingImages, setUploadingImages] = useState(false);
   const [description, setDescription] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("seedlings");
+  const [unit, setUnit] = useState<string>(defaultUnit || "kg");
+
+  useEffect(() => {
+    if (defaultUnit) setUnit(defaultUnit);
+  }, [defaultUnit]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState("");
   const [location, setLocation] = useState("");
@@ -453,7 +461,7 @@ export default function FarmerMilestoneEntryModal({
                         <select
                           value={activityType}
                           onChange={(e) => setActivityType(e.target.value as FarmActivity["type"])}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all bg-white"
                         >
                           <option value="planting">Planting</option>
                           <option value="weeding">Weeding</option>
@@ -502,7 +510,7 @@ export default function FarmerMilestoneEntryModal({
                       type="date"
                       value={date}
                       onChange={(e) => setDate(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
                     />
                   </div>
 
@@ -516,14 +524,14 @@ export default function FarmerMilestoneEntryModal({
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="e.g. Planting Mangoes"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
                       />
                     ) : (
                       <div className="space-y-2">
                         <select
                           value={description}
                           onChange={(e) => setDescription(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all bg-white"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all bg-white"
                         >
                           <option value="">Select Observation...</option>
                           {observationOptions.map(opt => (
@@ -583,22 +591,22 @@ export default function FarmerMilestoneEntryModal({
                   )}
 
                   {/* IoT Sensor Section */}
-                  <div className="md:col-span-2 bg-purple-50 border border-purple-200 rounded-xl p-4">
+                  <div className="md:col-span-2 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-bold text-purple-800 flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-emerald-800 flex items-center gap-2">
                         <Thermometer className="w-4 h-4" /> IoT Sensor Readings
                       </h4>
                       <button
                         type="button"
                         onClick={() => setShowIoTForm(!showIoTForm)}
-                        className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors"
+                        className="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700 transition-colors"
                       >
                         {showIoTForm ? "Hide Form" : "Add Reading"}
                       </button>
                     </div>
 
                     {showIoTForm && (
-                      <div className="bg-white p-3 rounded-lg border border-purple-100 mb-3 grid grid-cols-2 gap-2">
+                      <div className="bg-white p-3 rounded-lg border border-emerald-100 mb-3 grid grid-cols-2 gap-2">
                         <select
                           value={iotType}
                           onChange={(e) => setIoTType(e.target.value as IoTReading["type"])}
@@ -621,7 +629,7 @@ export default function FarmerMilestoneEntryModal({
                           <button
                             type="button"
                             onClick={addIoTReading}
-                            className="bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 transition-colors"
+                            className="bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700 transition-colors"
                           >
                             <Plus className="w-4 h-4" />
                           </button>
@@ -632,13 +640,13 @@ export default function FarmerMilestoneEntryModal({
                     {iotReadings.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {iotReadings.map((reading) => (
-                          <div key={reading.id} className="bg-white px-3 py-2 rounded-lg border border-purple-100 flex items-center justify-between shadow-sm">
+                          <div key={reading.id} className="bg-white px-3 py-2 rounded-lg border border-emerald-100 flex items-center justify-between shadow-sm">
                             <div className="flex items-center gap-2">
                               {getIoTIcon(reading.type)}
                               <span className="text-xs font-semibold">{getIoTLabel(reading.type)}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-purple-700">{reading.value}{reading.unit}</span>
+                              <span className="text-sm font-bold text-emerald-700">{reading.value}{reading.unit}</span>
                               <button onClick={() => removeIoTReading(reading.id)} className="text-red-400 hover:text-red-600">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -647,7 +655,7 @@ export default function FarmerMilestoneEntryModal({
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-purple-600 italic">No sensor data added yet</p>
+                      <p className="text-xs text-emerald-600 italic">No sensor data added yet</p>
                     )}
                   </div>
 
@@ -658,23 +666,23 @@ export default function FarmerMilestoneEntryModal({
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       placeholder="e.g. Plot 4, North-West Sector"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
                     />
                   </div>
 
                   {/* AI Diagnostics Section */}
-                  <div className="md:col-span-2 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4">
+                  <div className="md:col-span-2 bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h4 className="text-sm font-bold text-indigo-800 flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-emerald-800 flex items-center gap-2">
                           <CheckCircle className="w-4 h-4" /> AI Diagnostics & Quality Grading
                         </h4>
-                        <p className="text-xs text-indigo-600 mt-1">Scan crops for disease, predict yield quality, and verify treatment recovery.</p>
+                        <p className="text-xs text-emerald-600 mt-1">Scan crops for disease, predict yield quality, and verify treatment recovery.</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setShowAiScanner(!showAiScanner)}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm ${previousDiagnosis ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm ${previousDiagnosis ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'
                           }`}
                       >
                         {showAiScanner ? "Hide Scanner" : previousDiagnosis ? "Verify Recovery Scan" : "Enable AI Scan"}
@@ -694,7 +702,7 @@ export default function FarmerMilestoneEntryModal({
                     )}
 
                     {showAiScanner && (
-                      <div className="bg-white rounded-xl overflow-hidden border border-indigo-100 shadow-sm mt-4">
+                      <div className="bg-white rounded-xl overflow-hidden border border-emerald-100 shadow-sm mt-4">
                         <CropDiagnostics
                           onResult={(result) => {
                             setAiResult({
@@ -711,10 +719,10 @@ export default function FarmerMilestoneEntryModal({
                     )}
 
                     {aiResult && (
-                      <div className="mt-4 bg-white p-3 rounded-xl border border-indigo-200">
+                      <div className="mt-4 bg-white p-3 rounded-xl border border-emerald-200">
                         <div className="flex justify-between items-start mb-2">
                           <span className="text-xs font-bold text-gray-500 uppercase">AI Assessment Result</span>
-                          <span className="text-xs font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Health: {aiResult.healthScore}/100</span>
+                          <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Health: {aiResult.healthScore}/100</span>
                         </div>
                         <p className="text-sm font-semibold text-gray-900 mb-1">{aiResult.disease}</p>
                         <p className="text-xs text-gray-600 mb-2">Confidence: {(aiResult.confidence * 100).toFixed(1)}%</p>
@@ -764,7 +772,7 @@ export default function FarmerMilestoneEntryModal({
                       </button>
                     )}
                     {uploadedImageUrls.length > 0 && (
-                      <p className="text-xs text-green-600 flex items-center gap-1">
+                      <p className="text-xs text-emerald-600 flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" /> {uploadedImageUrls.length} photos ready
                       </p>
                     )}
@@ -790,12 +798,12 @@ export default function FarmerMilestoneEntryModal({
                           onChange={(e) => setUnit(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                         >
-                          <option value="seedlings">Seedlings</option>
-                          <option value="kg">Kilograms (kg)</option>
-                          <option value="liters">Liters</option>
-                          <option value="bags">Bags</option>
-                          <option value="hours">Hours</option>
-                          <option value="units">Units</option>
+                          {CONTRACT_UNITS.map(u => (
+                            <option key={u.value} value={u.value}>{u.label}</option>
+                          ))}
+                          {defaultUnit && !CONTRACT_UNITS.some(u => u.value === defaultUnit) && (
+                            <option value={defaultUnit}>{defaultUnit}</option>
+                          )}
                         </select>
                       </div>
                     </div>
@@ -809,7 +817,7 @@ export default function FarmerMilestoneEntryModal({
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Add details about this activity..."
-                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm h-28 resize-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm h-28 resize-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
                     />
                   </div>
 
@@ -859,10 +867,10 @@ export default function FarmerMilestoneEntryModal({
             {activities.length > 0 ? (
               <div className="space-y-3">
                 {activities.map((activity) => (
-                  <div key={activity.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:border-green-300 transition-colors">
+                  <div key={activity.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:border-emerald-300 transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3 flex-1">
-                        <div className="p-2 bg-green-100 rounded-lg text-green-600">{getActivityIcon(activity.type)}</div>
+                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">{getActivityIcon(activity.type)}</div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-semibold text-gray-900">
@@ -887,7 +895,7 @@ export default function FarmerMilestoneEntryModal({
                           {activity.iotReadings && activity.iotReadings.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-2">
                               {activity.iotReadings.map(r => (
-                                <div key={r.id} className="flex items-center gap-1 text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100 font-medium">
+                                <div key={r.id} className="flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100 font-medium">
                                   {getIoTIcon(r.type)}
                                   {r.value}{r.unit}
                                 </div>
@@ -923,10 +931,10 @@ export default function FarmerMilestoneEntryModal({
                           )}
 
                           {activity.aiDiagnosis && (
-                            <div className="mt-3 bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+                            <div className="mt-3 bg-emerald-50 border border-emerald-100 rounded-lg p-3">
                               <div className="flex justify-between items-center mb-1">
-                                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">AI Verified Data</span>
-                                <span className="text-[10px] font-black bg-indigo-200 text-indigo-800 px-1.5 py-0.5 rounded">Score: {activity.aiDiagnosis.healthScore}</span>
+                                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">AI Verified Data</span>
+                                <span className="text-[10px] font-black bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded">Score: {activity.aiDiagnosis.healthScore}</span>
                               </div>
                               <p className="text-xs font-medium text-gray-800">{activity.aiDiagnosis.disease} ({(activity.aiDiagnosis.confidence * 100).toFixed(0)}%)</p>
                             </div>

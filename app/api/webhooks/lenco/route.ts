@@ -4,25 +4,40 @@ import crypto from "crypto";
 
 const WEBHOOK_SECRET = process.env.LENCO_WEBHOOK_SECRET;
 
+/** Constant-time comparison of two hex signatures, length-safe. */
+function signaturesMatch(expectedHex: string, providedHex: string): boolean {
+    try {
+        const expected = Buffer.from(expectedHex, "hex");
+        const provided = Buffer.from(providedHex, "hex");
+        if (expected.length === 0 || expected.length !== provided.length) return false;
+        return crypto.timingSafeEqual(expected, provided);
+    } catch {
+        return false;
+    }
+}
+
 export async function POST(req: NextRequest) {
     try {
         const rawBody = await req.text();
         const signature = req.headers.get("x-lenco-signature");
 
-        // 1. Security Verification (if secret is configured)
-        if (WEBHOOK_SECRET && signature) {
-            const hmac = crypto.createHmac("sha512", WEBHOOK_SECRET);
-            const digest = hmac.update(rawBody).digest("hex");
-
-            if (digest !== signature) {
-                console.error("❌ Lenco Webhook: Invalid signature");
-                return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-            }
-            console.log("✅ Lenco Webhook: Signature verified");
-        } else if (WEBHOOK_SECRET && !signature) {
-            console.warn("⚠️ Lenco Webhook: Missing signature header, but secret is configured");
+        // 1. Security Verification — MANDATORY. This webhook credits user balances,
+        // so it must never be processed without a valid signature.
+        if (!WEBHOOK_SECRET) {
+            console.error("❌ Lenco Webhook: LENCO_WEBHOOK_SECRET is not configured — rejecting.");
+            return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+        }
+        if (!signature) {
+            console.error("❌ Lenco Webhook: Missing signature header");
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+
+        const digest = crypto.createHmac("sha512", WEBHOOK_SECRET).update(rawBody).digest("hex");
+        if (!signaturesMatch(digest, signature)) {
+            console.error("❌ Lenco Webhook: Invalid signature");
+            return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+        }
+        console.log("✅ Lenco Webhook: Signature verified");
 
         const event = JSON.parse(rawBody);
         console.log("🔔 Received Lenco Webhook Event:", event.event || event.type || "unknown");

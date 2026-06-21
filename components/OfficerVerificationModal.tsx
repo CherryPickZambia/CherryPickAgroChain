@@ -26,6 +26,8 @@ interface OfficerVerificationModalProps {
   onCloseAction: () => void;
   milestone: VerificationMilestone;
   onVerificationCompleteAction: () => void;
+  officerId?: string;
+  officerWallet?: string;
 }
 
 export default function OfficerVerificationModal({
@@ -33,6 +35,8 @@ export default function OfficerVerificationModal({
   onCloseAction,
   milestone,
   onVerificationCompleteAction,
+  officerId,
+  officerWallet,
 }: OfficerVerificationModalProps) {
   const [showEvidenceUpload, setShowEvidenceUpload] = useState(false);
   const [evidence, setEvidence] = useState<{
@@ -75,7 +79,9 @@ export default function OfficerVerificationModal({
         iot_readings: evidence.iotReadings as unknown as Record<string, unknown>[],
         notes: `${evidence.notes}\n\nOfficer Notes: ${officerNotes}`,
         ai_analysis: evidence.aiAnalysis || null,
-      });
+        officer_name: milestone.contract?.farmer?.name || 'Officer',
+        officer_wallet: officerWallet,
+      }, officerId);
 
       toast.success("Milestone verified successfully! Farmer can now track this milestone as complete.");
       onVerificationCompleteAction();

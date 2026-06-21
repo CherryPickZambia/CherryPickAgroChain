@@ -26,6 +26,7 @@ export interface SmartContract {
   qrCode: string;
   createdAt: Date;
   harvestDate?: Date;
+  unit?: string;
 }
 
 // Database Contract type (matches Supabase schema)
@@ -46,6 +47,7 @@ export interface Contract {
   completed_at?: string;
   blockchain_tx?: string;
   ipfs_metadata?: string;
+  quantity_unit?: string;
 }
 
 export interface Milestone {

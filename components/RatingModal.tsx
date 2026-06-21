@@ -177,7 +177,7 @@ export default function RatingModal({
             <button
               type="button"
               onClick={() => setShowDetailedRatings(!showDetailedRatings)}
-              className="w-full py-2 text-sm text-green-600 hover:text-green-700 font-medium"
+              className="w-full py-2 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
             >
               {showDetailedRatings ? '− Hide detailed ratings' : '+ Add detailed ratings'}
             </button>

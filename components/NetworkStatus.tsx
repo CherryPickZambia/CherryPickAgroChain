@@ -55,8 +55,8 @@ export default function NetworkStatus({ compact = false, showComparison = true }
 
   const getGasLevelColor = (gwei: string) => {
     const value = parseFloat(gwei);
-    if (value < 0.01) return "text-green-500";
-    if (value < 0.1) return "text-green-400";
+    if (value < 0.01) return "text-emerald-500";
+    if (value < 0.1) return "text-emerald-400";
     if (value < 1) return "text-yellow-500";
     if (value < 10) return "text-orange-500";
     return "text-red-500";
@@ -64,7 +64,7 @@ export default function NetworkStatus({ compact = false, showComparison = true }
 
   const getGasLevelBg = (gwei: string) => {
     const value = parseFloat(gwei);
-    if (value < 0.1) return "bg-green-500/10 border-green-500/20";
+    if (value < 0.1) return "bg-emerald-500/10 border-emerald-500/20";
     if (value < 1) return "bg-yellow-500/10 border-yellow-500/20";
     return "bg-orange-500/10 border-orange-500/20";
   };
@@ -85,7 +85,7 @@ export default function NetworkStatus({ compact = false, showComparison = true }
         {status?.isConnected ? (
           <>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
               <span className="text-gray-600 hidden sm:inline">Base</span>
             </div>
             <div className={`flex items-center gap-1 ${getGasLevelColor(status.gasPrice.gwei)}`}>
@@ -110,9 +110,9 @@ export default function NetworkStatus({ compact = false, showComparison = true }
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl ${status?.isConnected ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+          <div className={`p-2 rounded-xl ${status?.isConnected ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
             {status?.isConnected ? (
-              <Wifi className="w-5 h-5 text-green-500" />
+              <Wifi className="w-5 h-5 text-emerald-500" />
             ) : (
               <WifiOff className="w-5 h-5 text-red-500" />
             )}
@@ -207,15 +207,15 @@ export default function NetworkStatus({ compact = false, showComparison = true }
 
           {/* Savings Comparison */}
           {showComparison && comparison && (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 mb-4 border border-green-200">
+            <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl p-4 mb-4 border border-emerald-200">
               <div className="flex items-center gap-2 mb-3">
-                <TrendingDown className="w-5 h-5 text-green-600" />
-                <span className="font-medium text-green-800">Base vs Ethereum Mainnet</span>
+                <TrendingDown className="w-5 h-5 text-emerald-600" />
+                <span className="font-medium text-emerald-800">Base vs Ethereum Mainnet</span>
               </div>
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Base</p>
-                  <p className="font-bold text-green-600">{comparison.base.gasPrice}</p>
+                  <p className="font-bold text-emerald-600">{comparison.base.gasPrice}</p>
                   <p className="text-xs text-gray-500">{comparison.base.transferCost}</p>
                 </div>
                 <div>
@@ -224,8 +224,8 @@ export default function NetworkStatus({ compact = false, showComparison = true }
                   <p className="text-xs text-gray-500">{comparison.ethereumEstimate.transferCost}</p>
                 </div>
               </div>
-              <div className="text-center py-2 bg-green-100 rounded-lg">
-                <span className="font-bold text-green-700">{comparison.savings}</span>
+              <div className="text-center py-2 bg-emerald-100 rounded-lg">
+                <span className="font-bold text-emerald-700">{comparison.savings}</span>
               </div>
             </div>
           )}

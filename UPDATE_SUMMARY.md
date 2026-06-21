@@ -3,8 +3,8 @@
 ## 🎨 Major Updates Completed
 
 ### 1. ✅ CDP Credentials Integrated
-- **Project ID**: 8d885400-2c82-473e-b9d0-bf5c580a9a5f
-- **API Key**: 64e06207-c2c5-4e9d-8b5c-3e7bbfc292d6
+- **Project ID**: configured via `NEXT_PUBLIC_CDP_PROJECT_ID`
+- **API Key**: configured via `CDP_API_KEY`
 - **Wallet Secret**: Configured for server wallets
 - **Status**: Ready for blockchain transactions
 
@@ -145,9 +145,9 @@ Inspired by the high-quality agricultural UI designs you provided:
 ### Environment Setup
 ```bash
 # Already configured in .env.local
-NEXT_PUBLIC_CDP_PROJECT_ID=8d885400-2c82-473e-b9d0-bf5c580a9a5f
-CDP_API_KEY=64e06207-c2c5-4e9d-8b5c-3e7bbfc292d6
-CDP_WALLET_SECRET=[configured]
+NEXT_PUBLIC_CDP_PROJECT_ID=your-cdp-project-id
+CDP_API_KEY=your-cdp-api-key
+CDP_WALLET_SECRET=your-cdp-wallet-secret
 
 # Need to add (see SUPABASE_SETUP.md)
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url

@@ -258,7 +258,7 @@ export default function VerificationMap({ onSelectRequest }: VerificationMapProp
   if (loading) {
     return (
       <div className="card-premium p-8 text-center">
-        <div className="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4" />
+        <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-4" />
         <p className="text-gray-600">Loading nearby verification requests...</p>
       </div>
     );
@@ -294,8 +294,8 @@ export default function VerificationMap({ onSelectRequest }: VerificationMapProp
       {/* Verification requests list */}
       {sortedRequests.length === 0 ? (
         <div className="card-premium p-12 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-green-600" />
+          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-8 w-8 text-emerald-600" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No Pending Verifications</h3>
           <p className="text-gray-600">All nearby farms have been verified. Check back later.</p>
@@ -306,7 +306,7 @@ export default function VerificationMap({ onSelectRequest }: VerificationMapProp
             <div
               key={request.id}
               className={`card-premium hover:shadow-xl transition-all cursor-pointer ${
-                selectedRequest?.id === request.id ? 'ring-2 ring-green-500' : ''
+                selectedRequest?.id === request.id ? 'ring-2 ring-emerald-500' : ''
               }`}
               onClick={() => setSelectedRequest(request)}
             >
@@ -326,7 +326,7 @@ export default function VerificationMap({ onSelectRequest }: VerificationMapProp
                   {/* Crop and milestone */}
                   <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
                     <div className="flex items-center gap-1">
-                      <Sprout className="h-4 w-4 text-green-500" />
+                      <Sprout className="h-4 w-4 text-emerald-500" />
                       <span>{request.contract?.crop_type || 'Unknown Crop'}</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -370,7 +370,7 @@ export default function VerificationMap({ onSelectRequest }: VerificationMapProp
                       <p className="text-sm font-medium text-gray-700 mb-2">Activities to Verify:</p>
                       <div className="flex flex-wrap gap-2">
                         {request.activities.map((activity: any, idx: number) => (
-                          <span key={idx} className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs">
+                          <span key={idx} className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded text-xs">
                             {activity.type}: {activity.description}
                           </span>
                         ))}
@@ -385,7 +385,7 @@ export default function VerificationMap({ onSelectRequest }: VerificationMapProp
                         e.stopPropagation();
                         handleAcceptRequest(request);
                       }}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
                     >
                       <Navigation className="h-5 w-5" />
                       Accept & Navigate

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package, Camera, Crosshair, Map as MapIcon } from "lucide-react";
+import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package, Camera, Crosshair, Map as MapIcon, Wallet } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import MilestoneCard from "./MilestoneCard";
 import WalletBalance from "./WalletBalance";
@@ -73,7 +73,7 @@ export default function FarmerDashboard() {
     organic: false,
     batch_id: '',
   });
-  const [activeTab, setActiveTab] = useState<'contracts' | 'listings' | 'traceability' | 'bidding' | 'growth'>('contracts');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'profile' | 'contracts' | 'listings' | 'traceability' | 'bidding' | 'growth'>('dashboard');
 
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
@@ -185,6 +185,7 @@ export default function FarmerDashboard() {
           requiredQuantity: (contract.required_quantity as number) || 0,
           discountedPrice: (contract.price_per_kg as number) || (contract.discounted_price as number) || 0,
           standardPrice: (contract.price_per_kg as number) || (contract.standard_price as number) || 0,
+          unit: (contract.quantity_unit as string) || (contract.unit as string) || 'kg',
           milestones: (contract.milestones || [])
             .filter((m: any) => m && m.id)
             .map((m: any) => ({
@@ -498,7 +499,7 @@ export default function FarmerDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+            <Loader2 className="h-12 w-12 animate-spin text-emerald-600 mx-auto mb-4" />
             <p className="text-gray-600">Loading your dashboard...</p>
           </div>
         </div>
@@ -523,7 +524,7 @@ export default function FarmerDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dashboard-shell">
       {/* Header — ARKTOS */}
       <div className="mb-8">
         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>Farmer Portal v1.0</div>
@@ -551,6 +552,40 @@ export default function FarmerDashboard() {
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="flex gap-4 mt-2 mb-8 border-b border-gray-200 overflow-x-auto">
+        <button onClick={() => setActiveTab('dashboard')} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'dashboard' ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><TrendingUp className="w-5 h-5" />Dashboard</div>
+          {activeTab === 'dashboard' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
+        </button>
+        <button onClick={() => setActiveTab('profile')} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'profile' ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><User className="w-5 h-5" />Profile</div>
+          {activeTab === 'profile' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
+        </button>
+        <button onClick={() => setActiveTab('contracts')} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'contracts' ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><FileText className="w-5 h-5" />Contracts</div>
+          {activeTab === 'contracts' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
+        </button>
+        <button onClick={() => setActiveTab('listings')} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'listings' ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><ShoppingBag className="w-5 h-5" />Marketplace</div>
+          {activeTab === 'listings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
+        </button>
+        <button onClick={() => { if (isPending) { toast.error('Account pending approval.'); return; } setActiveTab('traceability'); }} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'traceability' ? 'text-emerald-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><QrCode className="w-5 h-5" />Traceability {isPending && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Locked</span>}</div>
+          {activeTab === 'traceability' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
+        </button>
+        <button onClick={() => setActiveTab('bidding')} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'bidding' ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><DollarSign className="w-5 h-5" />Bidding</div>
+          {activeTab === 'bidding' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
+        </button>
+        <button onClick={() => { if (isPending) { toast.error('Account pending approval.'); return; } setActiveTab('growth'); }} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'growth' ? 'text-emerald-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><Sprout className="w-5 h-5" />Growth Log {isPending && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Locked</span>}</div>
+          {activeTab === 'growth' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
+        </button>
+      </div>
+
+      {activeTab === 'dashboard' && (
+      <div>
       {/* ARKTOS Stats Swatches */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
         {[
@@ -589,57 +624,19 @@ export default function FarmerDashboard() {
           />
         </div>
       </div>
+      </div>
+      )}
 
-      {/* Farmer Profile */}
+      {activeTab === 'profile' && (
       <div className="grid grid-cols-1 gap-6 mb-8">
-
         {/* Farmer Profile Card */}
-        <div className="card-premium lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl">
-                <User className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-[#1a1a1a]">Farmer Profile</h3>
-            </div>
-            {!isEditingProfile ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsEditingProfile(true)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
-                  title="Edit Profile"
-                >
-                  <Edit2 className="h-5 w-5 text-gray-600" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSaveProfile}
-                  className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md flex items-center gap-2"
-                  title="Save Changes"
-                >
-                  <Save className="h-4 w-4" />
-                  Save Changes
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="px-4 py-2 border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors flex items-center gap-2"
-                  title="Cancel"
-                >
-                  <X className="h-4 w-4" />
-                  Cancel
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {/* Profile Photo */}
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">Profile Photo</label>
-              <div className="flex items-center gap-4">
-                <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md ring-2 ring-white">
+        <div className="card-premium overflow-hidden">
+          {/* Hero Header with Large Avatar */}
+          <div className="relative bg-gradient-to-r from-emerald-50 via-white to-emerald-50/30 px-8 py-8 -mx-6 -mt-6 mb-8 border-b border-emerald-100/50">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+              {/* Large Avatar */}
+              <div className="relative">
+                <div className="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-xl ring-[4px] ring-white ring-offset-2 ring-offset-emerald-100">
                   {profileForm.profile_photo ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -648,7 +645,7 @@ export default function FarmerDashboard() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-white font-bold text-2xl">
+                    <span className="text-white font-bold text-3xl md:text-4xl tracking-wider">
                       {(profileForm.name || farmerData?.name || '?')
                         .split(' ')
                         .filter(Boolean)
@@ -658,134 +655,186 @@ export default function FarmerDashboard() {
                     </span>
                   )}
                 </div>
-
                 {isEditingProfile && (
-                  <div className="flex flex-col gap-2">
-                    <label className={`px-4 py-2 rounded-xl font-semibold cursor-pointer text-sm flex items-center gap-2 transition-colors ${uploadingPhoto ? 'bg-gray-100 text-gray-500' : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'}`}>
-                      {uploadingPhoto ? 'Uploading…' : (profileForm.profile_photo ? 'Change Photo' : 'Upload Photo')}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleProfilePhotoUpload}
-                        disabled={uploadingPhoto}
-                        className="hidden"
-                      />
-                    </label>
-                    {profileForm.profile_photo && (
-                      <button
-                        type="button"
-                        onClick={() => setProfileForm(prev => ({ ...prev, profile_photo: '' }))}
-                        className="text-xs text-red-600 hover:underline self-start"
-                      >
-                        Remove photo
-                      </button>
-                    )}
-                    <p className="text-xs text-gray-500 max-w-[260px]">This photo appears on the public traceability page so buyers can meet you.</p>
+                  <label className="absolute -bottom-1 -right-1 w-9 h-9 bg-emerald-600 hover:bg-emerald-700 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-colors border-2 border-white">
+                    <Edit2 className="w-4 h-4 text-white" />
+                    <input type="file" accept="image/*" onChange={handleProfilePhotoUpload} disabled={uploadingPhoto} className="hidden" />
+                  </label>
+                )}
+              </div>
+
+              {/* Name & Role */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
+                    {profileForm.name || farmerData?.name || 'Farmer'}
+                  </h2>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${farmerData?.status === 'approved' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : farmerData?.status === 'pending' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${farmerData?.status === 'approved' ? 'bg-emerald-500' : farmerData?.status === 'pending' ? 'bg-yellow-500' : 'bg-gray-400'}`} />
+                    {farmerData?.status || 'pending'}
+                  </span>
+                </div>
+                <p className="text-gray-500 text-sm mt-1.5 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-500" />
+                  {farmerData?.location_address || 'Location not set'}
+                </p>
+                <p className="text-gray-400 text-xs mt-0.5">{evmAddress ? `${evmAddress.slice(0, 8)}...${evmAddress.slice(-6)}` : 'Wallet not connected'}</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 ml-auto">
+                {!isEditingProfile ? (
+                  <button
+                    onClick={() => setIsEditingProfile(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    Edit Profile
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveProfile}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-md"
+                    >
+                      <Save className="h-4 w-4" />
+                      Save
+                    </button>
                   </div>
                 )}
               </div>
             </div>
 
+            {isEditingProfile && profileForm.profile_photo && (
+              <button
+                type="button"
+                onClick={() => setProfileForm(prev => ({ ...prev, profile_photo: '' }))}
+                className="text-xs text-red-500 hover:text-red-600 mt-3 font-medium"
+              >
+                Remove photo
+              </button>
+            )}
+          </div>
+
+          {/* Fields Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+
             {/* Name */}
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">Full Name</label>
+            <div className="group">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Full Name</label>
               {isEditingProfile ? (
                 <input
                   type="text"
                   value={profileForm.name}
                   onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white text-sm font-medium text-gray-900"
                   placeholder="Enter your full name"
                 />
               ) : (
-                <div className="flex items-center gap-2 text-gray-900">
-                  <User className="h-4 w-4 text-gray-400" />
-                  <span>{farmerData?.name || 'Not set'}</span>
+                <div className="flex items-center gap-3 dashboard-arktos-field group-hover:border-[#BFFF00]/35 transition-colors">
+                  <div className="dashboard-arktos-icon-box">
+                    <User className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800">{farmerData?.name || 'Not set'}</span>
                 </div>
               )}
             </div>
 
             {/* Email */}
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">Email</label>
+            <div className="group">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Email</label>
               {isEditingProfile ? (
                 <input
                   type="email"
                   value={profileForm.email}
                   onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white text-sm font-medium text-gray-900"
                   placeholder="your.email@example.com"
                 />
               ) : (
-                <div className="flex items-center gap-2 text-gray-900">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span>{farmerData?.email || 'Not set'}</span>
+                <div className="flex items-center gap-3 bg-gray-50/80 border border-gray-100 rounded-xl px-4 py-3 group-hover:border-emerald-200/60 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                    <Mail className="h-4 w-4 text-blue-500" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800">{farmerData?.email || 'Not set'}</span>
                 </div>
               )}
             </div>
 
             {/* Phone */}
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">Phone Number</label>
+            <div className="group">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Phone Number</label>
               {isEditingProfile ? (
                 <input
                   type="tel"
                   value={profileForm.phone}
                   onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white text-sm font-medium text-gray-900"
                   placeholder="+260 XXX XXX XXX"
                 />
               ) : (
-                <div className="flex items-center gap-2 text-gray-900">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <span>{farmerData?.phone || 'Not set'}</span>
+                <div className="flex items-center gap-3 dashboard-arktos-field group-hover:border-[#BFFF00]/35 transition-colors">
+                  <div className="dashboard-arktos-icon-box">
+                    <Phone className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800">{farmerData?.phone || 'Not set'}</span>
                 </div>
               )}
             </div>
 
             {/* NRC/ID Number */}
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">NRC/ID Number</label>
+            <div className="group">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">NRC / ID Number</label>
               {isEditingProfile ? (
                 <input
                   type="text"
                   value={profileForm.nrc_id}
                   onChange={(e) => setProfileForm({ ...profileForm, nrc_id: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white text-sm font-medium text-gray-900 font-mono"
                   placeholder="e.g. 123456/11/1"
                 />
               ) : (
-                <div className="flex items-center gap-2 text-gray-900">
-                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-sm">
-                    {farmerData?.nrc_id || 'Not set'}
-                  </span>
+                <div className="flex items-center gap-3 bg-gray-50/80 border border-gray-100 rounded-xl px-4 py-3 group-hover:border-emerald-200/60 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                    <FileText className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800 font-mono">{farmerData?.nrc_id || 'Not set'}</span>
                 </div>
               )}
             </div>
 
             {/* Gender */}
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">Gender</label>
+            <div className="group">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Gender</label>
               {isEditingProfile ? (
                 <select
                   value={profileForm.gender}
                   onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white text-sm font-medium text-gray-900"
                 >
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
                 </select>
               ) : (
-                <div className="flex items-center gap-2 text-gray-900">
-                  <span className="capitalize">{farmerData?.gender || 'Not set'}</span>
+                <div className="flex items-center gap-3 bg-gray-50/80 border border-gray-100 rounded-xl px-4 py-3 group-hover:border-emerald-200/60 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center shrink-0">
+                    <User className="h-4 w-4 text-pink-500" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800 capitalize">{farmerData?.gender || 'Not set'}</span>
                 </div>
               )}
             </div>
 
-            {/* Location */}
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">Farm Location</label>
+            {/* Location - Full Width */}
+            <div className="md:col-span-2 group">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Farm Location</label>
               {isEditingProfile ? (
                 <div className="space-y-4">
                   <div className="flex gap-2">
@@ -795,7 +844,7 @@ export default function FarmerDashboard() {
                         type="text"
                         value={profileForm.location_address}
                         onChange={(e) => setProfileForm({ ...profileForm, location_address: e.target.value })}
-                        className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                        className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm bg-white"
                         placeholder="City, District, Zambia"
                       />
                     </div>
@@ -811,16 +860,16 @@ export default function FarmerDashboard() {
                   </div>
 
                   {profileForm.location_lat !== 0 && (
-                    <div className="bg-green-50/50 border border-green-100 rounded-xl p-3 flex items-center justify-between">
+                    <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-3 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-xs text-green-700 font-medium">
+                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        <span className="text-xs text-emerald-700 font-medium">
                           GPS Locked: {profileForm.location_lat.toFixed(6)}, {profileForm.location_lng.toFixed(6)}
                         </span>
                       </div>
                       <button
                         onClick={() => setIsLocationModalOpen(true)}
-                        className="text-[10px] font-bold text-green-700 hover:underline uppercase tracking-wider"
+                        className="text-[10px] font-bold text-emerald-700 hover:underline uppercase tracking-wider"
                       >
                         Adjust
                       </button>
@@ -845,15 +894,17 @@ export default function FarmerDashboard() {
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-gray-900 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
-                  <MapPin className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm">{farmerData?.location_address || 'Not set'}</span>
+                <div className="flex items-center gap-3 dashboard-arktos-field group-hover:border-[#BFFF00]/35 transition-colors">
+                  <div className="dashboard-arktos-icon-box">
+                    <MapPin className="h-4 w-4 text-emerald-500" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800">{farmerData?.location_address || 'Not set'}</span>
                   {farmerData?.location_lat && farmerData?.location_lat !== 0 && (
                     <a
                       href={`https://maps.google.com/?q=${farmerData.location_lat},${farmerData.location_lng}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-auto text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1.5 rounded-lg hover:bg-blue-100 transition-colors uppercase tracking-wider flex items-center gap-1"
+                      className="ml-auto text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2.5 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors uppercase tracking-wider flex items-center gap-1"
                     >
                       <MapIcon className="h-3 w-3" />
                       Maps
@@ -869,151 +920,87 @@ export default function FarmerDashboard() {
         {/* Farm Details Card */}
         <div className="card-premium">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-2xl">
-              <Sprout className="h-6 w-6 text-green-600" />
+            <div className="p-3 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-2xl">
+              <Sprout className="h-6 w-6 text-emerald-600" />
             </div>
-            <h3 className="text-xl font-bold text-[#1a1a1a]">Farm Details</h3>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Farm Details</h3>
+              <p className="text-xs text-gray-500">Overview of your farming activity</p>
+            </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Farm Size */}
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-2 block">Farm Size (Hectares)</label>
+            <div className="bg-gradient-to-br from-emerald-50/60 to-white border border-emerald-100/60 rounded-2xl p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                </div>
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Farm Size</span>
+              </div>
               {isEditingProfile ? (
                 <input
                   type="number"
                   value={profileForm.farm_size}
                   onChange={(e) => setProfileForm({ ...profileForm, farm_size: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
                   placeholder="0.0"
                   step="0.1"
                   min="0"
                 />
               ) : (
-                <div className="text-2xl font-bold text-gray-900">
-                  {farmerData?.farm_size || 0} Ha
+                <div>
+                  <div className="text-3xl font-bold text-emerald-700">{farmerData?.farm_size || 0}<span className="text-base font-semibold text-gray-500 ml-1">Ha</span></div>
                 </div>
               )}
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl">
-                <p className="text-sm text-gray-600 mb-1">Total Contracts</p>
-                <p className="text-2xl font-bold text-green-600">{contracts.length}</p>
+            {/* Total Contracts */}
+            <div className="bg-gradient-to-br from-blue-50/60 to-white border border-blue-100/60 rounded-2xl p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <FileText className="h-3.5 w-3.5 text-blue-600" />
+                </div>
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Contracts</span>
               </div>
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl">
-                <p className="text-sm text-gray-600 mb-1">Completion Rate</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {contracts.length > 0
-                    ? Math.round(
-                      (contracts.reduce((acc, c) =>
-                        acc + c.milestones.filter(m => m.status === "verified").length, 0
-                      ) / contracts.reduce((acc, c) => acc + c.milestones.length, 0)) * 100
-                    )
-                    : 0}%
-                </p>
-              </div>
+              <div className="text-3xl font-bold text-blue-700">{contracts.length}</div>
             </div>
 
-            {/* Wallet Address */}
-            <div className="bg-gray-50 p-4 rounded-xl mt-4">
-              <p className="text-sm font-medium text-gray-600 mb-2">Wallet Address</p>
-              <p className="text-xs font-mono text-gray-700 break-all">
+            {/* Completion Rate */}
+            <div className="bg-gradient-to-br from-amber-50/60 to-white border border-amber-100/60 rounded-2xl p-5 flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <TrendingUp className="h-3.5 w-3.5 text-amber-600" />
+                </div>
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Completion</span>
+              </div>
+              <div className="text-3xl font-bold text-amber-700">
+                {contracts.length > 0
+                  ? Math.round(
+                    (contracts.reduce((acc, c) =>
+                      acc + c.milestones.filter(m => m.status === "verified").length, 0
+                    ) / contracts.reduce((acc, c) => acc + c.milestones.length, 0)) * 100
+                  )
+                  : 0}%
+              </div>
+            </div>
+          </div>
+
+          {/* Wallet Address */}
+          <div className="mt-5 bg-gray-50/70 border border-gray-100 rounded-xl p-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+              <Wallet className="h-4 w-4 text-gray-500" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Wallet Address</p>
+              <p className="text-xs font-mono text-gray-600 break-all">
                 {evmAddress || 'Not connected'}
               </p>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Tabs */}
-      <div className="flex gap-4 mt-8 mb-8 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab('contracts')}
-          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'contracts' ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-        >
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Contracts
-          </div>
-          {activeTab === 'contracts' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('listings')}
-          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'listings' ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-        >
-          <div className="flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5" />
-            Marketplace Listings
-          </div>
-          {activeTab === 'listings' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />
-          )}
-        </button>
-
-        <button
-          onClick={() => {
-            if (isPending) {
-              toast.error('Account pending approval. Traceability unlocks after your farm is verified.');
-              return;
-            }
-            setActiveTab('traceability');
-          }}
-          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'traceability' ? 'text-green-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'
-            }`}
-        >
-          <div className="flex items-center gap-2">
-            <QrCode className="w-5 h-5" />
-            Traceability
-            {isPending && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Locked</span>}
-          </div>
-          {activeTab === 'traceability' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('bidding')}
-          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'bidding' ? 'text-green-600' : 'text-gray-500 hover:text-gray-700'
-            }`}
-        >
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
-            Bidding
-          </div>
-          {activeTab === 'bidding' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />
-          )}
-        </button>
-
-        <button
-          onClick={() => {
-            if (isPending) {
-              toast.error('Account pending approval. Growth tracking unlocks after verification.');
-              return;
-            }
-            setActiveTab('growth');
-          }}
-          className={`pb-4 px-2 font-medium transition-colors relative ${activeTab === 'growth' ? 'text-green-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'
-            }`}
-        >
-          <div className="flex items-center gap-2">
-            <Sprout className="w-5 h-5" />
-            Growth Log
-            {isPending && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Locked</span>}
-          </div>
-          {activeTab === 'growth' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600 rounded-t-full" />
-          )}
-        </button>
-
-      </div>
+      )}
 
       {/* Growth Tab */}
       {activeTab === 'growth' && (
@@ -1035,8 +1022,8 @@ export default function FarmerDashboard() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-2xl">
-                <ShoppingBag className="h-6 w-6 text-purple-600" />
+              <div className="p-3 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-2xl">
+                <ShoppingBag className="h-6 w-6 text-emerald-600" />
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-[#1a1a1a]">Marketplace Listings</h2>
@@ -1065,7 +1052,7 @@ export default function FarmerDashboard() {
                   <select
                     value={listingForm.crop_type}
                     onChange={(e) => setListingForm({ ...listingForm, crop_type: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="">Select crop type</option>
                     <option value="Mangoes">Mangoes</option>
@@ -1088,7 +1075,7 @@ export default function FarmerDashboard() {
                     type="number"
                     value={listingForm.quantity}
                     onChange={(e) => setListingForm({ ...listingForm, quantity: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="0"
                     min="0"
                     step="0.1"
@@ -1104,7 +1091,7 @@ export default function FarmerDashboard() {
                     type="number"
                     value={listingForm.price_per_unit}
                     onChange={(e) => setListingForm({ ...listingForm, price_per_unit: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     placeholder="0.00"
                     min="0"
                     step="0.01"
@@ -1117,7 +1104,7 @@ export default function FarmerDashboard() {
                   <select
                     value={listingForm.quality_grade}
                     onChange={(e) => setListingForm({ ...listingForm, quality_grade: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="Premium">Premium</option>
                     <option value="A">Grade A</option>
@@ -1127,15 +1114,15 @@ export default function FarmerDashboard() {
                 </div>
 
                 {/* Traceability Batch Link */}
-                <div className="md:col-span-2 bg-green-50 p-4 rounded-xl border border-green-100">
+                <div className="md:col-span-2 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
                   <label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-2">
-                    <QrCode className="w-4 h-4 text-green-600" />
+                    <QrCode className="w-4 h-4 text-emerald-600" />
                     Link Traceability Batch (Optional)
                   </label>
                   <select
                     value={listingForm.batch_id}
                     onChange={(e) => setListingForm({ ...listingForm, batch_id: e.target.value })}
-                    className="w-full px-4 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                    className="w-full px-4 py-2 border border-emerald-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
                   >
                     <option value="">Select a batch to verify origin...</option>
                     {batches.map(batch => (
@@ -1144,7 +1131,7 @@ export default function FarmerDashboard() {
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-green-700 mt-2">
+                  <p className="text-xs text-emerald-700 mt-2">
                     Linking a batch provides buyers with proof of origin and complete crop history.
                   </p>
                 </div>
@@ -1156,7 +1143,7 @@ export default function FarmerDashboard() {
                     type="date"
                     value={listingForm.harvest_date}
                     onChange={(e) => setListingForm({ ...listingForm, harvest_date: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
 
@@ -1167,7 +1154,7 @@ export default function FarmerDashboard() {
                     id="organic"
                     checked={listingForm.organic}
                     onChange={(e) => setListingForm({ ...listingForm, organic: e.target.checked })}
-                    className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                    className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
                   />
                   <label htmlFor="organic" className="ml-2 text-sm font-medium text-gray-700">
                     Organic Certified
@@ -1181,7 +1168,7 @@ export default function FarmerDashboard() {
                     value={listingForm.description}
                     onChange={(e) => setListingForm({ ...listingForm, description: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
                     placeholder="Describe your produce, growing conditions, certifications, etc."
                   />
                 </div>
@@ -1189,9 +1176,9 @@ export default function FarmerDashboard() {
 
               {/* Total Price Preview */}
               {listingForm.quantity > 0 && listingForm.price_per_unit > 0 && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
                   <p className="text-sm text-gray-600">Total Value</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-emerald-600">
                     K{(listingForm.quantity * listingForm.price_per_unit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -1234,10 +1221,10 @@ export default function FarmerDashboard() {
                 <div key={listing.id} className="card-premium hover:shadow-xl transition-shadow">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Package className="h-5 w-5 text-purple-600" />
+                      <Package className="h-5 w-5 text-emerald-600" />
                       <h4 className="font-bold text-gray-900">{listing.crop_type}</h4>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${listing.status === 'active' ? 'bg-green-100 text-green-700' :
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${listing.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
                       listing.status === 'sold' ? 'bg-blue-100 text-blue-700' :
                         'bg-gray-100 text-gray-700'
                       }`}>
@@ -1259,7 +1246,7 @@ export default function FarmerDashboard() {
                       <span className="font-semibold">{listing.quality_grade}</span>
                     </div>
                     {listing.organic && (
-                      <div className="flex items-center gap-1 text-green-600">
+                      <div className="flex items-center gap-1 text-emerald-600">
                         <CheckCircle className="h-4 w-4" />
                         <span className="text-xs font-medium">Organic</span>
                       </div>
@@ -1267,7 +1254,7 @@ export default function FarmerDashboard() {
                   </div>
 
                   <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="text-lg font-bold text-purple-600">
+                    <div className="text-lg font-bold text-emerald-600">
                       K{listing.total_price.toLocaleString()}
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
@@ -1402,7 +1389,7 @@ export default function FarmerDashboard() {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-3">
                         <div
-                          className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
+                          className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-3 rounded-full transition-all duration-500"
                           style={{ width: `${progressPercentage}%` }}
                         />
                       </div>
@@ -1488,12 +1475,12 @@ export default function FarmerDashboard() {
                           return (
                             <div
                               key={milestone.id}
-                              className={`relative ${isNextActive ? "ring-2 ring-green-500 ring-offset-2" : ""
+                              className={`relative ${isNextActive ? "ring-2 ring-emerald-500 ring-offset-2" : ""
                                 }`}
                             >
                               {isNextActive && (
                                 <div className="absolute -top-2 -right-2 z-10">
-                                  <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                                  <span className="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
                                     ACTIVE
                                   </span>
                                 </div>
@@ -1506,6 +1493,7 @@ export default function FarmerDashboard() {
                                 milestoneIndex={index}
                                 totalMilestones={totalMilestones}
                                 verifiedCount={completedCount}
+                                contractUnit={contract.unit || 'kg'}
                                 onEvidenceSubmitted={() => {
                                   if (farmerId) loadContracts(farmerId);
                                 }}
@@ -1573,11 +1561,11 @@ export default function FarmerDashboard() {
                     setShowMilestoneSelector(false);
                     setShowEvidenceModal(true);
                   }}
-                  className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all group"
+                  className="w-full text-left p-4 rounded-xl border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 transition-all group"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-semibold text-gray-900 group-hover:text-green-700">{m.contractName}</p>
+                      <p className="font-semibold text-gray-900 group-hover:text-emerald-700">{m.contractName}</p>
                       <p className="text-sm text-gray-600 mt-1">Milestone: {m.name}</p>
                     </div>
                     {m.dueDate && (

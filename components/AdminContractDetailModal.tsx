@@ -350,8 +350,8 @@ export default function AdminContractDetailModal({ isOpen, onCloseAction, contra
                                                                     )}
 
                                                                     {aiAnalysis && (
-                                                                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                                                            <p className="text-xs uppercase tracking-wide font-bold mb-1 text-purple-700">AI Analysis</p>
+                                                                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                                                                            <p className="text-xs uppercase tracking-wide font-bold mb-1 text-emerald-700">AI Analysis</p>
                                                                             {aiAnalysis.disease && <p className="text-sm"><span className="font-bold">Diagnosis:</span> {aiAnalysis.disease}</p>}
                                                                             {aiAnalysis.healthScore !== undefined && <p className="text-sm"><span className="font-bold">Health Score:</span> {aiAnalysis.healthScore}%</p>}
                                                                             {aiAnalysis.confidence !== undefined && <p className="text-sm"><span className="font-bold">Confidence:</span> {aiAnalysis.confidence}%</p>}
@@ -413,7 +413,7 @@ export default function AdminContractDetailModal({ isOpen, onCloseAction, contra
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-3 flex-shrink-0">
-                                                                <span className="text-sm font-bold" style={{ color: '#0C2D3A' }}>{totalKg ? `${totalKg} kg` : '—'}</span>
+                                                                <span className="text-sm font-bold" style={{ color: '#0C2D3A' }}>{totalKg ? `${totalKg} kg` : 'N/A'}</span>
                                                                 {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                                             </div>
                                                         </button>

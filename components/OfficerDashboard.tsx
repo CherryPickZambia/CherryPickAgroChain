@@ -15,6 +15,7 @@ import WalletBalance from "./WalletBalance";
 import CropDiagnostics from "./CropDiagnostics";
 import { supabase } from "@/lib/supabase";
 import type { Milestone } from "@/lib/types";
+import { dc } from "@/lib/dashboardTheme";
 
 interface MilestoneVerificationTask {
   id: string;
@@ -289,7 +290,7 @@ export default function OfficerDashboard() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "#F7F9FB" }}>
+    <div className="min-h-screen dashboard-shell" style={{ background: "#F7F9FB" }}>
       {/* Header — ARKTOS */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -384,7 +385,7 @@ export default function OfficerDashboard() {
                       placeholder="Search..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 w-64"
+                      className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-64"
                     />
                   </div>
                   <span className="px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
@@ -419,8 +420,8 @@ export default function OfficerDashboard() {
                         setShowVerificationModal(true);
                       }}
                       className={`text-left p-4 rounded-xl border-2 transition-all ${selectedVerification?.id === verification.id
-                        ? "border-green-500 bg-green-50 shadow-lg"
-                        : "border-gray-200 hover:border-green-300 hover:shadow-md bg-white"
+                        ? "border-emerald-500 bg-emerald-50 shadow-lg"
+                        : "border-gray-200 hover:border-emerald-300 hover:shadow-md bg-white"
                         }`}
                     >
                       <div className="flex items-center justify-between mb-3">
@@ -432,7 +433,7 @@ export default function OfficerDashboard() {
                           }`}>
                           {verification.priority}
                         </span>
-                        <span className="text-lg font-bold text-green-600">
+                        <span className="text-lg font-bold text-emerald-600">
                           K{verification.milestone.paymentAmount?.toLocaleString() || 0}
                         </span>
                       </div>
@@ -490,7 +491,7 @@ export default function OfficerDashboard() {
                       <div className="flex items-center space-x-3 mb-2">
                         <h3 className="font-semibold text-gray-900">{item.crop_type}</h3>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${item.status === "approved"
-                          ? "bg-green-100 text-green-700"
+                          ? "bg-emerald-100 text-emerald-700"
                           : "bg-red-100 text-red-700"
                           }`}>
                           {item.status}
@@ -502,7 +503,7 @@ export default function OfficerDashboard() {
                       <p className="text-sm text-gray-500">{item.notes}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-bold text-green-600">
+                      <p className="text-lg font-bold text-emerald-600">
                         +K{item.fee_earned}
                       </p>
                       <p className="text-sm text-gray-500">{item.verified_date}</p>
@@ -519,86 +520,50 @@ export default function OfficerDashboard() {
           <div className="space-y-6">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-orange-50 rounded-lg">
-                    <Clock className="h-6 w-6 text-orange-600" />
+              {[
+                { icon: Clock, value: stats.pending, label: "Pending Verifications", delay: 0 },
+                { icon: CheckCircle, value: stats.approvedToday, label: "Approved Today", delay: 0.1 },
+                { icon: DollarSign, value: `K${stats.totalEarnings}`, label: "Total Earnings", delay: 0.2 },
+                { icon: TrendingUp, value: `${stats.approvalRate}%`, label: "Approval Rate", delay: 0.3 },
+              ].map(({ icon: Icon, value, label, delay }) => (
+                <motion.div
+                  key={label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay }}
+                  className={dc.statCard}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={dc.iconBoxLime}>
+                      <Icon className={dc.iconLime} />
+                    </div>
                   </div>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{stats.pending}</p>
-                <p className="text-sm text-gray-600 mt-1">Pending Verifications</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{stats.approvedToday}</p>
-                <p className="text-sm text-gray-600 mt-1">Approved Today</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-purple-50 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-purple-600" />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">K{stats.totalEarnings}</p>
-                <p className="text-sm text-gray-600 mt-1">Total Earnings</p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <TrendingUp className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{stats.approvalRate}%</p>
-                <p className="text-sm text-gray-600 mt-1">Approval Rate</p>
-              </motion.div>
+                  <p className={dc.value}>{value}</p>
+                  <p className={dc.labelSm + " mt-1"}>{label}</p>
+                </motion.div>
+              ))}
             </div>
 
             {/* Performance Card */}
-            <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl p-8 text-white">
+            <div className="rounded-2xl p-8 text-white border border-[#0C2D3A]/20" style={{ background: "linear-gradient(135deg, #0C2D3A 0%, #1a4050 100%)" }}>
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-2xl font-bold mb-2">Excellent Performance!</h3>
-                  <p className="text-green-100">You're in the top 10% of officers</p>
+                  <p className="text-[#94B3C1]">You&apos;re in the top 10% of officers</p>
                 </div>
-                <Award className="h-16 w-16 text-green-200" />
+                <Award className="h-16 w-16 text-[#BFFF00]" />
               </div>
               <div className="grid grid-cols-3 gap-6">
                 <div>
-                  <p className="text-green-100 text-sm mb-1">Avg. Time</p>
+                  <p className="text-[#94B3C1] text-sm mb-1">Avg. Time</p>
                   <p className="text-2xl font-bold">{stats.avgVerificationTime}</p>
                 </div>
                 <div>
-                  <p className="text-green-100 text-sm mb-1">This Month</p>
+                  <p className="text-[#94B3C1] text-sm mb-1">This Month</p>
                   <p className="text-2xl font-bold">{history.length} verified</p>
                 </div>
                 <div>
-                  <p className="text-green-100 text-sm mb-1">Rating</p>
+                  <p className="text-[#94B3C1] text-sm mb-1">Rating</p>
                   <div className="flex items-center">
                     <Star className="h-5 w-5 text-yellow-300 fill-current mr-1" />
                     <p className="text-2xl font-bold">4.9</p>
@@ -620,6 +585,8 @@ export default function OfficerDashboard() {
           }}
           milestone={selectedVerification.milestone}
           onVerificationCompleteAction={handleVerificationComplete}
+          officerId={evmAddress || undefined}
+          officerWallet={evmAddress || undefined}
         />
       )}
     </div>

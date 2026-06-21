@@ -138,7 +138,7 @@ export default function AdminApprovalModal({
                   <h2 className="text-2xl" style={{ fontFamily: S.heading, fontWeight: 700, color: S.dark }}>
                     Admin Review & Approval
                   </h2>
-                  <p className="text-sm mt-0.5" style={{ fontFamily: S.body, color: S.muted }}>{milestone.name} — {milestone.description}</p>
+                  <p className="text-sm mt-0.5" style={{ fontFamily: S.body, color: S.muted }}>{milestone.name}: {milestone.description}</p>
                 </div>
               </div>
               <button

@@ -5,7 +5,7 @@ import { CDPReactProvider } from "@coinbase/cdp-react";
 import { cdpConfig } from "@/lib/config";
 import { theme } from "@/lib/theme";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
-import Cookies from "js-cookie";
+import { syncWalletSessionCookie } from "@/lib/authSession";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -16,11 +16,7 @@ function CookieManager() {
 
   // Sync auth state to cookies for middleware
   useEffect(() => {
-    if (evmAddress) {
-      Cookies.set('cp_wallet_session', evmAddress, { expires: 7 }); // 7 days
-    } else {
-      Cookies.remove('cp_wallet_session');
-    }
+    syncWalletSessionCookie(evmAddress);
   }, [evmAddress]);
 
   return null;

@@ -425,6 +425,8 @@ export async function officerVerifyMilestone(
     iot_readings: Record<string, unknown>[];
     notes: string;
     ai_analysis?: EvidenceAIAnalysis | null;
+    officer_name?: string;
+    officer_wallet?: string;
   },
   officerId?: string
 ) {
@@ -478,6 +480,8 @@ export async function officerVerifyMilestone(
     ...existingMetadata,
     officer_verified: true,
     officer_id: officerId,
+    officer_name: evidence.officer_name || existingMetadata.officer_name || null,
+    officer_wallet: evidence.officer_wallet || existingMetadata.officer_wallet || null,
     officer_notes: evidence.notes,
     officer_images: evidence.images,
     officer_iot_readings: evidence.iot_readings,

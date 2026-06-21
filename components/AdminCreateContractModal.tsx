@@ -290,7 +290,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 border-b border-gray-100 p-6 flex justify-between items-center z-10" style={{ background: '#F7F9FB' }}>
           <div className="flex items-center gap-4">
@@ -331,7 +331,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                   required
                   value={formData.farmerId}
                   onChange={(e) => setFormData({ ...formData, farmerId: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Choose a farmer</option>
                   {farmers.map((farmer) => (
@@ -349,15 +349,29 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                 </label>
                 <select
                   required
-                  value={formData.cropType}
-                  onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  value={SUPPORTED_CROPS.includes(formData.cropType as typeof SUPPORTED_CROPS[number]) ? formData.cropType : (formData.cropType ? "Other" : "")}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, cropType: val === "Other" ? "" : val });
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Select a crop</option>
                   {SUPPORTED_CROPS.map((crop) => (
                     <option key={crop} value={crop}>{crop}</option>
                   ))}
                 </select>
+                {(formData.cropType === "" || !SUPPORTED_CROPS.slice(0, -1).includes(formData.cropType as any)) && formData.cropType !== "" && null}
+                {!SUPPORTED_CROPS.slice(0, -1).includes(formData.cropType as any) && (
+                  <input
+                    type="text"
+                    required
+                    value={formData.cropType}
+                    onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
+                    placeholder="Enter custom crop name (e.g., Avocado, Passion Fruit)"
+                    className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                )}
               </div>
 
               <div>
@@ -370,7 +384,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                   value={formData.variety}
                   onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
                   placeholder="e.g., Kent, Tommy Atkins"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -378,7 +392,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                 type="button"
                 onClick={() => setStep(2)}
                 disabled={!formData.farmerId || !formData.cropType || !formData.variety}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-colors"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-colors"
               >
                 Next: Contract Terms
               </button>
@@ -402,12 +416,12 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                       value={formData.requiredQuantity}
                       onChange={(e) => setFormData({ ...formData, requiredQuantity: e.target.value })}
                       placeholder="e.g., 1000"
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                     />
                     <select
                       value={formData.quantityUnit}
                       onChange={(e) => setFormData({ ...formData, quantityUnit: e.target.value })}
-                      className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                      className="w-24 px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
                     >
                       <option value="kg">kg</option>
                       <option value="pieces">pieces</option>
@@ -428,7 +442,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                     required
                     value={formData.expectedHarvestDate}
                     onChange={(e) => setFormData({ ...formData, expectedHarvestDate: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -445,7 +459,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                     value={formData.discountedPrice}
                     onChange={(e) => setFormData({ ...formData, discountedPrice: e.target.value })}
                     placeholder="e.g., 15.50"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
 
@@ -460,15 +474,15 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                     value={formData.standardPrice}
                     onChange={(e) => setFormData({ ...formData, standardPrice: e.target.value })}
                     placeholder="e.g., 18.00"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                 </div>
               </div>
 
               {formData.requiredQuantity && formData.discountedPrice && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-700 mb-1">Total Contract Value</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-emerald-600">
                     ZK {(parseFloat(formData.requiredQuantity) * parseFloat(formData.discountedPrice)).toLocaleString()}
                   </p>
                 </div>
@@ -486,7 +500,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                   type="button"
                   onClick={() => setStep(3)}
                   disabled={!formData.requiredQuantity || !formData.discountedPrice || !formData.standardPrice}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-colors"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-colors"
                 >
                   Next: Setup Milestones
                 </button>
@@ -503,7 +517,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                   type="button"
                   onClick={generateAIMilestones}
                   disabled={loadingAI || milestones.length > 0}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-lg hover:from-emerald-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
                   {loadingAI ? (
                     <>
@@ -598,7 +612,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                             if (e.target.checked) updated[index].requiresProfessionalVerifier = true;
                             setMilestones(updated);
                           }}
-                          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                         />
                         <span className="text-xs font-medium text-gray-700">Key Milestone</span>
                       </label>
@@ -611,7 +625,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
                             updated[index] = { ...updated[index], requiresProfessionalVerifier: e.target.checked };
                             setMilestones(updated);
                           }}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                         />
                         <span className="text-xs font-medium text-gray-700">Requires Professional Verifier</span>
                       </label>
@@ -623,21 +637,21 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
               <button
                 type="button"
                 onClick={addCustomMilestone}
-                className="w-full border-2 border-dashed border-gray-300 rounded-lg py-3 text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors flex items-center justify-center gap-2"
+                className="w-full border-2 border-dashed border-gray-300 rounded-lg py-3 text-gray-600 hover:border-emerald-500 hover:text-emerald-600 transition-colors flex items-center justify-center gap-2"
               >
                 <Plus className="h-5 w-5" />
                 Add Custom Milestone
               </button>
 
               {/* Total Percentage Indicator */}
-              <div className={`p-4 rounded-lg ${getTotalPercentage() === 100 ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+              <div className={`p-4 rounded-lg ${getTotalPercentage() === 100 ? 'bg-emerald-50 border border-emerald-200' : 'bg-yellow-50 border border-yellow-200'}`}>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Total Payment Percentage:</span>
                   <div className="flex items-center gap-2">
-                    <span className={`text-lg font-bold ${getTotalPercentage() === 100 ? 'text-green-600' : 'text-yellow-600'}`}>
+                    <span className={`text-lg font-bold ${getTotalPercentage() === 100 ? 'text-emerald-600' : 'text-yellow-600'}`}>
                       {getTotalPercentage()}%
                     </span>
-                    {getTotalPercentage() === 100 && <Check className="h-5 w-5 text-green-600" />}
+                    {getTotalPercentage() === 100 && <Check className="h-5 w-5 text-emerald-600" />}
                   </div>
                 </div>
                 {getTotalPercentage() !== 100 && (

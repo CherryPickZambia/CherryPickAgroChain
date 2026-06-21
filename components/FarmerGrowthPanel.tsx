@@ -159,13 +159,13 @@ export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], i
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Sprout className="h-6 w-6 text-green-600" />Growth & Development</h2>
+                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2"><Sprout className="h-6 w-6 text-emerald-600" />Growth & Development</h2>
                     <p className="text-sm text-gray-600 mt-1">Log farm activities, evidence, and track crop progress</p>
                 </div>
                 <button
                     onClick={() => setShowForm(true)}
                     disabled={contracts.filter(c => c.status === "active").length === 0 && batches.length === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium text-sm transition-colors"
                 >
                     <Plus className="h-4 w-4" />
                     Log Activity
@@ -259,7 +259,7 @@ export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], i
                                             </div>
                                         ))}
                                         {photos.length < 4 && (
-                                            <button onClick={() => fileInputRef.current?.click()} className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-green-400 hover:text-green-500 transition-colors">
+                                            <button onClick={() => fileInputRef.current?.click()} className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-emerald-400 hover:text-emerald-500 transition-colors">
                                                 <Camera className="h-5 w-5" />
                                                 <span className="text-[10px] mt-1">Add</span>
                                             </button>
@@ -270,7 +270,7 @@ export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], i
                             </div>
                             <div className="flex gap-3 justify-end pt-2">
                                 <button onClick={() => { setShowForm(false); setPhotos([]); setPhotoFiles([]); }} className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors">Cancel</button>
-                                <button onClick={handleSubmit} disabled={submitting} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors">
+                                <button onClick={handleSubmit} disabled={submitting} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white rounded-lg text-sm font-medium transition-colors">
                                     {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                                     {submitting ? "Logging..." : "Log Activity"}
                                 </button>
@@ -282,7 +282,7 @@ export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], i
 
             {/* Activity Timeline */}
             {loading ? (
-                <div className="text-center py-12"><Loader2 className="h-8 w-8 animate-spin text-green-600 mx-auto mb-3" /><p className="text-gray-600">Loading activities...</p></div>
+                <div className="text-center py-12"><Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-3" /><p className="text-gray-600">Loading activities...</p></div>
             ) : activities.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                     <Sprout className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -303,8 +303,8 @@ export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], i
                                     {activity.description && <p className="text-sm text-gray-600 mt-1">{activity.description}</p>}
                                     <div className="flex flex-wrap gap-2 mt-2">
                                         {activity.quantity && <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{activity.quantity} {activity.unit}</span>}
-                                        {activity.fertilizer_brand && <span className="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">{activity.fertilizer_brand} {activity.npk_ratio}</span>}
-                                        {activity.transport_type && <span className="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1"><Truck className="h-3 w-3" />{activity.transport_type}</span>}
+                                        {activity.fertilizer_brand && <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">{activity.fertilizer_brand} {activity.npk_ratio}</span>}
+                                        {activity.transport_type && <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1"><Truck className="h-3 w-3" />{activity.transport_type}</span>}
                                         {activity.origin && <span className="text-xs bg-gray-50 text-gray-600 px-2 py-0.5 rounded-full">{activity.origin} → {activity.destination}</span>}
                                     </div>
                                     {activity.photos && activity.photos.length > 0 && (

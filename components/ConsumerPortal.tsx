@@ -123,8 +123,8 @@ export default function ConsumerPortal() {
                   </div>
                   {/* Sustainability Badge */}
                   <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1">
-                    <Leaf className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-bold text-green-600">{product.sustainabilityScore}%</span>
+                    <Leaf className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-bold text-emerald-600">{product.sustainabilityScore}%</span>
                   </div>
                 </div>
 
@@ -267,17 +267,17 @@ export default function ConsumerPortal() {
 
                   <div className="card-premium">
                     <h3 className="font-bold text-[#1a1a1a] mb-3 flex items-center gap-2">
-                      <Leaf className="h-5 w-5 text-green-600" />
+                      <Leaf className="h-5 w-5 text-emerald-600" />
                       Sustainability Score
                     </h3>
                     <div className="flex items-center gap-4">
                       <div className="flex-1 bg-gray-200 rounded-full h-4">
                         <div
-                          className="bg-gradient-to-r from-green-500 to-green-600 h-4 rounded-full"
+                          className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-4 rounded-full"
                           style={{ width: `${selectedProduct.sustainabilityScore}%` }}
                         ></div>
                       </div>
-                      <span className="text-2xl font-bold text-green-600">
+                      <span className="text-2xl font-bold text-emerald-600">
                         {selectedProduct.sustainabilityScore}%
                       </span>
                     </div>

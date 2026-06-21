@@ -76,14 +76,24 @@ export function truncateAddress(address: string): string {
 
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    pending: "text-yellow-600 bg-yellow-50",
-    submitted: "text-blue-600 bg-blue-50",
-    verified: "text-green-600 bg-green-50",
-    rejected: "text-red-600 bg-red-50",
-    active: "text-green-600 bg-green-50",
-    completed: "text-gray-600 bg-gray-50",
-    cancelled: "text-red-600 bg-red-50",
-    processing: "text-blue-600 bg-blue-50",
+    // Waiting / in-progress
+    pending: "text-amber-700 bg-amber-50",
+    submitted: "text-sky-700 bg-sky-50",
+    processing: "text-sky-700 bg-sky-50",
+    in_progress: "text-sky-700 bg-sky-50",
+    assigned: "text-sky-700 bg-sky-50",
+    // Positive / success — brand emerald
+    verified: "text-emerald-700 bg-emerald-50",
+    active: "text-emerald-700 bg-emerald-50",
+    paid: "text-emerald-700 bg-emerald-50",
+    approved: "text-emerald-700 bg-emerald-50",
+    // Terminal neutral
+    completed: "text-slate-600 bg-slate-100",
+    // Negative
+    rejected: "text-red-700 bg-red-50",
+    cancelled: "text-red-700 bg-red-50",
+    failed: "text-red-700 bg-red-50",
+    disputed: "text-red-700 bg-red-50",
   };
-  return colors[status] || "text-gray-600 bg-gray-50";
+  return colors[status?.toLowerCase()] || "text-slate-600 bg-slate-100";
 }

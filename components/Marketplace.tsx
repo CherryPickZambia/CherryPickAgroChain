@@ -8,11 +8,14 @@ import {
   ChevronDown, Sparkles, Star, Clock, DollarSign, Award
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
+import { syncWalletSessionCookie } from "@/lib/authSession";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { getMarketplaceListings, createMarketplaceOrder, type MarketplaceListing as DBListing } from "@/lib/database";
 import { lencoService } from "@/lib/lenco-service";
+import { DPO_PENDING_CHECKOUT_KEY, startDpoCardPayment } from "@/lib/dpo/client";
 import { transferUSDC } from "@/lib/blockchain/contractInteractions";
 import { createWalletClient, custom } from "viem";
 import { base, baseSepolia } from "viem/chains";
@@ -135,7 +138,7 @@ const CROP_BG: Record<string, string> = {
   Pineapples: "from-yellow-50 to-amber-50",
   "Cashew nuts": "from-stone-50 to-amber-50",
   Bananas: "from-yellow-50 to-lime-50",
-  Beetroot: "from-purple-50 to-pink-50",
+  Beetroot: "from-emerald-50 to-pink-50",
   Strawberries: "from-rose-50 to-pink-50",
   Pawpaw: "from-orange-50 to-yellow-50",
 };
@@ -168,6 +171,17 @@ const Countdown = ({ endTime }: { endTime: string }) => {
 
 export default function Marketplace() {
   const { evmAddress } = useEvmAddress();
+  const router = useRouter();
+
+  const goToDashboard = (e: React.MouseEvent) => {
+    e.preventDefault();
+    syncWalletSessionCookie(evmAddress);
+    router.push("/dashboard");
+  };
+
+  useEffect(() => {
+    syncWalletSessionCookie(evmAddress);
+  }, [evmAddress]);
 
   // Cart & checkout
   const [showCart, setShowCart] = useState(false);
@@ -198,7 +212,7 @@ export default function Marketplace() {
   const [bulkOrderForm, setBulkOrderForm] = useState<BulkOrderForm>({ cropType: "", quantity: "", targetPrice: "", deliveryDate: "", location: "", description: "" });
   const [bidForm, setBidForm] = useState<BidForm>({ price: "", quantity: "", message: "" });
   const [momoDetails, setMomoDetails] = useState({ phone: "", network: "mtn" as "mtn" | "airtel" });
-  const [cardDetails, setCardDetails] = useState({ number: "", expiryMonth: "", expiryYear: "", cvv: "", firstName: "", lastName: "", email: "", streetAddress: "", city: "", postalCode: "", country: "ZM" });
+  const [cardContact, setCardContact] = useState({ fullName: "", email: "", phone: "" });
 
   // ─── LOGIC ─────────────────────────────────────────────────────────────────
 
@@ -248,19 +262,50 @@ export default function Marketplace() {
         } catch (err: any) { toast.error(`MoMo Payment failed: ${err.message}`); setIsProcessingPayment(false); toast.dismiss("payment"); return; }
         toast.dismiss("payment");
       } else if (selectedPaymentMethod === "card") {
-        if (!cardDetails.number) { toast.error("Please enter card details"); setIsProcessingPayment(false); return; }
-        toast.loading("Processing card payment...", { id: "payment" });
+        const reference = `MP-CARD-${Date.now()}`;
+        const total = calculateTotal();
+        const nameParts = (cardContact.fullName || "Market Buyer").trim().split(/\s+/, 2);
+        const firstName = nameParts[0];
+        const lastName = nameParts[1] || nameParts[0];
+
+        toast.loading("Redirecting to secure card payment...", { id: "payment" });
         try {
-          const result = await lencoService.collectCard({
-            amount: calculateTotal(), email: cardDetails.email || "buyer@agrochain.com",
-            reference: `MP-CARD-${Date.now()}`, currency: "ZMW",
-            customer: { firstName: cardDetails.firstName || "Market", lastName: cardDetails.lastName || "Buyer" },
-            billing: { streetAddress: cardDetails.streetAddress || "Plot 12, Cairo Rd", city: cardDetails.city || "Lusaka", postalCode: cardDetails.postalCode || "10101", country: "ZM" },
-            card: { number: cardDetails.number, expiryMonth: cardDetails.expiryMonth || "12", expiryYear: cardDetails.expiryYear || "25", cvv: cardDetails.cvv || "123" },
+          const result = await startDpoCardPayment({
+            reference,
+            amount: total,
+            firstName,
+            lastName,
+            email: cardContact.email || "buyer@agrochain.com",
+            phone: cardContact.phone || undefined,
+            description: `AgroChain marketplace ${reference}`,
           });
-          success = result.status === "success" || result.success === true; txHash = result.reference || result.id;
-        } catch (err: any) { toast.error(`Card Payment failed: ${err.message}`); setIsProcessingPayment(false); toast.dismiss("payment"); return; }
-        toast.dismiss("payment");
+
+          if (!result.success || !result.paymentUrl || !result.transToken) {
+            throw new Error(result.error || "Could not start card payment.");
+          }
+
+          sessionStorage.setItem(
+            DPO_PENDING_CHECKOUT_KEY,
+            JSON.stringify({
+              reference,
+              transToken: result.transToken,
+              evmAddress,
+              cart,
+              auctionWinnerMode,
+              auctionToPay,
+              bidForm,
+            }),
+          );
+
+          toast.dismiss("payment");
+          window.location.href = result.paymentUrl;
+          return;
+        } catch (err: unknown) {
+          toast.error(err instanceof Error ? err.message : "Card payment failed");
+          setIsProcessingPayment(false);
+          toast.dismiss("payment");
+          return;
+        }
       }
 
       if (success) {
@@ -350,13 +395,13 @@ export default function Marketplace() {
       <div className="sticky top-0 z-40 bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="flex items-center gap-1.5 text-[#5A7684] hover:text-[#0C2D3A] transition-colors text-sm" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500 }}>
+            <Link href="/dashboard" onClick={goToDashboard} className="flex items-center gap-1.5 text-[#5A7684] hover:text-[#0C2D3A] transition-colors text-sm" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500 }}>
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
             </Link>
             <div className="w-px h-5 bg-gray-200" />
             <div className="flex items-center gap-2.5">
-              <span className="text-xl" role="img" aria-label="cherry">🍒</span>
+              <img src="/logo-new.png" alt="Cherry Pick" className="w-7 h-7 object-contain" />
               <div className="leading-none">
                 <p style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: '0.9rem', color: '#0C2D3A' }}>Marketplace</p>
                 <p style={{ fontFamily: "'Manrope', sans-serif", fontSize: '0.6rem', color: '#5A7684', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cherry Pick</p>
@@ -429,7 +474,7 @@ export default function Marketplace() {
                       <div className="space-y-3">
                         {cart.map((item) => (
                           <div key={item.id} className="flex gap-3 p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
-                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center text-2xl shrink-0">
+                            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-50 flex items-center justify-center text-2xl shrink-0">
                               {CROP_EMOJI[item.listing.cropType] || "🌿"}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -476,7 +521,7 @@ export default function Marketplace() {
                         </div>
                         <div>
                           <p className="text-xs font-bold text-[#0C2D3A] uppercase tracking-wider">Auction Win</p>
-                          <p className="font-bold text-[#0C2D3A] text-sm">{auctionToPay.cropType} — ZK {(parseFloat(bidForm.price || "0") * parseInt(bidForm.quantity || "0")).toLocaleString()}</p>
+                          <p className="font-bold text-[#0C2D3A] text-sm">{auctionToPay.cropType} · ZK {(parseFloat(bidForm.price || "0") * parseInt(bidForm.quantity || "0")).toLocaleString()}</p>
                         </div>
                       </div>
                     )}
@@ -486,7 +531,7 @@ export default function Marketplace() {
                       {[
                         { id: "momo", label: "Mobile Money", sub: "MTN / Airtel Zambia", icon: Phone, color: "bg-amber-500" },
                         { id: "card", label: "Bank Card", sub: "Visa / Mastercard", icon: CreditCard, color: "bg-blue-500" },
-                        { id: "usdc", label: "USDC (Base)", sub: "Stablecoin payment", icon: Wallet, color: "bg-indigo-600" },
+                        { id: "usdc", label: "USDC (Base)", sub: "Stablecoin payment", icon: Wallet, color: "bg-emerald-600" },
                       ].map((method) => (
                         <div key={method.id}>
                           <button
@@ -526,20 +571,18 @@ export default function Marketplace() {
                             {selectedPaymentMethod === method.id && method.id === "card" && (
                               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                                 <div className="p-4 space-y-3">
-                                  <input type="text" placeholder="Card Number" value={cardDetails.number}
-                                    onChange={(e) => setCardDetails({ ...cardDetails, number: e.target.value })}
-                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#0C2D3A]/20 focus:border-[#0C2D3A] transition-all font-bold text-lg" />
-                                  <div className="grid grid-cols-3 gap-2">
-                                    {[
-                                      { placeholder: "MM", field: "expiryMonth" },
-                                      { placeholder: "YY", field: "expiryYear" },
-                                      { placeholder: "CVV", field: "cvv" },
-                                    ].map((f) => (
-                                      <input key={f.field} type="text" placeholder={f.placeholder}
-                                        onChange={(e) => setCardDetails({ ...cardDetails, [f.field]: e.target.value })}
-                                        className="px-3 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#0C2D3A]/20 focus:border-[#0C2D3A] transition-all font-bold text-lg" />
-                                    ))}
+                                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-900">
+                                    You&apos;ll be redirected to <span className="font-semibold">DPO Pay</span> to enter your card securely. Card details are never stored on AgroChain.
                                   </div>
+                                  <input type="text" placeholder="Full name (optional)" value={cardContact.fullName}
+                                    onChange={(e) => setCardContact({ ...cardContact, fullName: e.target.value })}
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#0C2D3A]/20 focus:border-[#0C2D3A]" />
+                                  <input type="email" placeholder="Email (optional)" value={cardContact.email}
+                                    onChange={(e) => setCardContact({ ...cardContact, email: e.target.value })}
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#0C2D3A]/20 focus:border-[#0C2D3A]" />
+                                  <input type="tel" placeholder="Phone (optional)" value={cardContact.phone}
+                                    onChange={(e) => setCardContact({ ...cardContact, phone: e.target.value })}
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#0C2D3A]/20 focus:border-[#0C2D3A]" />
                                 </div>
                               </motion.div>
                             )}
@@ -596,7 +639,7 @@ export default function Marketplace() {
                   ) : (
                     <button onClick={handleCheckout} disabled={isProcessingPayment}
                       className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#0C2D3A] hover:bg-[#0C2D3A] text-white rounded-xl font-bold text-sm transition-colors disabled:opacity-50 shadow-sm">
-                      {isProcessingPayment ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Complete Payment"}
+                      {isProcessingPayment ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : selectedPaymentMethod === "card" ? "Continue to secure payment" : "Complete Payment"}
                     </button>
                   )}
                 </div>
@@ -855,7 +898,7 @@ export default function Marketplace() {
                             {listing.quality}
                           </span>
                           {listing.aiVerified && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-600 text-white shadow-md">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 text-white shadow-md">
                               <Sparkles className="h-3 w-3" />
                               AI Verified
                             </span>

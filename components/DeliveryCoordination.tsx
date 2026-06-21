@@ -171,8 +171,8 @@ export default function DeliveryCoordination() {
                 {deliveries.filter(d => d.status === "delivered").length}
               </p>
             </div>
-            <div className="bg-green-100 p-3 rounded-xl">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+            <div className="bg-emerald-100 p-3 rounded-xl">
+              <CheckCircle className="h-6 w-6 text-emerald-600" />
             </div>
           </div>
         </div>
@@ -183,8 +183,8 @@ export default function DeliveryCoordination() {
               <p className="text-sm font-medium text-gray-600 mb-1">Total Distance</p>
               <p className="text-3xl font-bold text-[#1a1a1a]">245 km</p>
             </div>
-            <div className="bg-purple-100 p-3 rounded-xl">
-              <Navigation className="h-6 w-6 text-purple-600" />
+            <div className="bg-emerald-100 p-3 rounded-xl">
+              <Navigation className="h-6 w-6 text-emerald-600" />
             </div>
           </div>
         </div>
@@ -220,8 +220,8 @@ export default function DeliveryCoordination() {
 
             {/* Route Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="flex items-start gap-3 p-4 bg-green-50 rounded-lg">
-                <MapPin className="h-5 w-5 text-green-600 mt-1" />
+              <div className="flex items-start gap-3 p-4 bg-emerald-50 rounded-lg">
+                <MapPin className="h-5 w-5 text-emerald-600 mt-1" />
                 <div>
                   <p className="text-sm font-medium text-gray-700">Pickup</p>
                   <p className="text-sm text-gray-900 font-semibold">{delivery.pickupLocation}</p>
@@ -245,8 +245,8 @@ export default function DeliveryCoordination() {
             {delivery.driverId && (
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                    <Truck className="h-5 w-5 text-purple-600" />
+                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <Truck className="h-5 w-5 text-emerald-600" />
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{delivery.driverName}</p>
@@ -270,7 +270,7 @@ export default function DeliveryCoordination() {
                 <div className="space-y-3">
                   {delivery.trackingUpdates.map((update, index) => (
                     <div key={index} className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2"></div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-gray-900">{update.status}</p>
@@ -307,7 +307,7 @@ export default function DeliveryCoordination() {
 
       {/* Map Modal (Placeholder) */}
       {selectedDelivery && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-4xl w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-[#1a1a1a]">Live Tracking</h3>

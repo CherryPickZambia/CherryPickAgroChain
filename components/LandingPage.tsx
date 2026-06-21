@@ -41,7 +41,6 @@ const injectStyles = () => {
     .cp-landing *{box-sizing:border-box}
     @keyframes slowPan{0%{transform:scale(1.05) translate(0,0)}100%{transform:scale(1.12) translate(-1%,2%)}}
     @keyframes pulseDot{0%,100%{opacity:.3}50%{opacity:1}}
-    @keyframes scrollLine{0%{transform:scaleY(0);transform-origin:top}100%{transform:scaleY(1);transform-origin:top}}
     .cp-landing .cp-dot{width:6px;height:6px;background:#4ade80;border-radius:50%;display:inline-block;animation:pulseDot 2s infinite}
     .cp-landing .cp-nav-link{position:relative;text-decoration:none;color:#fff;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;font-family:'Inter',sans-serif;font-weight:500;transition:opacity .3s}
     .cp-landing .cp-nav-link::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:1px;background:#fff;transition:width .4s cubic-bezier(.19,1,.22,1)}
@@ -169,30 +168,6 @@ export default function LandingPage() {
             </motion.div>
           </div>
         </motion.div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2, duration: 1 }}
-          onClick={() => document.getElementById("the-idea")?.scrollIntoView({ behavior: "smooth" })}
-          style={{ position: "absolute", bottom: "2rem", left: "50%", transform: "translateX(-50%)", zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}
-        >
-          <span style={meta}>Scroll</span>
-          {/* Mouse shell */}
-          <div style={{ width: 22, height: 36, border: "1.5px solid rgba(255,255,255,0.35)", borderRadius: 11, position: "relative", display: "flex", justifyContent: "center", paddingTop: 6 }}>
-            {/* Animated dot */}
-            <motion.div
-              animate={{ y: [0, 14, 0], opacity: [1, 0.2, 1] }}
-              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-              style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }}
-            />
-          </div>
-          {/* Trailing line */}
-          <motion.div
-            animate={{ scaleY: [0.4, 1, 0.4], opacity: [0.2, 0.5, 0.2] }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-            style={{ width: 1, height: 20, background: "rgba(255,255,255,0.3)", transformOrigin: "top" }}
-          />
-        </motion.div>
       </header>
 
       {/* ══════ MANIFESTO / THE IDEA (Sentient 12-col grid layout) ══════ */}
@@ -237,7 +212,6 @@ export default function LandingPage() {
                   Along the way, they gain access to <strong style={{ color: C.white, fontWeight: 500 }}>AI-powered crop diagnostics</strong>, helping identify plant health issues early and improve yields.
                 </p>
                 {/* Nourish-style accent line */}
-                <div style={{ width: 40, height: 2, background: C.accent, marginBottom: "1.5rem" }} />
                 <ul style={{ listStyle: "none", padding: 0, borderTop: `1px solid ${C.border}`, paddingTop: "1.5rem" }}>
                   {["More stability", "Better harvests", "Reliable markets"].map(t => (
                     <li key={t} style={{ fontFamily: FM, fontSize: "0.85rem", color: C.muted, marginBottom: 8, display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -286,7 +260,6 @@ export default function LandingPage() {
                 <p style={{ ...body, marginBottom: "2.5rem" }}>
                   Every inspection contributes to a trusted production record, and every completed verification can generate <strong style={{ color: C.white, fontWeight: 500 }}>incentive payments</strong>, creating new opportunities for skilled agricultural professionals.
                 </p>
-                <div style={{ width: 40, height: 2, background: C.accent, marginBottom: "1.5rem" }} />
                 <ul style={{ listStyle: "none", padding: 0, borderTop: `1px solid ${C.border}`, paddingTop: "1.5rem" }}>
                   {["Better data", "Stronger supply chains", "Fair compensation"].map(t => (
                     <li key={t} style={{ fontFamily: FM, fontSize: "0.85rem", color: C.muted, marginBottom: 8, display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -355,7 +328,6 @@ export default function LandingPage() {
               <p style={{ ...body, marginBottom: "2rem" }}>
                 Every product processed through the AgroChain 360 network carries a simple QR code. Scan it and the story unfolds.
               </p>
-              <div style={{ width: 40, height: 2, background: C.accent, marginBottom: "1.5rem" }} />
               <ul style={{ listStyle: "none", padding: 0, borderTop: `1px solid ${C.border}`, paddingTop: "1.5rem" }}>
                 {[
                   { icon: Users, text: "The farmer who grew it" },

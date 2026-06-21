@@ -483,48 +483,54 @@ export async function transferUSDC(
 }
 
 /**
- * Verifier Fee Configuration
- * - Total verifier fees = 2% of total contract value (split across milestones)
- * - If milestones > 4, cap at 3% total
- * - Admin can override with custom percentages
+ * Verifier (Officer) Fee Configuration
+ * Tiered model in ZMW:
+ *   - Milestone payment ≤ K2,000  → officer earns 5% of the milestone
+ *   - Milestone payment > K2,000  → officer earns flat K150 (cap)
+ * Admin can override the entire calculation with `customFeePercent`.
  */
 export interface VerifierFeeConfig {
-  totalContractValue: number;      // Total contract value in USDC
+  totalContractValue: number;      // Total contract value (ZMW)
   totalMilestones: number;         // Number of milestones in contract
   customFeePercent?: number;       // Admin-set custom fee percentage (optional)
 }
 
+export const VERIFIER_FEE_TIER_THRESHOLD = 2000; // K2,000
+export const VERIFIER_FEE_PERCENT_BELOW = 5;     // 5%
+export const VERIFIER_FEE_FLAT_ABOVE = 150;      // K150 flat
+
 /**
- * Calculate verifier fee for a single milestone
- * Based on: 2% of total contract split across milestones, max 3% if >4 milestones
+ * Compute the fee a verifier earns for approving a single milestone.
+ * Pure helper — no side-effects.
  */
-export function calculateVerifierFee(config: VerifierFeeConfig): number {
-  const { totalContractValue, totalMilestones, customFeePercent } = config;
-  
-  // If admin set a custom fee, use that
-  if (customFeePercent !== undefined && customFeePercent > 0) {
-    return totalContractValue * (customFeePercent / 100);
+export function feeForMilestone(milestoneAmount: number): number {
+  if (!Number.isFinite(milestoneAmount) || milestoneAmount <= 0) return 0;
+  if (milestoneAmount <= VERIFIER_FEE_TIER_THRESHOLD) {
+    return milestoneAmount * (VERIFIER_FEE_PERCENT_BELOW / 100);
   }
-  
-  // Default: 2% of total contract value split across milestones
-  // Cap at 3% if more than 4 milestones
-  let totalVerifierPercent = 2; // 2% total for verifiers
-  
-  if (totalMilestones > 4) {
-    // Cap at 3% total if more than 4 milestones
-    totalVerifierPercent = Math.min(3, totalMilestones * 0.5);
-  }
-  
-  // Fee per milestone = total verifier % / number of milestones
-  const feePerMilestonePercent = totalVerifierPercent / totalMilestones;
-  const feeAmount = totalContractValue * (feePerMilestonePercent / 100);
-  
-  // Minimum $1 USDC per verification
-  return Math.max(1, feeAmount);
+  return VERIFIER_FEE_FLAT_ABOVE;
 }
 
 /**
- * Get verifier fee breakdown for a contract
+ * Calculate verifier fee for a single milestone (assumes equal split across
+ * milestones when only contract-level totals are provided).
+ */
+export function calculateVerifierFee(config: VerifierFeeConfig): number {
+  const { totalContractValue, totalMilestones, customFeePercent } = config;
+
+  // Admin custom override applies to the whole contract; split per milestone.
+  if (customFeePercent !== undefined && customFeePercent > 0) {
+    const total = totalContractValue * (customFeePercent / 100);
+    return totalMilestones > 0 ? total / totalMilestones : total;
+  }
+
+  const milestoneAmount = totalContractValue / Math.max(1, totalMilestones);
+  return feeForMilestone(milestoneAmount);
+}
+
+/**
+ * Get verifier fee breakdown for a contract using the tiered model
+ * (5% ≤ K2,000, flat K150 above).
  */
 export function getVerifierFeeBreakdown(
   totalContractValue: number,
@@ -536,33 +542,29 @@ export function getVerifierFeeBreakdown(
   feePerMilestonePercent: number;
   totalFeeAmount: number;
 } {
-  // If admin set a custom fee
+  const milestones = Math.max(1, totalMilestones);
+
+  // Admin override
   if (customFeePercent !== undefined && customFeePercent > 0) {
-    const feePerMilestone = (totalContractValue * (customFeePercent / 100)) / totalMilestones;
+    const totalFeeAmount = totalContractValue * (customFeePercent / 100);
     return {
       totalFeePercent: customFeePercent,
-      feePerMilestone: Math.max(1, feePerMilestone),
-      feePerMilestonePercent: customFeePercent / totalMilestones,
-      totalFeeAmount: totalContractValue * (customFeePercent / 100),
+      feePerMilestone: totalFeeAmount / milestones,
+      feePerMilestonePercent: customFeePercent / milestones,
+      totalFeeAmount,
     };
   }
-  
-  // Default calculation
-  let totalFeePercent = 2; // 2% default
-  
-  if (totalMilestones > 4) {
-    // Cap at 3% if more than 4 milestones
-    totalFeePercent = Math.min(3, totalMilestones * 0.5);
-  }
-  
-  const feePerMilestonePercent = totalFeePercent / totalMilestones;
-  const feePerMilestone = totalContractValue * (feePerMilestonePercent / 100);
-  
+
+  const milestoneAmount = totalContractValue / milestones;
+  const feePerMilestone = feeForMilestone(milestoneAmount);
+  const totalFeeAmount = feePerMilestone * milestones;
+  const totalFeePercent = totalContractValue > 0 ? (totalFeeAmount / totalContractValue) * 100 : 0;
+
   return {
     totalFeePercent,
-    feePerMilestone: Math.max(1, feePerMilestone),
-    feePerMilestonePercent,
-    totalFeeAmount: totalContractValue * (totalFeePercent / 100),
+    feePerMilestone,
+    feePerMilestonePercent: milestones > 0 ? totalFeePercent / milestones : 0,
+    totalFeeAmount,
   };
 }
 
@@ -587,8 +589,8 @@ export async function payMilestoneApproval(
   if (verifierFeeConfig) {
     verifierFee = calculateVerifierFee(verifierFeeConfig);
   } else {
-    // Fallback: 2% of milestone payment, minimum $1
-    verifierFee = Math.max(1, milestonePaymentUSDC * 0.02);
+    // Fallback: tiered 5%/flat-K150 model applied directly to the milestone amount
+    verifierFee = feeForMilestone(milestonePaymentUSDC);
   }
   
   // Pay farmer

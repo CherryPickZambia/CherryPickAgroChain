@@ -30,6 +30,7 @@ import { logProcessingEvent, getAllBatches, getRecentTraceabilityEvents, logMile
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { AuthButton } from "@coinbase/cdp-react";
 import WalletBalance from "./WalletBalance";
+import { dc } from "@/lib/dashboardTheme";
 
 // Sample jobs data
 const SAMPLE_JOBS: JobData[] = [
@@ -819,7 +820,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F7F9FB] dashboard-shell">
       <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
       <motion.aside
@@ -831,8 +832,8 @@ export default function AdminDashboard() {
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-red-50 shadow-sm border border-red-100">
-              <span className="text-2xl" role="img" aria-label="cherry">🍒</span>
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-white shadow-sm border border-gray-100 overflow-hidden">
+              <img src="/logo-new.png" alt="Cherry Pick" className="w-9 h-9 object-contain" />
             </div>
             <div>
               <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800 }} className="text-xl text-gray-800">Dashboard</span>
@@ -925,12 +926,12 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Total Farmers</p>
-                      <p className="text-3xl font-bold text-gray-800">{stats.totalFarmers.value}</p>
-                      <p className="text-xs text-gray-400 mt-1">{stats.totalFarmers.subtitle}</p>
+                      <p className={dc.labelSm + " mb-1"}>Total Farmers</p>
+                      <p className={dc.value}>{stats.totalFarmers.value}</p>
+                      <p className={dc.sub}>{stats.totalFarmers.subtitle}</p>
                     </div>
-                    <div className="p-2 bg-green-50 rounded-lg">
-                      <Users className="h-5 w-5 text-green-600" />
+                    <div className={dc.iconBoxLime}>
+                      <Users className={dc.iconLime} />
                     </div>
                   </div>
                 </motion.div>
@@ -944,12 +945,12 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Active Contracts</p>
-                      <p className="text-3xl font-bold text-gray-800">{stats.activeContracts.value}</p>
-                      <p className="text-xs text-gray-400 mt-1">{stats.activeContracts.subtitle}</p>
+                      <p className={dc.labelSm + " mb-1"}>Active Contracts</p>
+                      <p className={dc.value}>{stats.activeContracts.value}</p>
+                      <p className={dc.sub}>{stats.activeContracts.subtitle}</p>
                     </div>
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <FileText className="h-5 w-5 text-blue-600" />
+                    <div className={dc.iconBoxLime}>
+                      <FileText className={dc.iconLime} />
                     </div>
                   </div>
                 </motion.div>
@@ -963,12 +964,12 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Marketplace Listings</p>
-                      <p className="text-3xl font-bold text-gray-800">{stats.marketplaceListings.value}</p>
-                      <p className="text-xs text-gray-400 mt-1">{stats.marketplaceListings.subtitle}</p>
+                      <p className={dc.labelSm + " mb-1"}>Marketplace Listings</p>
+                      <p className={dc.value}>{stats.marketplaceListings.value}</p>
+                      <p className={dc.sub}>{stats.marketplaceListings.subtitle}</p>
                     </div>
-                    <div className="p-2 bg-purple-50 rounded-lg">
-                      <ShoppingBag className="h-5 w-5 text-purple-600" />
+                    <div className={dc.iconBoxLime}>
+                      <ShoppingBag className={dc.iconLime} />
                     </div>
                   </div>
                 </motion.div>
@@ -982,12 +983,12 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="text-sm text-gray-500 mb-1">Platform Revenue</p>
-                      <p className="text-3xl font-bold text-gray-800">{stats.totalRevenue.value}</p>
-                      <p className="text-xs text-gray-400 mt-1">{stats.totalRevenue.subtitle}</p>
+                      <p className={dc.labelSm + " mb-1"}>Platform Revenue</p>
+                      <p className={dc.value}>{stats.totalRevenue.value}</p>
+                      <p className={dc.sub}>{stats.totalRevenue.subtitle}</p>
                     </div>
-                    <div className="p-2 bg-emerald-50 rounded-lg">
-                      <DollarSign className="h-5 w-5 text-emerald-600" />
+                    <div className={dc.iconBoxLime}>
+                      <DollarSign className={dc.iconLime} />
                     </div>
                   </div>
                 </motion.div>
@@ -1007,7 +1008,7 @@ export default function AdminDashboard() {
                       <input
                         type="text"
                         placeholder="Search..."
-                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                     </div>
                     <button
@@ -1035,8 +1036,8 @@ export default function AdminDashboard() {
                   className="dashboard-panel rounded-2xl p-6"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-gray-800">Crop Distribution</h3>
-                    <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <h3 className={dc.heading}>Crop Distribution</h3>
+                    <select className={dc.select}>
                       <option>2022</option>
                       <option>2023</option>
                       <option>2024</option>
@@ -1115,11 +1116,11 @@ export default function AdminDashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+                  className={`lg:col-span-2 ${dc.panel} p-6`}
                 >
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-bold text-gray-800">Cost Analysis</h3>
-                    <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <h3 className={dc.heading}>Cost Analysis</h3>
+                    <select className={dc.select}>
                       <option>Monthly</option>
                       <option>Weekly</option>
                       <option>Yearly</option>
@@ -1141,16 +1142,16 @@ export default function AdminDashboard() {
                       <Line
                         type="monotone"
                         dataKey="cost"
-                        stroke="#10b981"
+                        stroke="#0C2D3A"
                         strokeWidth={3}
-                        dot={{ fill: "#10b981", r: 4 }}
+                        dot={{ fill: "#BFFF00", r: 4 }}
                         activeDot={{ r: 6 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
                   <div className="mt-4 flex items-center justify-center">
-                    <div className="px-4 py-2 bg-green-50 rounded-lg">
-                      <p className="text-2xl font-bold text-green-600">ZK 386.50</p>
+                    <div className={dc.metricBadge}>
+                      <p>ZK 386.50</p>
                     </div>
                   </div>
                 </motion.div>
@@ -1160,38 +1161,37 @@ export default function AdminDashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+                  className={`${dc.panel} p-6`}
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-gray-800">Recent Due Jobs</h3>
-                    <button className="text-sm text-green-600 hover:text-green-700 font-medium">See All</button>
+                    <h3 className={dc.heading}>Recent Due Jobs</h3>
+                    <button className={dc.link}>See All</button>
                   </div>
                   <div className="space-y-3">
                     {[
                       { title: "Harrowing Season", location: "ABY Farm - Bay Land" },
                       { title: "Harrowing Season", location: "YNS Farm - ARD Land" },
                     ].map((job, index) => (
-                      <div key={index} className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg">
-                        <div className="p-2 bg-orange-100 rounded-lg">
-                          <Clock className="h-4 w-4 text-orange-600" />
+                      <div key={index} className={dc.listItem}>
+                        <div className={dc.iconBox}>
+                          <Clock className={dc.icon} />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-800">{job.title}</p>
-                          <p className="text-xs text-gray-500 mt-0.5">{job.location}</p>
+                          <p className={dc.valueSm}>{job.title}</p>
+                          <p className={dc.sub}>{job.location}</p>
                         </div>
                       </div>
                     ))}
                   </div>
-                  {/* Upgrade Banner */}
-                  <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                  <div className={`mt-6 ${dc.statusBanner}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-800 mb-1">Platform Health</p>
-                        <p className="text-xs text-gray-600">All systems operational</p>
+                        <p className={`${dc.valueSm} mb-1`}>Platform Health</p>
+                        <p className={dc.sub}>All systems operational</p>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium text-green-700">Active</span>
+                        <div className={dc.statusDot} />
+                        <span className={dc.statusActive}>Active</span>
                       </div>
                     </div>
                   </div>
@@ -1238,7 +1238,7 @@ export default function AdminDashboard() {
                   </div>
                 ) : pendingVerifications.length === 0 ? (
                   <div className="text-center py-12">
-                    <CheckCircle2 className="h-16 w-16 text-green-300 mx-auto mb-4" />
+                    <CheckCircle2 className="h-16 w-16 text-emerald-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900">All Caught Up!</h3>
                     <p className="text-gray-500 mt-1">No pending verifications to review</p>
                   </div>
@@ -1250,17 +1250,17 @@ export default function AdminDashboard() {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         whileHover={{ y: -4 }}
-                        className="border border-gray-200 rounded-xl p-4 hover:border-purple-300 hover:shadow-lg transition-all cursor-pointer bg-white"
+                        className="border border-gray-200 rounded-xl p-4 hover:border-emerald-300 hover:shadow-lg transition-all cursor-pointer bg-white"
                         onClick={() => {
                           setSelectedVerification(verification);
                           setShowApprovalModal(true);
                         }}
                       >
                         <div className="flex items-center justify-between mb-3">
-                          <div className="p-2 bg-purple-50 rounded-lg">
-                            <AlertCircle className="h-5 w-5 text-purple-600" />
+                          <div className="p-2 bg-emerald-50 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-emerald-600" />
                           </div>
-                          <span className="text-lg font-bold text-green-600">
+                          <span className="text-lg font-bold text-emerald-600">
                             ZK {verification.payment_amount.toLocaleString()}
                           </span>
                         </div>
@@ -1284,7 +1284,7 @@ export default function AdminDashboard() {
                           </span>
                         </div>
 
-                        <button className="w-full mt-3 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <button className="w-full mt-3 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
                           <Eye className="h-4 w-4" />
                           Review
                         </button>
@@ -1338,7 +1338,7 @@ export default function AdminDashboard() {
                             <FileText style={{ width: 18, height: 18, color: "#BFFF00" }} />
                           </div>
                           <div>
-                            <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "0.9rem", color: "#0C2D3A" }}>{contract.contract_code || contract.id.slice(0, 8)} — {contract.crop}</div>
+                            <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "0.9rem", color: "#0C2D3A" }}>{contract.contract_code || contract.id.slice(0, 8)} · {contract.crop}</div>
                             <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.8rem", color: "#5A7684" }}>{contract.farmer} • {contract.date}</div>
                           </div>
                         </div>
@@ -1651,7 +1651,7 @@ export default function AdminDashboard() {
                         </div>
                         <div style={{ background: "rgba(255,255,255,0.05)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: BK.rd, padding: 28, minHeight: 240, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
                           <div style={{ ...syne, fontWeight: 700, fontSize: "1.25rem", marginBottom: 4 }}>Top Buyer</div>
-                          <div style={{ ...manrope, fontSize: "0.85rem", opacity: 0.7, marginBottom: 4 }}>Agro Exports — ZK 68,000</div>
+                          <div style={{ ...manrope, fontSize: "0.85rem", opacity: 0.7, marginBottom: 4 }}>Agro Exports · ZK 68,000</div>
                           <div style={{ ...manrope, fontSize: "0.8rem", opacity: 0.5 }}>15 orders • Kitwe, Zambia</div>
                           <div style={{ marginTop: 16 }}>
                             <span style={{ display: "inline-flex", padding: "6px 16px", background: "rgba(191,255,0,0.2)", color: BK.lime, borderRadius: BK.pill, fontWeight: 600, fontSize: "0.8rem", ...manrope }}>Top Performer</span>
@@ -1850,7 +1850,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                      <QrCode className="h-6 w-6 text-teal-600" />
+                      <QrCode className="h-6 w-6 text-emerald-600" />
                       Traceability Dashboard
                     </h2>
                     <p className="text-gray-600 mt-1">Track batches and supply chain events across all farmers</p>
@@ -1970,7 +1970,7 @@ export default function AdminDashboard() {
                                 href={`https://basescan.org/tx/${contract.blockchain_tx}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs font-mono text-purple-600 hover:text-purple-800 flex items-center gap-1 mt-1 bg-purple-50 px-2 py-0.5 rounded w-fit"
+                                className="text-xs font-mono text-emerald-600 hover:text-emerald-800 flex items-center gap-1 mt-1 bg-emerald-50 px-2 py-0.5 rounded w-fit"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Activity className="h-3 w-3" />
@@ -2069,11 +2069,11 @@ export default function AdminDashboard() {
                                         In Progress
                                       </span>
                                     )}
-                                    <span className="px-2 py-0.5 text-[10px] border border-purple-200 text-purple-600 rounded-full uppercase font-bold">Batch</span>
+                                    <span className="px-2 py-0.5 text-[10px] border border-emerald-200 text-emerald-600 rounded-full uppercase font-bold">Batch</span>
                                   </div>
                                   <p className="text-sm text-gray-600">{batch.farmer_name} • {batch.crop_type} • {batch.total_quantity || 0} {batch.unit || 'kg'}</p>
                                 </div>
-                                <div className={`px-3 py-1.5 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity ${hasSavedProgress ? 'bg-amber-600' : 'bg-purple-600'
+                                <div className={`px-3 py-1.5 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity ${hasSavedProgress ? 'bg-amber-600' : 'bg-emerald-600'
                                   }`}>
                                   {hasSavedProgress ? 'Continue Processing' : 'Start Processing'}
                                 </div>
@@ -2101,17 +2101,17 @@ export default function AdminDashboard() {
                                 }}
                                 className={`w-full p-4 border rounded-lg transition-all text-left flex items-center justify-between group ${hasSavedProgress
                                   ? 'border-amber-300 bg-amber-50 hover:border-amber-500'
-                                  : 'border-green-200 hover:border-green-400 hover:bg-green-50'
+                                  : 'border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50'
                                   }`}
                               >
                                 <div>
                                   <div className="flex items-center gap-2">
-                                    <p className="font-mono font-semibold text-green-700">{contract.contract_code || contract.id.slice(0, 8)}</p>
-                                    <span className="px-2 py-0.5 text-[10px] bg-green-100 text-green-700 rounded-full uppercase font-bold">Delivery Done</span>
+                                    <p className="font-mono font-semibold text-emerald-700">{contract.contract_code || contract.id.slice(0, 8)}</p>
+                                    <span className="px-2 py-0.5 text-[10px] bg-emerald-100 text-emerald-700 rounded-full uppercase font-bold">Delivery Done</span>
                                   </div>
                                   <p className="text-sm text-gray-600">{contract.farmer} • {contract.crop} • {contract.amount}</p>
                                 </div>
-                                <div className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity">
+                                <div className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm opacity-80 group-hover:opacity-100 transition-opacity">
                                   Start Processing
                                 </div>
                               </button>
@@ -2127,7 +2127,7 @@ export default function AdminDashboard() {
               {/* Products Ready for Distribution */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Truck className="h-5 w-5 text-green-600" />
+                  <Truck className="h-5 w-5 text-emerald-600" />
                   Products Ready for Distribution ({verifiedProducts.length})
                 </h3>
                 {verifiedProducts.length === 0 ? (
@@ -2152,13 +2152,13 @@ export default function AdminDashboard() {
                       <tbody className="divide-y divide-gray-100">
                         {verifiedProducts.map((product) => (
                           <tr key={product.batchCode} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 font-mono text-sm text-teal-600 font-semibold">{product.batchCode}</td>
+                            <td className="px-4 py-3 font-mono text-sm text-emerald-600 font-semibold">{product.batchCode}</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{product.cropType}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{product.farmerName}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{product.quantity}</td>
                             <td className="px-4 py-3">
                               <span className={`px-2 py-1 text-xs font-medium rounded-full ${product.grade === 'Premium' ? 'bg-yellow-100 text-yellow-800' :
-                                product.grade === 'Grade A' ? 'bg-green-100 text-green-800' :
+                                product.grade === 'Grade A' ? 'bg-emerald-100 text-emerald-800' :
                                   'bg-blue-100 text-blue-800'
                                 }`}>
                                 {product.grade}
@@ -2170,7 +2170,7 @@ export default function AdminDashboard() {
                                   href={`https://basescan.org/tx/${product.nftTxHash}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-xs font-mono text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                                  className="text-xs font-mono text-emerald-600 hover:text-emerald-800 flex items-center gap-1"
                                 >
                                   {product.nftTxHash.slice(0, 10)}...
                                   <ExternalLink className="h-3 w-3" />
@@ -2185,7 +2185,7 @@ export default function AdminDashboard() {
                                 href={`/trace/${product.batchCode}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs px-3 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 inline-flex items-center gap-1"
+                                className="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 inline-flex items-center gap-1"
                               >
                                 View <Eye className="h-3 w-3" />
                               </a>
@@ -2324,13 +2324,23 @@ export default function AdminDashboard() {
                   if (traceData?.batch?.id) {
                     const batchId = traceData.batch.id;
 
-                    // 1. Log the Warehouse Processing Complete event
+                    // 1. Log the Factory Processing Complete event
+                    const qaSteps = [
+                      `Receiving & Weighing: ${processingData.batchCode} received and weighed`,
+                      `Quality Grading: Grade ${processingData.qualityCheck.grade}`,
+                      `Sorting: Grade A=${processingData.sorting.gradeA}, Grade B=${processingData.sorting.gradeB}, Rejected=${processingData.sorting.rejected}`,
+                      processingData.processing.applicable && processingData.processing.completed ? `Processing: ${processingData.processing.methods.join(', ')} (${processingData.processing.duration})` : null,
+                      `Packaging: ${processingData.packaging.packageType}, ${processingData.packaging.packageCount} units`,
+                      `Storage Conditions: ${processingData.storageConditions}`,
+                      `Ready for Distribution: ${processingData.readyForDistribution ? 'Yes' : 'No'}`,
+                    ].filter(Boolean).join(' | ');
+
                     await addTraceabilityEvent({
                       batch_id: batchId,
                       event_type: 'processing',
-                      event_title: 'Warehouse Processing Complete',
-                      event_description: `Batch ${processingData.batchCode} processed, quality graded as ${processingData.qualityCheck.grade}, and NFT minted.`,
-                      actor_name: 'Warehouse Admin',
+                      event_title: 'Factory Processing Complete',
+                      event_description: `Batch ${processingData.batchCode} processed at Factory. ${qaSteps}. NFT minted.`,
+                      actor_name: 'Factory Admin',
                       actor_type: 'admin',
                       blockchain_tx: processingData.nftTxHash,
                     });
@@ -2420,15 +2430,15 @@ export default function AdminDashboard() {
                         }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-bold text-green-700">{user.name.charAt(0)}</span>
+                        <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-bold text-emerald-700">{user.name.charAt(0)}</span>
                         </div>
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900">{user.name}</h4>
                           <p className="text-sm text-gray-600">{user.location} • {user.email}</p>
                         </div>
                         {user.verified && (
-                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                         )}
                       </div>
                     </div>
@@ -2574,7 +2584,7 @@ export default function AdminDashboard() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
                   {[
                     { title: "General", items: [{ k: "Platform Name", v: "Cherry Pick" }, { k: "Currency", v: "ZMW (Kwacha)" }, { k: "Time Zone", v: "Africa/Lusaka" }, { k: "Language", v: "English" }] },
-                    { title: "Verification", items: [{ k: "Officer Fee", v: "K50" }, { k: "Auto-approve Farmers", v: "Enabled", accent: true }, { k: "Min Listing Quality", v: "Grade B" }] },
+                    { title: "Verification", items: [{ k: "Officer Fee", v: "5% (≤K2,000) / K150 flat" }, { k: "Auto-approve Farmers", v: "Enabled", accent: true }, { k: "Min Listing Quality", v: "Grade B" }] },
                     { title: "Payment", items: [{ k: "Platform Fee", v: "2.5%" }, { k: "Payment Network", v: "Base (Coinbase L2)" }] },
                   ].map((section, si) => (
                     <div key={si} style={{ background: "#fff", borderRadius: 24, border: "1px solid rgba(12,45,58,0.06)", padding: 32 }}>
@@ -2883,19 +2893,22 @@ export default function AdminDashboard() {
                     },
                   ];
 
-                  // Only add verifier payment if we have a wallet address and fee > 0
-                  if (resolvedOfficerWallet && verifierFee > 0) {
+                  // Always record verifier payment so the fee is never silently skipped.
+                  // Mark as confirmed if wallet exists, otherwise pending so admin can resolve it later.
+                  if (verifierFee > 0) {
                     paymentInserts.push({
-                      to_address: resolvedOfficerWallet,
+                      to_address: resolvedOfficerWallet || 'pending-wallet',
                       from_address: evmAddress || 'platform',
                       amount: verifierFee,
                       currency: 'ZMW',
                       payment_type: 'platform_fee',
                       reference_id: selectedVerification.milestone_id,
                       reference_type: 'milestone',
-                      transaction_hash: `VF-${selectedVerification.milestone_id}-${Date.now()}`,
-                      status: 'confirmed',
-                      confirmed_at: new Date().toISOString(),
+                      transaction_hash: resolvedOfficerWallet
+                        ? `VF-${selectedVerification.milestone_id}-${Date.now()}`
+                        : `VF-PENDING-${selectedVerification.milestone_id}-${Date.now()}`,
+                      status: resolvedOfficerWallet ? 'confirmed' : 'pending',
+                      confirmed_at: resolvedOfficerWallet ? new Date().toISOString() : null,
                     });
                   }
 

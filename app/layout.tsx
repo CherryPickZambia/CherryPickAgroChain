@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "Cherry Pick - Blockchain Contract Farming Platform",
   description: "Digitize, secure, and optimize contract farming for high-value fruits and vegetables with blockchain technology",
   icons: {
-    icon: '/cherrypick-logo.png',
+    icon: '/logo-new.png',
     apple: '/cherrypick-logo.png',
   },
 };

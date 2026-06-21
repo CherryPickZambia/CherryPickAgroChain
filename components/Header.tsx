@@ -17,20 +17,20 @@ export default function Header({ userRole }: HeaderProps) {
       case "admin":
         return {
           label: "Admin",
-          color: "text-purple-700",
-          bg: "bg-gradient-to-r from-purple-50 to-violet-50",
-          border: "border-purple-200",
+          color: "text-emerald-700",
+          bg: "bg-gradient-to-r from-emerald-50 to-emerald-50",
+          border: "border-emerald-200",
           icon: Shield,
-          gradient: "from-purple-500 to-violet-600"
+          gradient: "from-emerald-500 to-emerald-600"
         };
       case "farmer":
         return {
           label: "Farmer",
           color: "text-emerald-700",
-          bg: "bg-gradient-to-r from-emerald-50 to-teal-50",
+          bg: "bg-gradient-to-r from-emerald-50 to-emerald-50",
           border: "border-emerald-200",
           icon: Leaf,
-          gradient: "from-emerald-500 to-teal-600"
+          gradient: "from-emerald-500 to-emerald-600"
         };
       case "buyer":
         return {
@@ -65,7 +65,7 @@ export default function Header({ userRole }: HeaderProps) {
           <div className="flex justify-between items-center h-14">
             {/* Logo Section */}
             <div className="flex items-center space-x-3">
-              <span className="text-xl" role="img" aria-label="cherry">🍒</span>
+              <img src="/logo-new.png" alt="Cherry Pick" className="w-7 h-7 object-contain" />
               <div>
                 <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "1rem", color: "#0C2D3A" }}>Cherry Pick</span>
                 {roleDisplay && (

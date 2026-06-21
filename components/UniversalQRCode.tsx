@@ -65,7 +65,7 @@ export default function UniversalQRCode({
                 {/* Logo above QR */}
                 <div className="flex items-center justify-center mb-3">
                     <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                        <div className="w-6 h-6 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
                             <Leaf className="h-4 w-4 text-white" />
                         </div>
                         <span className="text-sm font-bold text-gray-800">Cherry Pick</span>

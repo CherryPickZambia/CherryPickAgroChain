@@ -16,9 +16,11 @@ interface MilestoneCardProps {
   milestoneIndex?: number;
   totalMilestones?: number;
   verifiedCount?: number;
+  /** Unit from the parent contract (e.g. "kg", "bags"). Will default the activity entry unit. */
+  contractUnit?: string;
 }
 
-export default function MilestoneCard({ milestone, contractId, canSubmit, isNextActive, onEvidenceSubmitted, milestoneIndex, totalMilestones, verifiedCount }: MilestoneCardProps) {
+export default function MilestoneCard({ milestone, contractId, canSubmit, isNextActive, onEvidenceSubmitted, milestoneIndex, totalMilestones, verifiedCount, contractUnit }: MilestoneCardProps) {
   const [showEntryModal, setShowEntryModal] = useState(false);
 
   const getStatusIcon = () => {
@@ -246,6 +248,7 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
         milestoneName={milestone.name}
         onSubmitAction={handleFarmerEntries}
         batchId={milestone.batchId}
+        defaultUnit={contractUnit}
       />
     </div>
   );

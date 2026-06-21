@@ -13,6 +13,7 @@ export interface MobileMoneyTransferParams {
     phone: string;
     network: 'mtn' | 'airtel' | 'zamtel';
     accountName?: string;
+    narration?: string;
     reference?: string;
 }
 

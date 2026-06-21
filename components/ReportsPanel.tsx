@@ -207,8 +207,8 @@ export default function ReportsPanel({ userId, userRole }: ReportsPanelProps) {
   const getColorClasses = (color: string) => {
     const colors = {
       blue: "from-blue-100 to-blue-50 text-blue-600",
-      green: "from-green-100 to-green-50 text-green-600",
-      purple: "from-purple-100 to-purple-50 text-purple-600",
+      green: "from-emerald-100 to-emerald-50 text-emerald-600",
+      purple: "from-emerald-100 to-emerald-50 text-emerald-600",
       orange: "from-orange-100 to-orange-50 text-orange-600",
     };
     return colors[color as keyof typeof colors] || colors.blue;

@@ -141,22 +141,22 @@ When deploying to production, set these in your hosting platform:
 
 ```env
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://dmjjmdthanlbsjkizrlz.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 
 # Coinbase CDP
-NEXT_PUBLIC_CDP_PROJECT_ID=8d885400-2c82-473e-b9d0-bf5c580a9a5f
-CDP_API_KEY=64e06207-c2c5-4e9d-8b5c-3e7bbfc292d6
-CDP_WALLET_SECRET=MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg...
+NEXT_PUBLIC_CDP_PROJECT_ID=your-cdp-project-id
+CDP_API_KEY=your-cdp-api-key
+CDP_WALLET_SECRET=your-cdp-wallet-secret
 
 # OpenAI
 OPENAI_API_KEY=your-openai-api-key-here
 
 # Pinata IPFS
-PINATA_API_KEY=1565bd032575b8df1795
-PINATA_API_SECRET=3381960bf29cf0070a5f7118c60d33e7088eccd836a08a32b5219e403b602758
-PINATA_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+PINATA_API_KEY=your-pinata-api-key
+PINATA_API_SECRET=your-pinata-api-secret
+PINATA_JWT=your-pinata-jwt
 ```
 
 ---

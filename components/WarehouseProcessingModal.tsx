@@ -344,16 +344,16 @@ export default function WarehouseProcessingModal({
                                         className="flex items-center cursor-pointer"
                                         onClick={() => setActiveStep(step.id)}
                                     >
-                                        <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${isCompleted ? 'bg-green-500 text-white' :
-                                            isActive ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-500'
+                                        <div className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${isCompleted ? 'bg-emerald-500 text-white' :
+                                            isActive ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500'
                                             }`}>
                                             <StepIcon className="h-5 w-5" />
                                         </div>
-                                        <span className={`ml-2 text-sm font-medium ${isActive ? 'text-teal-600' : 'text-gray-500'}`}>
+                                        <span className={`ml-2 text-sm font-medium ${isActive ? 'text-emerald-600' : 'text-gray-500'}`}>
                                             {step.label}
                                         </span>
                                         {index < steps.length - 1 && (
-                                            <div className={`w-12 h-1 mx-3 rounded ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
+                                            <div className={`w-12 h-1 mx-3 rounded ${isCompleted ? 'bg-emerald-500' : 'bg-gray-200'}`} />
                                         )}
                                     </div>
                                 );
@@ -377,7 +377,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 qualityCheck: { ...prev.qualityCheck, grade: e.target.value }
                                             }))}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         >
                                             <option value="">Select Grade</option>
                                             {grades.map(g => <option key={g} value={g}>{g}</option>)}
@@ -394,7 +394,7 @@ export default function WarehouseProcessingModal({
                                                         ...prev,
                                                         qualityCheck: { ...prev.qualityCheck, passed: e.target.checked }
                                                     }))}
-                                                    className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"
+                                                    className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
                                                 />
                                                 <span className="ml-3 text-sm font-medium text-gray-700">Quality Check Passed</span>
                                             </label>
@@ -416,25 +416,25 @@ export default function WarehouseProcessingModal({
                                 </div>
 
                                 {/* AI Intake Defect Scanning */}
-                                <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 mt-4">
+                                <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 mt-4">
                                     <div className="flex items-center justify-between mb-3">
                                         <div>
-                                            <h4 className="text-sm font-bold text-indigo-800 flex items-center gap-2">
+                                            <h4 className="text-sm font-bold text-emerald-800 flex items-center gap-2">
                                                 <CheckCircle2 className="w-4 h-4" /> AI Defect Scanner
                                             </h4>
-                                            <p className="text-xs text-indigo-600 mt-1">Scan intake crates for rot, disease, and overall quality.</p>
+                                            <p className="text-xs text-emerald-600 mt-1">Scan intake crates for rot, disease, and overall quality.</p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => setShowAiScanner(!showAiScanner)}
-                                            className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+                                            className="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-emerald-700 transition-colors shadow-sm"
                                         >
                                             {showAiScanner ? "Close Scanner" : "Scan Batch"}
                                         </button>
                                     </div>
 
                                     {showAiScanner && (
-                                        <div className="bg-white rounded-xl overflow-hidden border border-indigo-100 shadow-sm mt-4" style={{ minHeight: 320 }}>
+                                        <div className="bg-white rounded-xl overflow-hidden border border-emerald-100 shadow-sm mt-4" style={{ minHeight: 320 }}>
                                             <CropDiagnostics
                                                 cropType={batch?.cropType}
                                                 onResult={(result) => {
@@ -459,13 +459,13 @@ export default function WarehouseProcessingModal({
                                     )}
 
                                     {processing.aiDefectScan && (
-                                        <div className="mt-3 bg-white p-3 rounded-xl border border-indigo-200 flex justify-between items-center">
+                                        <div className="mt-3 bg-white p-3 rounded-xl border border-emerald-200 flex justify-between items-center">
                                             <div>
                                                 <span className="text-xs font-bold text-gray-500 uppercase block mb-1">Last Scan Result</span>
                                                 <p className="text-sm font-semibold text-gray-900">{processing.aiDefectScan.disease}</p>
                                             </div>
                                             <div className="text-right">
-                                                <span className="text-xs font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Score: {processing.aiDefectScan.healthScore}/100</span>
+                                                <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Score: {processing.aiDefectScan.healthScore}/100</span>
                                                 <p className="text-[10px] text-gray-400 mt-1">Conf: {(processing.aiDefectScan.confidence * 100).toFixed(1)}%</p>
                                             </div>
                                         </div>
@@ -482,7 +482,7 @@ export default function WarehouseProcessingModal({
                                         }))}
                                         rows={3}
                                         placeholder="Add any quality observations..."
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                     />
                                 </div>
                             </div>
@@ -503,7 +503,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 sorting: { ...prev.sorting, gradeA: parseInt(e.target.value) || 0 }
                                             }))}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         />
                                     </div>
                                     <div>
@@ -515,7 +515,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 sorting: { ...prev.sorting, gradeB: parseInt(e.target.value) || 0 }
                                             }))}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         />
                                     </div>
                                     <div>
@@ -527,7 +527,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 sorting: { ...prev.sorting, rejected: parseInt(e.target.value) || 0 }
                                             }))}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         />
                                     </div>
                                 </div>
@@ -540,7 +540,7 @@ export default function WarehouseProcessingModal({
                                             ...prev,
                                             sorting: { ...prev.sorting, completed: e.target.checked }
                                         }))}
-                                        className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"
+                                        className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
                                     />
                                     <span className="ml-3 text-sm font-medium text-gray-700">Sorting Completed</span>
                                 </label>
@@ -561,7 +561,7 @@ export default function WarehouseProcessingModal({
                                             ...prev,
                                             processing: { ...prev.processing, applicable: e.target.checked }
                                         }))}
-                                        className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"
+                                        className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
                                     />
                                     <span className="ml-3 text-sm font-medium text-gray-700">Processing Required for This Batch</span>
                                 </label>
@@ -579,7 +579,7 @@ export default function WarehouseProcessingModal({
                                                         processing: { ...prev.processing, methods: val ? [val] : [] }
                                                     }));
                                                 }}
-                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                                             >
                                                 <option value="">Select Processing Type</option>
                                                 <option value="Dehydration">Dehydration</option>
@@ -596,7 +596,7 @@ export default function WarehouseProcessingModal({
                                                     <label
                                                         key={method}
                                                         className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${processing.processing.methods.includes(method)
-                                                            ? 'border-teal-500 bg-teal-50 text-teal-700'
+                                                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                                                             : 'border-gray-200 hover:border-gray-300'
                                                             }`}
                                                     >
@@ -604,7 +604,7 @@ export default function WarehouseProcessingModal({
                                                             type="checkbox"
                                                             checked={processing.processing.methods.includes(method)}
                                                             onChange={() => handleMethodToggle(method)}
-                                                            className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
+                                                            className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
                                                         />
                                                         <span className="ml-2 text-sm">{method}</span>
                                                     </label>
@@ -623,7 +623,7 @@ export default function WarehouseProcessingModal({
                                                         processing: { ...prev.processing, duration: e.target.value }
                                                     }))}
                                                     placeholder="e.g., 48 hours"
-                                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                                 />
                                             </div>
                                             <div>
@@ -636,7 +636,7 @@ export default function WarehouseProcessingModal({
                                                         processing: { ...prev.processing, notes: e.target.value }
                                                     }))}
                                                     placeholder="Any additional notes..."
-                                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                                 />
                                             </div>
                                         </div>
@@ -649,7 +649,7 @@ export default function WarehouseProcessingModal({
                                                     ...prev,
                                                     processing: { ...prev.processing, completed: e.target.checked }
                                                 }))}
-                                                className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"
+                                                className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
                                             />
                                             <span className="ml-3 text-sm font-medium text-gray-700">Processing Completed</span>
                                         </label>
@@ -672,7 +672,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 packaging: { ...prev.packaging, packageType: e.target.value }
                                             }))}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         >
                                             <option value="">Select Type</option>
                                             {packageTypes.map(t => <option key={t} value={t}>{t}</option>)}
@@ -688,17 +688,17 @@ export default function WarehouseProcessingModal({
                                                 packaging: { ...prev.packaging, packageCount: parseInt(e.target.value) || 0 }
                                             }))}
                                             disabled={(processing.packaging.sizes || []).length > 0}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-gray-50 disabled:text-gray-700"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50 disabled:text-gray-700"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Multi-size packaging repeater */}
-                                <div className="p-4 bg-teal-50/40 rounded-xl border border-teal-100">
+                                <div className="p-4 bg-emerald-50/40 rounded-xl border border-emerald-100">
                                     <div className="flex items-center justify-between mb-3">
                                         <div>
-                                            <label className="block text-sm font-bold text-teal-900">Packaging Sizes in this Batch</label>
-                                            <p className="text-xs text-teal-700 mt-0.5">Add every variant you packed (e.g. 200g x 100, 1kg x 40). Total weight is auto-calculated.</p>
+                                            <label className="block text-sm font-bold text-emerald-900">Packaging Sizes in this Batch</label>
+                                            <p className="text-xs text-emerald-700 mt-0.5">Add every variant you packed (e.g. 200g x 100, 1kg x 40). Total weight is auto-calculated.</p>
                                         </div>
                                         <button
                                             type="button"
@@ -709,7 +709,7 @@ export default function WarehouseProcessingModal({
                                                     sizes: [...(prev.packaging.sizes || []), { sizeLabel: "", sizeKg: 0, count: 0 }]
                                                 }
                                             }))}
-                                            className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
+                                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
                                         >
                                             + Add Size
                                         </button>
@@ -717,11 +717,11 @@ export default function WarehouseProcessingModal({
 
                                     <div className="space-y-2">
                                         {(processing.packaging.sizes || []).length === 0 && (
-                                            <p className="text-xs text-gray-500 italic px-1">No package sizes added yet. Click <span className="font-semibold text-teal-700">+ Add Size</span> to record at least one variant.</p>
+                                            <p className="text-xs text-gray-500 italic px-1">No package sizes added yet. Click <span className="font-semibold text-emerald-700">+ Add Size</span> to record at least one variant.</p>
                                         )}
 
                                         {(processing.packaging.sizes || []).map((row, idx) => (
-                                            <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-white rounded-lg p-2 border border-teal-100">
+                                            <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-white rounded-lg p-2 border border-emerald-100">
                                                 <div className="col-span-4">
                                                     <select
                                                         value={packSizes.includes(row.sizeLabel) ? row.sizeLabel : (row.sizeLabel ? "__custom" : "")}
@@ -738,7 +738,7 @@ export default function WarehouseProcessingModal({
                                                                 return { ...prev, packaging: { ...prev.packaging, sizes } };
                                                             });
                                                         }}
-                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                                     >
                                                         <option value="">Preset size</option>
                                                         {packSizes.map(s => <option key={s} value={s}>{s}</option>)}
@@ -755,7 +755,7 @@ export default function WarehouseProcessingModal({
                                                             sizes[idx] = { ...sizes[idx], sizeLabel: e.target.value };
                                                             return { ...prev, packaging: { ...prev.packaging, sizes } };
                                                         })}
-                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                                     />
                                                 </div>
                                                 <div className="col-span-2">
@@ -769,7 +769,7 @@ export default function WarehouseProcessingModal({
                                                             sizes[idx] = { ...sizes[idx], sizeKg: parseFloat(e.target.value) || 0 };
                                                             return { ...prev, packaging: { ...prev.packaging, sizes } };
                                                         })}
-                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                                     />
                                                 </div>
                                                 <div className="col-span-2">
@@ -783,7 +783,7 @@ export default function WarehouseProcessingModal({
                                                             const totalCount = sizes.reduce((s, x) => s + (x.count || 0), 0);
                                                             return { ...prev, packaging: { ...prev.packaging, sizes, packageCount: totalCount } };
                                                         })}
-                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                        className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                                     />
                                                 </div>
                                                 <div className="col-span-1 flex justify-end">
@@ -805,9 +805,9 @@ export default function WarehouseProcessingModal({
                                     </div>
 
                                     {(processing.packaging.sizes || []).length > 0 && (
-                                        <div className="mt-3 flex items-center justify-between text-xs bg-white rounded-lg px-3 py-2 border border-teal-100">
+                                        <div className="mt-3 flex items-center justify-between text-xs bg-white rounded-lg px-3 py-2 border border-emerald-100">
                                             <span className="text-gray-600">Total batch weight</span>
-                                            <span className="font-bold text-teal-800">
+                                            <span className="font-bold text-emerald-800">
                                                 {(processing.packaging.sizes || []).reduce((s, x) => s + (x.sizeKg || 0) * (x.count || 0), 0).toFixed(2)} kg
                                                 {" "}· {(processing.packaging.sizes || []).reduce((s, x) => s + (x.count || 0), 0)} packs
                                             </span>
@@ -824,7 +824,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 packaging: { ...prev.packaging, labelsPrinted: e.target.checked }
                                             }))}
-                                            className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"
+                                            className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
                                         />
                                         <span className="ml-3 text-sm font-medium text-gray-700">Labels Printed (with QR Code)</span>
                                     </label>
@@ -837,7 +837,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 packaging: { ...prev.packaging, completed: e.target.checked }
                                             }))}
-                                            className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500"
+                                            className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
                                         />
                                         <span className="ml-3 text-sm font-medium text-gray-700">Packaging Completed</span>
                                     </label>
@@ -860,7 +860,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 productionDate: e.target.value
                                             }))}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         />
                                     </div>
                                     <div>
@@ -872,7 +872,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 expiryDate: e.target.value
                                             }))}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         />
                                     </div>
                                     <div>
@@ -883,7 +883,7 @@ export default function WarehouseProcessingModal({
                                                 ...prev,
                                                 storageConditions: e.target.value
                                             }))}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         >
                                             <option value="">Select</option>
                                             {storageOptions.map(s => <option key={s} value={s}>{s}</option>)}
@@ -897,25 +897,25 @@ export default function WarehouseProcessingModal({
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div className="flex items-center gap-2">
                                             {processing.qualityCheck.passed ?
-                                                <CheckCircle2 className="h-4 w-4 text-green-500" /> :
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> :
                                                 <AlertCircle className="h-4 w-4 text-red-500" />}
                                             Quality: {processing.qualityCheck.grade || 'Not set'}
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {processing.sorting.completed ?
-                                                <CheckCircle2 className="h-4 w-4 text-green-500" /> :
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> :
                                                 <AlertCircle className="h-4 w-4 text-red-500" />}
                                             Sorted: {processing.sorting.gradeA + processing.sorting.gradeB} kg
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {!processing.processing.applicable || processing.processing.completed ?
-                                                <CheckCircle2 className="h-4 w-4 text-green-500" /> :
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> :
                                                 <AlertCircle className="h-4 w-4 text-yellow-500" />}
                                             Processing: {processing.processing.applicable ? processing.processing.methods.join(', ') || 'Methods not selected' : 'N/A'}
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {processing.packaging.completed ?
-                                                <CheckCircle2 className="h-4 w-4 text-green-500" /> :
+                                                <CheckCircle2 className="h-4 w-4 text-emerald-500" /> :
                                                 <AlertCircle className="h-4 w-4 text-red-500" />}
                                             Packages: {processing.packaging.packageCount} {processing.packaging.packageType}
                                         </div>
@@ -932,7 +932,7 @@ export default function WarehouseProcessingModal({
                                                 value={processing.productName}
                                                 onChange={(e) => setProcessing(prev => ({ ...prev, productName: e.target.value }))}
                                                 placeholder="e.g. Cherry-Pick Dried Mango"
-                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                             />
                                         </div>
                                         <div>
@@ -951,18 +951,18 @@ export default function WarehouseProcessingModal({
                                                         htmlFor="product-image-upload"
                                                         className={`flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${isUploading
                                                             ? 'bg-gray-50 border-gray-300'
-                                                            : 'bg-teal-50/30 border-teal-200 hover:border-teal-400 hover:bg-teal-50'
+                                                            : 'bg-emerald-50/30 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50'
                                                             }`}
                                                     >
                                                         {isUploading ? (
                                                             <>
-                                                                <Loader2 className="h-5 w-5 text-teal-600 animate-spin" />
-                                                                <span className="text-sm font-medium text-teal-600">Uploading...</span>
+                                                                <Loader2 className="h-5 w-5 text-emerald-600 animate-spin" />
+                                                                <span className="text-sm font-medium text-emerald-600">Uploading...</span>
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <Upload className="h-5 w-5 text-teal-600" />
-                                                                <span className="text-sm font-medium text-teal-600">Choose File or Take Photo</span>
+                                                                <Upload className="h-5 w-5 text-emerald-600" />
+                                                                <span className="text-sm font-medium text-emerald-600">Choose File or Take Photo</span>
                                                             </>
                                                         )}
                                                     </label>
@@ -986,12 +986,12 @@ export default function WarehouseProcessingModal({
                                 </div>
 
                                 {/* NFT Info */}
-                                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
+                                <div className="bg-gradient-to-r from-emerald-50 to-emerald-50 rounded-xl p-4 border border-emerald-200">
                                     <div className="flex items-center gap-3">
-                                        <Coins className="h-6 w-6 text-purple-600" />
+                                        <Coins className="h-6 w-6 text-emerald-600" />
                                         <div>
-                                            <h4 className="font-semibold text-purple-900">Blockchain Certificate</h4>
-                                            <p className="text-sm text-purple-700">
+                                            <h4 className="font-semibold text-emerald-900">Blockchain Certificate</h4>
+                                            <p className="text-sm text-emerald-700">
                                                 Clicking &quot;Ready for Distribution&quot; will mint an NFT with full traceability data on the blockchain.
                                             </p>
                                         </div>

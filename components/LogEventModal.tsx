@@ -8,6 +8,7 @@ import { getLatestAIDiagnostic } from "@/lib/traceabilityService";
 import { useEffect } from "react";
 import { addTraceabilityEvent, TraceabilityEventType } from "@/lib/traceabilityService";
 import { uploadToIPFS } from "@/lib/ipfsService";
+import { CONTRACT_UNITS } from "@/lib/config";
 import toast from "react-hot-toast";
 
 interface IoTReading {
@@ -33,6 +34,8 @@ interface LogEventModalProps {
     userId?: string;
     onSuccessAction: () => void;
     isContract?: boolean;
+    /** Unit from the contract or batch (e.g. "kg", "bags"). When provided it becomes the default selected unit. */
+    defaultUnit?: string;
 }
 
 const EVENT_TYPES = [
@@ -48,7 +51,7 @@ const EVENT_TYPES = [
     { value: 'transport_start', label: 'Transport / Dispatch', icon: Truck },
 ];
 
-export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId, userId, onSuccessAction, isContract = false }: LogEventModalProps) {
+export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId, userId, onSuccessAction, isContract = false, defaultUnit }: LogEventModalProps) {
     const [loading, setLoading] = useState(false);
     const [entryType, setEntryType] = useState<"activity" | "observation">("activity");
     const [eventType, setEventType] = useState<TraceabilityEventType>('growth_update');
@@ -78,9 +81,14 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
     const [fertilizerType, setFertilizerType] = useState("organic");
     const [npkRatio, setNpkRatio] = useState("");
 
-    // Quantity Fields
+    // Quantity Fields — default unit inherits from the parent contract/batch when provided
     const [quantity, setQuantity] = useState("");
-    const [unit, setUnit] = useState("kg");
+    const [unit, setUnit] = useState<string>(defaultUnit || "kg");
+
+    // Keep unit in sync if the default changes (e.g. user opens modal for a different batch)
+    useEffect(() => {
+        if (defaultUnit) setUnit(defaultUnit);
+    }, [defaultUnit]);
 
     // Recommendations & Checklist
     const [recommendations, setRecommendations] = useState("");
@@ -324,7 +332,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Event Type</label>
                                     <select
-                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all outline-none"
                                         value={eventType}
                                         onChange={(e) => setEventType(e.target.value as TraceabilityEventType)}
                                     >
@@ -340,7 +348,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                         type="text"
                                         required
                                         placeholder={entryType === "activity" ? "e.g. Planting Batch A" : "e.g. Flowering observed"}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all outline-none"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
                                     />
@@ -389,7 +397,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                         type="number"
                                         step="0.1"
                                         placeholder="e.g. 500"
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all outline-none"
                                         value={quantity}
                                         onChange={(e) => setQuantity(e.target.value)}
                                     />
@@ -397,24 +405,27 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Unit</label>
                                     <select
-                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all outline-none"
                                         value={unit}
                                         onChange={(e) => setUnit(e.target.value)}
                                     >
-                                        <option value="kg">Kilograms (kg)</option>
-                                        <option value="liters">Liters</option>
-                                        <option value="bags">Bags</option>
-                                        <option value="seedlings">Seedlings</option>
-                                        <option value="hours">Hours</option>
-                                        <option value="units">Units</option>
+                                        {CONTRACT_UNITS.map(u => (
+                                            <option key={u.value} value={u.value}>{u.label}</option>
+                                        ))}
+                                        {defaultUnit && !CONTRACT_UNITS.some(u => u.value === defaultUnit) && (
+                                            <option value={defaultUnit}>{defaultUnit}</option>
+                                        )}
                                     </select>
+                                    {defaultUnit && (
+                                        <p className="text-xs text-gray-400 mt-1">Default matches contract unit: <span className="font-semibold text-gray-600">{defaultUnit}</span></p>
+                                    )}
                                 </div>
 
                                 <div className="md:col-span-2 space-y-2">
                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Description / Notes</label>
                                     <textarea
                                         rows={3}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none resize-none"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all outline-none resize-none"
                                         placeholder="Add details about this activity..."
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
@@ -428,7 +439,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                         <input
                                             type="text"
                                             placeholder="e.g. Plot 4, North-West Sector"
-                                            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all outline-none"
+                                            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all outline-none"
                                             value={location}
                                             onChange={(e) => setLocation(e.target.value)}
                                         />
@@ -437,22 +448,22 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                             </div>
 
                             {/* IoT Sensor Readings */}
-                            <div className="bg-purple-50/50 border border-purple-100 rounded-2xl p-4 space-y-4 mb-6">
+                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 space-y-4 mb-6">
                                 <div className="flex items-center justify-between">
-                                    <h4 className="text-xs font-bold text-purple-800 uppercase tracking-wider flex items-center gap-2">
+                                    <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-2">
                                         <Thermometer className="w-4 h-4" /> IoT Sensor Readings
                                     </h4>
                                     <button
                                         type="button"
                                         onClick={() => setShowIoTForm(!showIoTForm)}
-                                        className="text-[10px] font-bold bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 transition-colors uppercase tracking-wider"
+                                        className="text-[10px] font-bold bg-emerald-600 text-white px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition-colors uppercase tracking-wider"
                                     >
                                         {showIoTForm ? "Hide" : "Add Reading"}
                                     </button>
                                 </div>
 
                                 {showIoTForm && (
-                                    <div className="bg-white p-3 rounded-xl border border-purple-100 flex gap-2">
+                                    <div className="bg-white p-3 rounded-xl border border-emerald-100 flex gap-2">
                                         <select
                                             value={iotType}
                                             onChange={(e) => setIoTType(e.target.value as any)}
@@ -475,7 +486,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                             <button
                                                 type="button"
                                                 onClick={addIoTReading}
-                                                className="bg-purple-600 text-white p-2 rounded-lg hover:bg-purple-700 transition-colors"
+                                                className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition-colors"
                                             >
                                                 <Plus className="w-5 h-5" />
                                             </button>
@@ -486,13 +497,13 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                 {iotReadings.length > 0 ? (
                                     <div className="grid grid-cols-2 gap-2">
                                         {iotReadings.map((reading) => (
-                                            <div key={reading.id} className="bg-white px-3 py-2 rounded-lg border border-purple-100 flex items-center justify-between shadow-sm">
+                                            <div key={reading.id} className="bg-white px-3 py-2 rounded-lg border border-emerald-100 flex items-center justify-between shadow-sm">
                                                 <div className="flex items-center gap-2">
-                                                    <Thermometer className="w-3.5 h-3.5 text-purple-500" />
+                                                    <Thermometer className="w-3.5 h-3.5 text-emerald-500" />
                                                     <span className="text-xs font-semibold">{reading.type.replace('_', ' ')}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-bold text-purple-700">{reading.value}{reading.unit}</span>
+                                                    <span className="text-sm font-bold text-emerald-700">{reading.value}{reading.unit}</span>
                                                     <button onClick={() => removeIoTReading(reading.id)} className="text-red-400 hover:text-red-600">
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
@@ -501,7 +512,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-purple-600 italic">No sensor data added yet</p>
+                                    <p className="text-xs text-emerald-600 italic">No sensor data added yet</p>
                                 )}
                             </div>
 
@@ -543,25 +554,25 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                     </button>
                                 )}
                                 {uploadedImageUrls.length > 0 && (
-                                    <div className="flex items-center gap-2 text-green-700 text-[10px] font-bold bg-white p-3 rounded-xl border border-green-100 uppercase tracking-wider">
-                                        <CheckCircle className="w-4 h-4 text-green-500" /> {uploadedImageUrls.length} Files Securely Logged to IPFS
+                                    <div className="flex items-center gap-2 text-emerald-700 text-[10px] font-bold bg-white p-3 rounded-xl border border-emerald-100 uppercase tracking-wider">
+                                        <CheckCircle className="w-4 h-4 text-emerald-500" /> {uploadedImageUrls.length} Files Securely Logged to IPFS
                                     </div>
                                 )}
                             </div>
 
                             {/* AI Diagnostics Section */}
-                            <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 space-y-4 mb-6">
+                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4 space-y-4 mb-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h4 className="text-xs font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-2">
+                                        <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-2">
                                             <CheckCircle className="w-4 h-4" /> AI Crop Diagnostics
                                         </h4>
-                                        <p className="text-[10px] text-indigo-600 mt-1">Scan crops for disease detection and health assessment</p>
+                                        <p className="text-[10px] text-emerald-600 mt-1">Scan crops for disease detection and health assessment</p>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setShowAiScanner(!showAiScanner)}
-                                        className={`text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition-colors ${previousDiagnosis ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                                        className={`text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider transition-colors ${previousDiagnosis ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                                     >
                                         {showAiScanner ? "Hide Scanner" : previousDiagnosis ? "Verify Recovery" : "Enable AI Scan"}
                                     </button>
@@ -580,7 +591,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                 )}
 
                                 {showAiScanner && (
-                                    <div className="bg-white rounded-xl overflow-hidden border border-indigo-100 shadow-sm">
+                                    <div className="bg-white rounded-xl overflow-hidden border border-emerald-100 shadow-sm">
                                         <CropDiagnostics
                                             onResult={(result) => {
                                                 setAiResult({
@@ -597,10 +608,10 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                 )}
 
                                 {aiResult && (
-                                    <div className="bg-white p-3 rounded-xl border border-indigo-200">
+                                    <div className="bg-white p-3 rounded-xl border border-emerald-200">
                                         <div className="flex justify-between items-start mb-2">
                                             <span className="text-[10px] font-bold text-gray-500 uppercase">AI Assessment Result</span>
-                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Health: {aiResult.healthScore}/100</span>
+                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Health: {aiResult.healthScore}/100</span>
                                         </div>
                                         <p className="text-sm font-semibold text-gray-900 mb-1">{aiResult.disease}</p>
                                         <p className="text-xs text-gray-600 mb-2">Confidence: {(aiResult.confidence * 100).toFixed(1)}%</p>
@@ -676,7 +687,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                             {eventType === 'transport_start' && (
                                 <div className="space-y-4 pt-2 border-t border-gray-100">
                                     <h4 className="font-bold text-gray-800 flex items-center gap-2">
-                                        <Truck className="w-4 h-4 text-green-600" /> Dispatch Details
+                                        <Truck className="w-4 h-4 text-emerald-600" /> Dispatch Details
                                     </h4>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-1">

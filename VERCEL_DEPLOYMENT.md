@@ -39,22 +39,22 @@ All references to "AgroChain360" have been changed to "Cherry Pick":
 
    ```env
    # Supabase
-   NEXT_PUBLIC_SUPABASE_URL=https://dmjjmdthanlbsjkizrlz.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamptZHRoYW5sYnNqa2l6cmx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MjMxNDAsImV4cCI6MjA3Nzk5OTE0MH0.UocGwJFmRIF-sfYHznsuu2XZKJ9BwtUCPYk_3gTgPhs
-   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtamptZHRoYW5sYnNqa2l6cmx6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjQyMzE0MCwiZXhwIjoyMDc3OTk5MTQwfQ.rOKCGd7pdCJ3fD6cPXLNDI2qhPlVmjpjpPWh4ky4n50
+   NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 
    # Coinbase CDP
-   NEXT_PUBLIC_CDP_PROJECT_ID=8d885400-2c82-473e-b9d0-bf5c580a9a5f
-   CDP_API_KEY=64e06207-c2c5-4e9d-8b5c-3e7bbfc292d6
-   CDP_WALLET_SECRET=MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQguQcIxaccgZ7ihdUiUq+RzAA+1s56wXuMh+U8w0tKUm2hRANCAAR+H0En9zOmiEmqNeid3GWmwZY4nkMS1fmF3aiRYndY973SF5hXtIZDkas5bTRda/Rxh8IIUm4Eozrji9/NQuAh
+   NEXT_PUBLIC_CDP_PROJECT_ID=your-cdp-project-id
+   CDP_API_KEY=your-cdp-api-key
+   CDP_WALLET_SECRET=your-cdp-wallet-secret
 
    # OpenAI (Get your own key from https://platform.openai.com/api-keys)
    OPENAI_API_KEY=your-openai-api-key
 
    # Pinata IPFS
-   PINATA_API_KEY=1565bd032575b8df1795
-   PINATA_API_SECRET=3381960bf29cf0070a5f7118c60d33e7088eccd836a08a32b5219e403b602758
-   PINATA_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiIyM2FmMTAzZi0wYjBkLTQwYjItOWI5YS05MTM1ZjgwMjkyNTYiLCJlbWFpbCI6ImJhc2V6YW1iaWFAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6IjE1NjViZDAzMjU3NWI4ZGYxNzk1Iiwic2NvcGVkS2V5U2VjcmV0IjoiMzM4MTk2MGJmMjljZjAwNzBhNWY3MTE4YzYwZDMzZTcwODhlY2NkODM2YTA4YTMyYjUyMTllNDAzYjYwMjc1OCIsImV4cCI6MTc5MjgzMDU5MX0.lXZz_2mIHlUCSxJHndCKb6uOyNTxTET35CSerdcYlQU
+   PINATA_API_KEY=your-pinata-api-key
+   PINATA_API_SECRET=your-pinata-api-secret
+   PINATA_JWT=your-pinata-jwt
    ```
 
 5. **Deploy:**

@@ -275,7 +275,7 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
 
                 {activeTab === "map" && (
                   <div className="space-y-4">
-                    <div className="aspect-video bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl relative overflow-hidden">
+                    <div className="aspect-video bg-gradient-to-br from-emerald-50 to-emerald-50 rounded-xl relative overflow-hidden">
                       {/* Simplified map visualization */}
                       <div className="absolute inset-0 opacity-20">
                         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">

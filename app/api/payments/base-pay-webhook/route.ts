@@ -2,28 +2,41 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import crypto from "crypto";
 
+/** Constant-time comparison of two hex signatures, length-safe. */
+function signaturesMatch(expectedHex: string, providedHex: string): boolean {
+    try {
+        const expected = Buffer.from(expectedHex, "hex");
+        const provided = Buffer.from(providedHex, "hex");
+        if (expected.length === 0 || expected.length !== provided.length) return false;
+        return crypto.timingSafeEqual(expected, provided);
+    } catch {
+        return false;
+    }
+}
+
 export async function POST(req: NextRequest) {
     try {
         const signature = req.headers.get("x-cb-signature");
         const rawBody = await req.text();
 
+        // Signature verification is MANDATORY — this webhook marks contracts as
+        // funded/active, so it must never be processed unverified.
+        const secret = process.env.BASE_PAY_WEBHOOK_SECRET;
+        if (!secret) {
+            console.error("BASE_PAY_WEBHOOK_SECRET is not configured — rejecting webhook.");
+            return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+        }
         if (!signature) {
             return NextResponse.json({ error: "Missing signature" }, { status: 401 });
         }
 
-        const secret = process.env.BASE_PAY_WEBHOOK_SECRET;
-        if (!secret) {
-            console.warn("BASE_PAY_WEBHOOK_SECRET is missing. Bypassing signature check for dev.");
-        } else {
-            // Base Pay signature verification
-            const expectedSignature = crypto
-                .createHmac("sha256", secret)
-                .update(rawBody)
-                .digest("hex");
+        const expectedSignature = crypto
+            .createHmac("sha256", secret)
+            .update(rawBody)
+            .digest("hex");
 
-            if (signature !== expectedSignature) {
-                return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-            }
+        if (!signaturesMatch(expectedSignature, signature)) {
+            return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
         }
 
         const event = JSON.parse(rawBody);

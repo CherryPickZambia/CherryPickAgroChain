@@ -38,7 +38,7 @@ export interface ProgressUpdate {
 }
 
 const UPDATE_TYPES = [
-  { value: 'progress', label: 'Progress Update', icon: Leaf, color: 'bg-green-500' },
+  { value: 'progress', label: 'Progress Update', icon: Leaf, color: 'bg-emerald-500' },
   { value: 'input_application', label: 'Input Application', icon: Beaker, color: 'bg-blue-500' },
   { value: 'issue', label: 'Report Issue', icon: Bug, color: 'bg-red-500' },
   { value: 'harvest', label: 'Harvest Update', icon: CheckCircle, color: 'bg-yellow-500' },
@@ -175,9 +175,9 @@ export default function FarmerProgressUpdate({
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white">
+      <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white">
         <h2 className="text-xl font-bold">Submit Progress Update</h2>
-        <p className="text-green-100 text-sm">Keep your buyers informed about your crop progress</p>
+        <p className="text-emerald-100 text-sm">Keep your buyers informed about your crop progress</p>
       </div>
 
       <div className="p-6 space-y-6">
@@ -217,7 +217,7 @@ export default function FarmerProgressUpdate({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g., Week 4 Growth Update, Applied NPK Fertilizer"
-            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors"
+            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors"
           />
         </div>
 
@@ -313,7 +313,7 @@ export default function FarmerProgressUpdate({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe the current state of your crops, any observations, or details about the update..."
             rows={4}
-            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors resize-none"
+            className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none transition-colors resize-none"
           />
         </div>
 
@@ -347,7 +347,7 @@ export default function FarmerProgressUpdate({
             {photos.length < 5 && (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-1 hover:border-green-400 hover:bg-green-50 transition-all"
+                className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-1 hover:border-emerald-400 hover:bg-emerald-50 transition-all"
               >
                 <Plus className="w-6 h-6 text-gray-400" />
                 <span className="text-xs text-gray-500">Add Photo</span>
@@ -366,8 +366,8 @@ export default function FarmerProgressUpdate({
             disabled={isGettingLocation}
             className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all ${
               location
-                ? 'border-green-500 bg-green-50 text-green-700'
-                : 'border-gray-200 hover:border-green-400 text-gray-700'
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                : 'border-gray-200 hover:border-emerald-400 text-gray-700'
             }`}
           >
             <MapPin className={`w-5 h-5 ${isGettingLocation ? 'animate-pulse' : ''}`} />
@@ -385,7 +385,7 @@ export default function FarmerProgressUpdate({
           whileTap={{ scale: 0.98 }}
           onClick={handleSubmit}
           disabled={isSubmitting || !title.trim()}
-          className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+          className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
         >
           {isSubmitting ? (
             <>

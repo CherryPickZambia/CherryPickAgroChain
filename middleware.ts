@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // The routes that need to be protected
-const protectedRoutes = ['/dashboard', '/marketplace', '/api/admin', '/api/payments'];
+const protectedRoutes = ['/dashboard', '/marketplace', '/api/admin', '/api/payments', '/api/lenco'];
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -39,6 +39,8 @@ export function middleware(request: NextRequest) {
     response.headers.set('X-Frame-Options', 'DENY');
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=(self), payment=(self)');
+    response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
 
     return response;
 }

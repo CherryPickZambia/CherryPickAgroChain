@@ -147,9 +147,9 @@ ${risks.output_text}
 
       {/* AI Insights Panel */}
       {aiInsights && (
-        <div className="card-premium bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200">
+        <div className="card-premium bg-gradient-to-br from-emerald-50 to-emerald-50 border-2 border-emerald-200">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="h-6 w-6 text-green-600" />
+            <Sparkles className="h-6 w-6 text-emerald-600" />
             <h3 className="text-xl font-bold text-[#1a1a1a]">AI-Powered Insights for {selectedCrop}</h3>
           </div>
           <div className="prose prose-sm max-w-none">
@@ -271,7 +271,7 @@ ${risks.output_text}
                   <div
                     className={`h-3 rounded-full ${
                       metric.color === 'green'
-                        ? 'bg-gradient-to-r from-green-500 to-green-600'
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600'
                         : metric.color === 'yellow'
                         ? 'bg-gradient-to-r from-yellow-500 to-yellow-600'
                         : 'bg-gradient-to-r from-red-500 to-red-600'
@@ -283,12 +283,12 @@ ${risks.output_text}
             ))}
           </div>
 
-          <div className="mt-6 flex items-center justify-between p-4 bg-green-50 rounded-xl">
+          <div className="mt-6 flex items-center justify-between p-4 bg-emerald-50 rounded-xl">
             <div>
-              <p className="text-sm font-semibold text-green-900">Overall Quality Score</p>
-              <p className="text-3xl font-bold text-green-600">92%</p>
+              <p className="text-sm font-semibold text-emerald-900">Overall Quality Score</p>
+              <p className="text-3xl font-bold text-emerald-600">92%</p>
             </div>
-            <TrendingUp className="h-12 w-12 text-green-600" />
+            <TrendingUp className="h-12 w-12 text-emerald-600" />
           </div>
         </div>
 
@@ -339,7 +339,7 @@ ${risks.output_text}
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-100 rounded-full h-2">
                         <div
-                          className="bg-green-500 h-2 rounded-full"
+                          className="bg-emerald-500 h-2 rounded-full"
                           style={{ width: `${supplier.quality}%` }}
                         ></div>
                       </div>
@@ -368,7 +368,7 @@ ${risks.output_text}
                 alert.type === 'warning'
                   ? 'bg-yellow-50 border-yellow-500'
                   : alert.type === 'success'
-                  ? 'bg-green-50 border-green-500'
+                  ? 'bg-emerald-50 border-emerald-500'
                   : 'bg-blue-50 border-blue-500'
               }`}
             >

@@ -372,7 +372,7 @@ export default function AdminTraceabilityHistoryModal({
                                         </span>
                                       )}
                                       {hasAI && (
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                           AI ANALYSIS
                                         </span>
                                       )}
@@ -439,24 +439,24 @@ export default function AdminTraceabilityHistoryModal({
 
                                       {/* AI Diagnostic */}
                                       {hasAI && (
-                                        <div className="p-3 rounded-lg bg-purple-50 border border-purple-100">
-                                          <p className="text-xs font-bold text-purple-800 mb-1">AI Diagnostic Results</p>
+                                        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                                          <p className="text-xs font-bold text-emerald-800 mb-1">AI Diagnostic Results</p>
                                           <div className="grid grid-cols-3 gap-2 text-xs">
                                             <div>
-                                              <p className="text-purple-600">Disease</p>
-                                              <p className="font-semibold text-purple-900">{event.ai_disease || 'None detected'}</p>
+                                              <p className="text-emerald-600">Disease</p>
+                                              <p className="font-semibold text-emerald-900">{event.ai_disease || 'None detected'}</p>
                                             </div>
                                             <div>
-                                              <p className="text-purple-600">Health Score</p>
-                                              <p className="font-semibold text-purple-900">{event.ai_health_score ?? 'N/A'}%</p>
+                                              <p className="text-emerald-600">Health Score</p>
+                                              <p className="font-semibold text-emerald-900">{event.ai_health_score ?? 'N/A'}%</p>
                                             </div>
                                             <div>
-                                              <p className="text-purple-600">Confidence</p>
-                                              <p className="font-semibold text-purple-900">{event.ai_confidence ?? 'N/A'}%</p>
+                                              <p className="text-emerald-600">Confidence</p>
+                                              <p className="font-semibold text-emerald-900">{event.ai_confidence ?? 'N/A'}%</p>
                                             </div>
                                           </div>
                                           {event.ai_treatment_rec && (
-                                            <p className="text-xs mt-2 text-purple-700"><strong>Treatment:</strong> {event.ai_treatment_rec}</p>
+                                            <p className="text-xs mt-2 text-emerald-700"><strong>Treatment:</strong> {event.ai_treatment_rec}</p>
                                           )}
                                         </div>
                                       )}
@@ -504,9 +504,9 @@ export default function AdminTraceabilityHistoryModal({
 
                                       {/* Quality / Compliance */}
                                       {event.quality_grade && (
-                                        <div className="p-3 rounded-lg bg-green-50 border border-green-100">
-                                          <p className="text-xs font-bold text-green-800 mb-1">Quality Assessment</p>
-                                          <p className="text-sm font-semibold text-green-900">Grade: {event.quality_grade}</p>
+                                        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                                          <p className="text-xs font-bold text-emerald-800 mb-1">Quality Assessment</p>
+                                          <p className="text-sm font-semibold text-emerald-900">Grade: {event.quality_grade}</p>
                                         </div>
                                       )}
 
@@ -516,7 +516,7 @@ export default function AdminTraceabilityHistoryModal({
                                           href={`https://basescan.org/tx/${event.blockchain_tx}`}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="flex items-center gap-1 text-xs font-mono text-purple-600 hover:text-purple-800 bg-purple-50 px-3 py-1.5 rounded-lg w-fit"
+                                          className="flex items-center gap-1 text-xs font-mono text-emerald-600 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-lg w-fit"
                                         >
                                           <ExternalLink className="h-3 w-3" />
                                           On-chain: {event.blockchain_tx.slice(0, 14)}...

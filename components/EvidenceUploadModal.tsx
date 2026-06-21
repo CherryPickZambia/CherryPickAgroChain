@@ -309,7 +309,7 @@ export default function EvidenceUploadModal({
                     }}
                     role="button"
                     tabIndex={0}
-                    className={`relative group text-left rounded-lg overflow-hidden border-2 transition-all ${selectedAiImageIndex === index ? "border-green-500 ring-2 ring-green-100" : "border-gray-200 hover:border-green-300"}`}
+                    className={`relative group text-left rounded-lg overflow-hidden border-2 transition-all ${selectedAiImageIndex === index ? "border-emerald-500 ring-2 ring-emerald-100" : "border-gray-200 hover:border-emerald-300"}`}
                   >
                     <img
                       src={preview}
@@ -334,11 +334,11 @@ export default function EvidenceUploadModal({
 
                 {/* Add Image Tile (camera + gallery) */}
                 {images.length < 10 && (
-                  <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-stretch justify-center gap-2 p-3 hover:border-green-500 hover:bg-green-50/40 transition-colors">
+                  <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-stretch justify-center gap-2 p-3 hover:border-emerald-500 hover:bg-emerald-50/40 transition-colors">
                     <button
                       type="button"
                       onClick={() => cameraInputRef.current?.click()}
-                      className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-md font-semibold text-xs px-2 shadow-sm"
+                      className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-md font-semibold text-xs px-2 shadow-sm"
                     >
                       <Camera className="h-4 w-4" />
                       Take Photo
@@ -467,7 +467,7 @@ export default function EvidenceUploadModal({
                 </label>
                 <button
                   onClick={() => setShowIoTForm(!showIoTForm)}
-                  className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
+                  className="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
                 >
                   <Plus className="h-4 w-4" />
                   Add Reading
@@ -525,7 +525,7 @@ export default function EvidenceUploadModal({
                       className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-100 rounded-lg text-green-600">
+                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
                           {getIoTIcon(reading.type)}
                         </div>
                         <div>
@@ -564,7 +564,7 @@ export default function EvidenceUploadModal({
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add any additional information about this milestone..."
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
               />
             </div>
           </div>

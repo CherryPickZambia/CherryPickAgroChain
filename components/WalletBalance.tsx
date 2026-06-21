@@ -279,30 +279,10 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
       }
     }
 
-    // After all retries, if the MoMo already deducted, auto-confirm the deposit
-    // so the user sees their balance. This prevents funds being "lost" in limbo.
-    if (supabase) {
-      const { data: pendingRecord } = await supabase
-        .from('payments')
-        .select('id, status')
-        .eq('transaction_hash', transactionReference)
-        .maybeSingle();
-
-      if (pendingRecord && normalizePaymentStatus(pendingRecord.status) === 'pending') {
-        // Auto-confirm pending MoMo deposits after timeout
-        // The money was already deducted from the phone
-        await supabase.from('payments').update({
-          status: 'confirmed',
-          confirmed_at: new Date().toISOString(),
-        }).eq('id', pendingRecord.id);
-
-        await loadBalances();
-        toast.success('Deposit has been credited to your wallet.');
-        return;
-      }
-    }
-
-    toast('Deposit is still processing. Your balance will update shortly.', { icon: '⏳' });
+    // All polling retries exhausted — deposit is still pending.
+    // The Lenco webhook will update the payment when the user completes PIN auth.
+    // Do NOT auto-confirm; the user may have cancelled or the request may have failed.
+    toast('Deposit is still processing. Please complete authorization on your phone. Your balance will update shortly.', { icon: '⏳', duration: 6000 });
     await loadBalances();
   }, [loadBalances]);
 
@@ -437,6 +417,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           phone: momoPhone,
           network: momoOperator,
           accountName: userName || 'Withdrawal',
+          narration: `Cherry Pick Withdrawal - ${userName || 'User'}`,
           reference: `WD-${Date.now()}`
         });
 
@@ -478,7 +459,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           amount: netAmount,
           accountNumber: bankAccountNumber,
           bankId: selectedBankId,
-          narration: `Withdrawal - ${userName || 'User'}`,
+          narration: `Cherry Pick Withdrawal - ${userName || 'User'}`,
           reference,
           country: 'zm'
         });
@@ -555,7 +536,9 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         };
         const result = await lencoService.collectMobileMoney(payload);
         const transactionReference = result.reference || result.id || payload.reference;
-        const normalizedStatus = normalizePaymentStatus(result.status || (result.success ? 'confirmed' : 'pending'));
+        // IMPORTANT: result.success only means the collection request was ACCEPTED by Lenco.
+        // The user still needs to enter their PIN on their phone. Never treat this as 'confirmed'.
+        const normalizedStatus = 'pending';
 
         if (supabase && walletAddress) {
           await supabase.from('payments').insert({
@@ -565,16 +548,12 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
             currency: 'ZMW',
             transaction_hash: transactionReference,
             status: normalizedStatus,
-            confirmed_at: normalizedStatus === 'confirmed' ? new Date().toISOString() : null,
+            confirmed_at: null,
           });
         }
 
-        if (normalizedStatus === 'confirmed') {
-          toast.success(`K${depositAmount} has been added to this wallet.`);
-        } else {
-          toast.success(`Requested K${depositAmount} via Mobile Money. Please authorize on your phone.`);
-          void watchPaymentConfirmation(transactionReference);
-        }
+        toast.success(`Requested K${depositAmount} via Mobile Money. Please authorize on your phone.`);
+        void watchPaymentConfirmation(transactionReference);
       } else if (depositMethod === 'deposit-card') {
         if (!depositAmount || parseFloat(depositAmount) <= 0) {
           toast.error('Please enter a valid amount');
@@ -745,7 +724,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           <div className="mt-6 pt-4 border-t border-white/20">
             <h4 className="text-sm font-medium mb-3" style={{ fontFamily: "'Syne', sans-serif", color: '#BFFF00' }}>Recent Activity</h4>
             <div className="space-y-2">
-              {paymentHistory.map((payment) => (
+              {paymentHistory.slice(-3).map((payment) => (
                 <div key={payment.id} className="flex items-center justify-between py-2 px-3 bg-white/10 rounded-lg">
                   <div className="flex items-center gap-2">
                     {isIncomingPayment(payment) ? (
@@ -768,6 +747,11 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                 </div>
               ))}
             </div>
+            {paymentHistory.length > 3 && (
+              <p className="text-xs text-white/40 mt-2 text-center">
+                +{paymentHistory.length - 3} older transactions
+              </p>
+            )}
           </div>
         )}
       </motion.div>
@@ -1013,7 +997,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                       onClick={() => setDepositMethod('collect-momo')}
                       className={`p-3 rounded-xl border-2 transition-all text-center ${depositMethod === 'collect-momo' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'}`}
                     >
-                      <Smartphone className="h-5 w-5 mx-auto mb-1 text-green-600" />
+                      <Smartphone className="h-5 w-5 mx-auto mb-1 text-emerald-600" />
                       <p className="text-xs font-medium text-gray-900">Mobile Money</p>
                       <p className="text-[10px] text-gray-500">Mtn / Airtel</p>
                     </button>
@@ -1029,7 +1013,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                       onClick={() => setDepositMethod('crypto')}
                       className={`p-3 rounded-xl border-2 transition-all text-center ${depositMethod === 'crypto' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'}`}
                     >
-                      <Coins className="h-5 w-5 mx-auto mb-1 text-purple-600" />
+                      <Coins className="h-5 w-5 mx-auto mb-1 text-emerald-600" />
                       <p className="text-xs font-medium text-gray-900">Crypto Deposit</p>
                       <p className="text-[10px] text-gray-500">USDC on Base</p>
                     </button>

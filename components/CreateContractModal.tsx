@@ -110,7 +110,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 border-b border-gray-100 p-6 flex justify-between items-center z-10" style={{ background: '#F7F9FB' }}>
           <div className="flex items-center gap-4">
@@ -147,15 +147,28 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
                 </label>
                 <select
                   required
-                  value={formData.cropType}
-                  onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  value={SUPPORTED_CROPS.includes(formData.cropType as typeof SUPPORTED_CROPS[number]) ? formData.cropType : (formData.cropType ? "Other" : "")}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, cropType: val === "Other" ? "" : val });
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 >
                   <option value="">Select a crop</option>
                   {SUPPORTED_CROPS.map((crop) => (
                     <option key={crop} value={crop}>{crop}</option>
                   ))}
                 </select>
+                {!SUPPORTED_CROPS.slice(0, -1).includes(formData.cropType as any) && (
+                  <input
+                    type="text"
+                    required
+                    value={formData.cropType}
+                    onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
+                    placeholder="Enter custom crop name (e.g., Avocado, Passion Fruit)"
+                    className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  />
+                )}
               </div>
 
               <div>
@@ -168,7 +181,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
                   value={formData.variety}
                   onChange={(e) => setFormData({ ...formData, variety: e.target.value })}
                   placeholder="e.g., Kent, Tommy Atkins"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -183,7 +196,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
                   value={formData.farmSize}
                   onChange={(e) => setFormData({ ...formData, farmSize: e.target.value })}
                   placeholder="e.g., 2.5"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -191,7 +204,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
                 type="button"
                 onClick={() => setStep(2)}
                 disabled={!formData.cropType || !formData.variety || !formData.farmSize}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-colors"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-semibold transition-colors"
               >
                 Next: Contract Terms
               </button>
@@ -213,7 +226,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
                   value={formData.requiredQuantity}
                   onChange={(e) => setFormData({ ...formData, requiredQuantity: e.target.value })}
                   placeholder="e.g., 1000"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
@@ -228,7 +241,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
                   value={formData.discountedPrice}
                   onChange={(e) => setFormData({ ...formData, discountedPrice: e.target.value })}
                   placeholder="e.g., 15.50"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   Price you'll receive from Cherry-Pick (includes financing discount)
@@ -246,7 +259,7 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
                   value={formData.standardPrice}
                   onChange={(e) => setFormData({ ...formData, standardPrice: e.target.value })}
                   placeholder="e.g., 18.00"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   Market price for over-delivery sales
@@ -262,14 +275,14 @@ export default function CreateContractModal({ farmerId, onCloseAction, onContrac
                   required
                   value={formData.expectedHarvestDate}
                   onChange={(e) => setFormData({ ...formData, expectedHarvestDate: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
 
               {formData.requiredQuantity && formData.discountedPrice && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                   <p className="text-sm font-medium text-gray-700 mb-1">Total Contract Value</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-emerald-600">
                     K{(parseFloat(formData.requiredQuantity) * parseFloat(formData.discountedPrice)).toLocaleString()}
                   </p>
                 </div>
