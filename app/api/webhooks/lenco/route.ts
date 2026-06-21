@@ -46,12 +46,11 @@ export async function POST(req: NextRequest) {
         const data = event.data || event;
         const reference = data.reference;
 
-        // 2. Process Successful Payment
+        // 2. Process payment outcome
         if ((status === "successful" || status === "success") && reference) {
             console.log(`Processing successful Lenco payment for reference: ${reference}`);
 
             if (supabase) {
-                // Update the payment status from 'pending' to 'confirmed'
                 const { data: updated, error } = await supabase
                     .from('payments')
                     .update({
@@ -71,6 +70,19 @@ export async function POST(req: NextRequest) {
                 } else {
                     console.warn(`⚠️ No pending payment found for reference: ${reference}`);
                 }
+            }
+        } else if (
+            reference &&
+            (status === "failed" || status === "cancelled" || status === "rejected" || status === "declined")
+        ) {
+            console.log(`Marking failed Lenco payment for reference: ${reference}`);
+
+            if (supabase) {
+                await supabase
+                    .from('payments')
+                    .update({ status: 'failed' })
+                    .eq('transaction_hash', reference)
+                    .eq('status', 'pending');
             }
         }
 

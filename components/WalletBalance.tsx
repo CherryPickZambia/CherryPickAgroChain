@@ -73,13 +73,6 @@ interface PaymentHistory {
 type WithdrawMethod = 'base' | 'mobile-money' | 'bank';
 type DepositMethod = 'collect-momo' | 'deposit-card';
 
-const SETTLED_PAYMENT_STATUSES = ['confirmed', 'completed'] as const;
-
-const isSettledPaymentStatus = (status?: string | null) => {
-  if (!status) return false;
-  return SETTLED_PAYMENT_STATUSES.includes(status.toLowerCase() as (typeof SETTLED_PAYMENT_STATUSES)[number]);
-};
-
 const normalizePaymentStatus = (status?: string | null) => {
   const normalized = status?.toLowerCase();
 
@@ -92,6 +85,10 @@ const normalizePaymentStatus = (status?: string | null) => {
   }
 
   return 'pending';
+};
+
+const isSettledPaymentStatus = (status?: string | null) => {
+  return normalizePaymentStatus(status) === 'confirmed';
 };
 
 const isFiatCurrency = (currency?: string | null) => {
@@ -187,7 +184,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           .filter((payment: PaymentHistory, index: number, array: PaymentHistory[]) => array.findIndex((candidate: PaymentHistory) => candidate.id === payment.id) === index)
           .sort((left: PaymentHistory, right: PaymentHistory) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
 
-        // Calculate fiat balance from settled payments only
+        // Fiat balance counts only settled (confirmed) payments — never pending/processing
         const fiatTotal = mergedPayments.reduce((sum: number, payment: PaymentHistory) => {
           if (!isFiatCurrency(payment.currency) || !isSettledPaymentStatus(payment.status)) {
             return sum;
@@ -196,18 +193,13 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           return sum + (isIncomingPayment(payment) ? Math.abs(payment.amount || 0) : -Math.abs(payment.amount || 0));
         }, 0);
 
-        // Also count pending deposits so users see expected balance
-        const pendingDeposits = mergedPayments.reduce((sum: number, payment: PaymentHistory) => {
-          if (!isFiatCurrency(payment.currency)) return sum;
-          const status = (payment.status || '').toLowerCase();
-          if ((status === 'pending' || status === 'processing') && isIncomingPayment(payment)) {
-            return sum + Math.abs(payment.amount || 0);
-          }
-          return sum;
-        }, 0);
-
-        setFiatBalance(fiatTotal + pendingDeposits);
-        setPaymentHistory(mergedPayments.slice(0, 10));
+        setFiatBalance(fiatTotal);
+        // Recent activity shows confirmed transactions only (not in-flight deposits)
+        setPaymentHistory(
+          mergedPayments
+            .filter((payment) => isSettledPaymentStatus(payment.status))
+            .slice(0, 10)
+        );
       }
     } catch (error) {
       console.error('Error loading balances:', error);
@@ -519,12 +511,10 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
       if (depositMethod === 'collect-momo') {
         if (!depositAmount || parseFloat(depositAmount) <= 0) {
           toast.error('Please enter a valid amount');
-          setDepositing(false);
           return;
         }
         if (!depositPhone) {
           toast.error('Please enter a phone number');
-          setDepositing(false);
           return;
         }
 
@@ -536,9 +526,6 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         };
         const result = await lencoService.collectMobileMoney(payload);
         const transactionReference = result.reference || result.id || payload.reference;
-        // IMPORTANT: result.success only means the collection request was ACCEPTED by Lenco.
-        // The user still needs to enter their PIN on their phone. Never treat this as 'confirmed'.
-        const normalizedStatus = 'pending';
 
         if (supabase && walletAddress) {
           await supabase.from('payments').insert({
@@ -547,22 +534,27 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
             amount: parseFloat(depositAmount),
             currency: 'ZMW',
             transaction_hash: transactionReference,
-            status: normalizedStatus,
+            status: 'pending',
             confirmed_at: null,
           });
         }
 
-        toast.success(`Requested K${depositAmount} via Mobile Money. Please authorize on your phone.`);
+        toast.success(`Requested K${depositAmount} via Mobile Money. Authorize on your phone — balance updates after confirmation.`);
         void watchPaymentConfirmation(transactionReference);
-      } else if (depositMethod === 'deposit-card') {
+
+        setShowDepositModal(false);
+        setDepositAmount('');
+        setDepositPhone('');
+        return;
+      }
+
+      if (depositMethod === 'deposit-card') {
         if (!depositAmount || parseFloat(depositAmount) <= 0) {
           toast.error('Please enter a valid amount');
-          setDepositing(false);
           return;
         }
         if (!cardName || !cardNumber || !cardExpiry || !cardCVC) {
           toast.error('Please fill in all card details');
-          setDepositing(false);
           return;
         }
 
@@ -593,7 +585,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         });
 
         const transactionReference = result.reference || result.id || cardReference;
-        const normalizedStatus = normalizePaymentStatus(result.status || (result.success ? 'confirmed' : 'pending'));
+        const normalizedStatus = normalizePaymentStatus(result.status);
 
         if (supabase && walletAddress) {
           await supabase.from('payments').insert({
@@ -602,27 +594,26 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
             amount: parseFloat(depositAmount),
             currency: 'ZMW',
             transaction_hash: transactionReference,
-            status: normalizedStatus,
+            status: normalizedStatus === 'confirmed' ? 'confirmed' : 'pending',
             confirmed_at: normalizedStatus === 'confirmed' ? new Date().toISOString() : null,
           });
         }
 
         if (normalizedStatus === 'confirmed') {
           toast.success(`Successfully deposited K${depositAmount} using card ending in ${cardNumber.slice(-4) || 'XXXX'}.`);
+          await loadBalances();
         } else {
-          toast.success(`Card deposit is being processed for K${depositAmount}.`);
+          toast.success(`Card deposit initiated for K${depositAmount}. Balance updates after payment is confirmed.`);
           void watchPaymentConfirmation(transactionReference);
         }
-      }
 
-      setShowDepositModal(false);
-      setDepositAmount('');
-      setDepositPhone('');
-      setCardNumber('');
-      setCardExpiry('');
-      setCardCVC('');
-      setCardName(''); // Reset card name as well
-      loadBalances();
+        setShowDepositModal(false);
+        setDepositAmount('');
+        setCardNumber('');
+        setCardExpiry('');
+        setCardCVC('');
+        setCardName('');
+      }
 
     } catch (error: any) {
       console.error(error);
