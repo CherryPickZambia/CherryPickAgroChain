@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { geocodeAddress, hasValidCoordinates } from '@/lib/geocoding';
 
 const WALLET_RE = /^0x[a-fA-F0-9]{40}$/;
 
@@ -62,21 +63,39 @@ export async function POST(request: NextRequest) {
       updates[key] = normalizeNullable(value);
     }
 
-    if (updates.location_lat != null || updates.location_lng != null) {
-      const lat = Number(updates.location_lat ?? rawUpdates.location_lat);
-      const lng = Number(updates.location_lng ?? rawUpdates.location_lng);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        updates.location_lat = lat;
-        updates.location_lng = lng;
-        updates.gps_lat = lat;
-        updates.gps_lng = lng;
-      }
-    }
-
     if (updates.farm_size != null) {
       const size = Number(updates.farm_size);
       updates.farm_size = Number.isFinite(size) ? size : 0;
       updates.farm_size_hectares = updates.farm_size;
+    }
+
+    const address = typeof updates.location_address === 'string' ? updates.location_address.trim() : '';
+    const coordsValid = hasValidCoordinates(updates.location_lat, updates.location_lng);
+
+    // Manual address entry: geocode when farmer typed a place but has no GPS pin
+    if (address && !coordsValid) {
+      const geo = await geocodeAddress(address);
+      if (!geo) {
+        return NextResponse.json(
+          {
+            error:
+              'Could not find that location on the map. Add more detail (district, province) or use Precise Pin.',
+          },
+          { status: 422 },
+        );
+      }
+      updates.location_address = geo.displayName;
+      updates.location_lat = geo.lat;
+      updates.location_lng = geo.lng;
+      updates.gps_lat = geo.lat;
+      updates.gps_lng = geo.lng;
+    } else if (coordsValid) {
+      const lat = Number(updates.location_lat);
+      const lng = Number(updates.location_lng);
+      updates.location_lat = lat;
+      updates.location_lng = lng;
+      updates.gps_lat = lat;
+      updates.gps_lng = lng;
     }
 
     if (Object.keys(updates).length === 0) {

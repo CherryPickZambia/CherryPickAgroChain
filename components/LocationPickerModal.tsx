@@ -95,6 +95,30 @@ export default function LocationPickerModal({
         }
     };
 
+    const searchAddress = async () => {
+        const query = address.trim();
+        if (!query) {
+            toast.error("Enter a place name to search");
+            return;
+        }
+
+        setIsGeocoding(true);
+        try {
+            const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || "Location not found");
+            }
+            setPosition([data.lat, data.lng]);
+            setAddress(data.displayName || query);
+            toast.success("Location found on map");
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Could not find that place");
+        } finally {
+            setIsGeocoding(false);
+        }
+    };
+
     const useMyLocation = () => {
         if (!navigator.geolocation) {
             toast.error("Geolocation is not supported by your browser");
@@ -122,7 +146,7 @@ export default function LocationPickerModal({
         onSelectAction({
             lat: position[0],
             lng: position[1],
-            address: address
+            address: address.trim() || `${position[0].toFixed(6)}, ${position[1].toFixed(6)}`,
         });
         onCloseAction();
     };
@@ -210,15 +234,34 @@ export default function LocationPickerModal({
                                 </div>
 
                                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1001] w-full max-w-lg px-4">
-                                    <div className="bg-white/90 backdrop-blur rounded-2xl shadow-xl p-4 border border-white">
+                                    <div className="bg-white/90 backdrop-blur rounded-2xl shadow-xl p-4 border border-white space-y-3">
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={address}
+                                                onChange={(e) => setAddress(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && searchAddress()}
+                                                placeholder="Type farm area, e.g. Kasama, Northern Province"
+                                                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={searchAddress}
+                                                disabled={isGeocoding}
+                                                className="px-3 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1"
+                                            >
+                                                {isGeocoding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                                                Find
+                                            </button>
+                                        </div>
                                         <div className="flex items-start gap-3">
                                             <div className="p-2 bg-blue-50 rounded-lg shrink-0">
                                                 <MapIcon className="h-5 w-5 text-blue-600" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Selected Location</p>
-                                                <p className="text-sm text-gray-900 font-medium truncate">
-                                                    {isGeocoding ? "Finding address..." : address || "Click on map to pick location"}
+                                                <p className="text-sm text-gray-900 font-medium">
+                                                    {isGeocoding ? "Finding location..." : address || "Click map, search, or drag the pin"}
                                                 </p>
                                                 <p className="text-[10px] text-gray-500 mt-1 font-mono">
                                                     {position[0].toFixed(6)}, {position[1].toFixed(6)}
@@ -246,7 +289,7 @@ export default function LocationPickerModal({
                             </button>
                             <button
                                 onClick={handleConfirm}
-                                disabled={!address || isGeocoding}
+                                disabled={isGeocoding}
                                 className="px-8 py-2.5 text-white rounded-xl transition-all disabled:opacity-40 flex items-center gap-2"
                                 style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 600, background: '#0C2D3A' }}
                             >

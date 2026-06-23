@@ -367,25 +367,48 @@ export default function FarmerDashboard() {
   };
 
   const handleSaveProfile = async () => {
-    if (!farmerId) return;
+    if (!farmerId || !evmAddress) return;
 
     try {
-      // Ensure farm_size is a number
+      const address = profileForm.location_address?.trim() || '';
+      const addressChanged = address !== (farmerData?.location_address?.trim() || '');
+      const hasCoords =
+        Number.isFinite(profileForm.location_lat) &&
+        Number.isFinite(profileForm.location_lng) &&
+        profileForm.location_lat !== 0 &&
+        profileForm.location_lng !== 0;
+
+      // If farmer typed a new place name, geocode it instead of keeping stale GPS
+      const shouldGeocode = Boolean(address) && (addressChanged || !hasCoords);
+
       const updateData = {
-        ...profileForm,
+        name: profileForm.name,
         email: profileForm.email || null,
         phone: profileForm.phone || null,
-        location_lat: Number(profileForm.location_lat) || null,
-        location_lng: Number(profileForm.location_lng) || null,
+        location_address: address || null,
+        location_lat: shouldGeocode ? null : hasCoords ? profileForm.location_lat : null,
+        location_lng: shouldGeocode ? null : hasCoords ? profileForm.location_lng : null,
         farm_size: Number(profileForm.farm_size) || 0,
         nrc_id: profileForm.nrc_id || null,
         gender: profileForm.gender || null,
+        profile_photo: profileForm.profile_photo || null,
+        bio: profileForm.bio || null,
       };
 
-      await updateFarmer(farmerId, updateData, { walletAddress: evmAddress });
-      setFarmerData({ ...farmerData, ...updateData } as FarmerProfile);
+      const saved = await updateFarmer(farmerId, updateData, { walletAddress: evmAddress });
+      setFarmerData({ ...farmerData, ...saved } as FarmerProfile);
+      setProfileForm((prev) => ({
+        ...prev,
+        location_address: saved.location_address || prev.location_address,
+        location_lat: saved.location_lat ?? prev.location_lat,
+        location_lng: saved.location_lng ?? prev.location_lng,
+      }));
       setIsEditingProfile(false);
-      toast.success("Profile updated successfully!");
+      toast.success(
+        shouldGeocode && saved.location_lat
+          ? 'Profile saved — farm location placed on the map.'
+          : 'Profile updated successfully!',
+      );
     } catch (error: unknown) {
       console.error("Error updating profile:", error);
       const message = error instanceof Error ? error.message : "Failed to update profile";
@@ -846,19 +869,22 @@ export default function FarmerDashboard() {
                         value={profileForm.location_address}
                         onChange={(e) => setProfileForm({ ...profileForm, location_address: e.target.value })}
                         className="w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm bg-white"
-                        placeholder="City, District, Zambia"
+                        placeholder="e.g. Kasama, Northern Province, Zambia"
                       />
                     </div>
                     <button
                       onClick={() => setIsLocationModalOpen(true)}
                       className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 transition-all flex items-center gap-2 border border-emerald-100 font-semibold text-sm whitespace-nowrap shadow-sm"
-                      title="Set Precise Location"
+                      title="Set location on map (optional if you type address above)"
                       type="button"
                     >
                       <Crosshair className="h-4 w-4" />
                       Precise Pin
                     </button>
                   </div>
+                  <p className="text-xs text-gray-500">
+                    Type your farm area above and save — we&apos;ll place it on the map automatically. Use Precise Pin only if you&apos;re at the farm.
+                  </p>
 
                   {profileForm.location_lat !== 0 && (
                     <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl p-3 flex items-center justify-between">
