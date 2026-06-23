@@ -2,6 +2,7 @@
 
 import { QRCodeSVG } from "qrcode.react";
 import { Leaf, Download } from "lucide-react";
+import { publicLookupUrl, PUBLIC_SITE_URL } from "@/lib/site";
 
 interface UniversalQRCodeProps {
     size?: number;
@@ -14,10 +15,9 @@ export default function UniversalQRCode({
     showDownload = true,
     className = ""
 }: UniversalQRCodeProps) {
-    // The universal lookup URL - all QR codes point here
-    const lookupUrl = typeof window !== 'undefined'
-        ? `${window.location.origin}/lookup`
-        : "https://cherrypick.zm/lookup";
+    // Always encode the production domain — not window.location (avoids Vercel URLs on printed QR)
+    const lookupUrl = publicLookupUrl();
+    const lookupLabel = `${PUBLIC_SITE_URL.replace(/^https?:\/\//, '')}/lookup`;
 
     const handleDownload = () => {
         const svg = document.getElementById("universal-qr-svg");
@@ -47,7 +47,7 @@ export default function UniversalQRCode({
                 ctx.fillText("SCAN TO VERIFY", canvas.width / 2, size + 45);
                 ctx.font = "12px sans-serif";
                 ctx.fillStyle = "#6b7280";
-                ctx.fillText("cherrypick.zm/lookup", canvas.width / 2, size + 65);
+                ctx.fillText(lookupLabel, canvas.width / 2, size + 65);
             }
 
             const link = document.createElement("a");

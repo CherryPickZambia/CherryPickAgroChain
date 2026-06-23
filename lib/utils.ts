@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { publicTraceUrl } from "@/lib/site";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -15,7 +16,7 @@ export function generateContractId(): string {
 }
 
 export const generateQRCode = (contractId: string): string => {
-  return `https://cherrypick.co.zm/trace/${contractId}`;
+  return publicTraceUrl(contractId);
 };
 
 export function calculateMilestonePayment(

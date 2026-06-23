@@ -12,6 +12,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { base, baseSepolia } from 'viem/chains';
 import axios from 'axios';
 import { CropJourneyNFTABI } from '@/lib/blockchain/abis/CropJourneyNFT';
+import { publicTraceUrl } from '@/lib/site';
 
 // Network configuration
 const NETWORK = process.env.NEXT_PUBLIC_NETWORK === 'testnet' ? 'baseSepolia' : 'base';
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
         const metadata = {
             name: `AgroChain360 Traceability Certificate - ${batchCode}`,
             description: `Official traceability certificate for ${cropType} batch ${batchCode}. This NFT represents a verified agricultural product that has passed quality checks and is ready for distribution. Farmer: ${farmerName}. Grade: ${qualityGrade}.`,
-            external_url: `https://agrochain360.vercel.app/lookup?batch=${batchCode}`,
+            external_url: publicTraceUrl(batchCode),
             attributes: [
                 { trait_type: 'Batch Code', value: batchCode },
                 { trait_type: 'Crop Type', value: cropType },
