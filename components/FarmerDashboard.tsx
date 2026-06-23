@@ -382,7 +382,7 @@ export default function FarmerDashboard() {
         gender: profileForm.gender || null,
       };
 
-      await updateFarmer(farmerId, updateData);
+      await updateFarmer(farmerId, updateData, { walletAddress: evmAddress });
       setFarmerData({ ...farmerData, ...updateData } as FarmerProfile);
       setIsEditingProfile(false);
       toast.success("Profile updated successfully!");

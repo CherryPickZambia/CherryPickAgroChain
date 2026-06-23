@@ -165,7 +165,29 @@ export async function getFarmerByWallet(walletAddress: string) {
   return data;
 }
 
-export async function updateFarmer(id: string, updates: Partial<Farmer>) {
+export async function updateFarmer(
+  id: string,
+  updates: Partial<Farmer>,
+  options?: { walletAddress?: string },
+) {
+  if (typeof window !== 'undefined' && options?.walletAddress) {
+    const response = await fetch('/api/farmers/update-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        farmerId: id,
+        walletAddress: options.walletAddress,
+        updates,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update farmer profile');
+    }
+    return data.farmer;
+  }
+
   const client = checkSupabase();
   const { data, error } = await client
     .from('farmers')

@@ -60,7 +60,7 @@ export default function FarmMap({ farms = [], onFarmClick, selectedFarmId }: Far
             />
             {farms.map((farm) => (
               <Marker
-                key={farm.id}
+                key={`${farm.id}-${farm.lat}-${farm.lng}`}
                 position={[farm.lat, farm.lng]}
                 eventHandlers={{
                   click: () => onFarmSelect(farm),
@@ -122,7 +122,11 @@ export default function FarmMap({ farms = [], onFarmClick, selectedFarmId }: Far
       
       {/* Map */}
       <div className="absolute inset-0">
-        <MapComponent farms={farms} onFarmSelect={handleFarmSelect} />
+        <MapComponent
+          key={farms.map((f) => `${f.id}:${f.lat}:${f.lng}`).join('|') || 'empty'}
+          farms={farms}
+          onFarmSelect={handleFarmSelect}
+        />
       </div>
 
       {/* Farm Legend */}

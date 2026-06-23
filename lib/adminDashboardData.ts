@@ -192,6 +192,17 @@ export async function getMonthlyPaymentTrend(): Promise<MonthlyTrendPoint[]> {
   });
 }
 
+function resolveFarmerCoordinates(f: Record<string, unknown>): { lat: number; lng: number } {
+  const latRaw = f.location_lat ?? f.gps_lat;
+  const lngRaw = f.location_lng ?? f.gps_lng;
+  const lat = Number(latRaw);
+  const lng = Number(lngRaw);
+  if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
+    return { lat, lng };
+  }
+  return { lat: -15.4, lng: 28.3 };
+}
+
 export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
   if (!supabase) return [];
 
@@ -245,6 +256,8 @@ export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
     const cropsRaw = f.crops_grown;
     const crops = Array.isArray(cropsRaw) ? (cropsRaw as string[]) : [];
 
+    const coords = resolveFarmerCoordinates(f);
+
     return {
       id,
       wallet: (f.wallet_address as string) || "",
@@ -253,8 +266,8 @@ export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
       phone: (f.phone as string) || "",
       role: "farmer",
       location: (f.location_address as string) || "Unknown Location",
-      locationLat: Number(f.gps_lat ?? f.location_lat ?? -15.4),
-      locationLng: Number(f.gps_lng ?? f.location_lng ?? 28.3),
+      locationLat: coords.lat,
+      locationLng: coords.lng,
       farmSize: Number(f.farm_size_hectares ?? f.farm_size ?? 0),
       crops,
       joined: f.created_at ? new Date(f.created_at as string).toLocaleDateString() : "—",
