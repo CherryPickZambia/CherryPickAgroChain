@@ -1,10 +1,67 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import {
+  getCanonicalHost,
+  LEGACY_REDIRECT_HOSTS,
+  PUBLIC_SITE_URL,
+  resolveLegacyPublicPath,
+} from '@/lib/site';
 
 // The routes that need to be protected
 const protectedRoutes = ['/dashboard', '/marketplace', '/api/admin', '/api/payments', '/api/lenco'];
 
+function redirectLegacyHost(request: NextRequest): NextResponse | null {
+  const host = (request.headers.get('host') || '').split(':')[0].toLowerCase();
+  const canonicalHost = getCanonicalHost();
+
+  if (!host || host === 'localhost' || host === canonicalHost) {
+    return null;
+  }
+
+  const path = resolveLegacyPublicPath(
+    request.nextUrl.pathname,
+    request.nextUrl.searchParams,
+  );
+
+  // Old printed QR / bookmarked links on legacy domains → canonical site
+  if (LEGACY_REDIRECT_HOSTS.includes(host)) {
+    const destination = new URL(path, PUBLIC_SITE_URL);
+    const batchHandled = path.startsWith('/trace/');
+    if (!batchHandled) {
+      request.nextUrl.searchParams.forEach((value, key) => {
+        destination.searchParams.set(key, value);
+      });
+    }
+    return NextResponse.redirect(destination, 308);
+  }
+
+  return null;
+}
+
+function redirectLegacyPath(request: NextRequest): NextResponse | null {
+  const path = resolveLegacyPublicPath(
+    request.nextUrl.pathname,
+    request.nextUrl.searchParams,
+  );
+
+  // Same domain: /lookup?batch=CODE → /trace/CODE (old NFT metadata links)
+  if (path !== request.nextUrl.pathname) {
+    const destination = request.nextUrl.clone();
+    destination.pathname = path;
+    destination.search = '';
+    return NextResponse.redirect(destination, 308);
+  }
+
+  return null;
+}
+
 export function middleware(request: NextRequest) {
+    const legacyHostRedirect = redirectLegacyHost(request);
+    if (legacyHostRedirect) return legacyHostRedirect;
+
+    const legacyPathRedirect = redirectLegacyPath(request);
+    if (legacyPathRedirect) return legacyPathRedirect;
+
     const { pathname } = request.nextUrl;
 
     // Check if it's a protected route
