@@ -8,7 +8,7 @@ import {
 import toast from "react-hot-toast";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { dc, D, syne, manrope } from "@/lib/dashboardTheme";
-import { uploadImageToIPFS, uploadToIPFS } from "@/lib/ipfsService";
+import { uploadImageToIPFS } from "@/lib/ipfsService";
 import {
   DEFAULT_LANDING_PAGE_CONTENT,
   loadLandingPageContent,
@@ -151,33 +151,57 @@ function HeroMediaField({
   hero: LandingPageContent["hero"];
   onChange: (hero: LandingPageContent["hero"]) => void;
 }) {
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
   const posterInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadingPoster, setUploadingPoster] = useState(false);
 
   const setMediaType = (mediaType: HeroMediaType) => onChange({ ...hero, mediaType });
 
-  const handleVideoFile = async (file: File) => {
-    if (!file.type.startsWith("video/") && !/\.(mp4|webm|mov|m4v)$/i.test(file.name)) {
-      toast.error("Please choose an MP4, WebM, or MOV video");
-      return;
-    }
-    if (file.size > 80 * 1024 * 1024) {
-      toast.error("Video must be under 80MB — try compressing or paste a hosted URL");
-      return;
-    }
+  const isVideoFile = (file: File) =>
+    file.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(file.name);
+
+  const uploadMediaFile = async (file: File) => {
     setUploading(true);
     try {
-      const result = await uploadToIPFS(file);
-      onChange({ ...hero, mediaType: "video", videoUrl: result.url });
-      toast.success("Hero video uploaded");
-    } catch {
-      toast.error("Video upload failed — try pasting a direct MP4 URL instead");
+      const form = new FormData();
+      form.append("file", file);
+      const response = await fetch("/api/upload/media", { method: "POST", body: form });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      if (data.mediaType === "video" || isVideoFile(file)) {
+        onChange({ ...hero, mediaType: "video", videoUrl: data.url });
+        toast.success("Hero video uploaded — click Save changes");
+      } else {
+        onChange({ ...hero, mediaType: "image", imageUrl: data.url });
+        toast.success("Hero image uploaded — click Save changes");
+      }
+    } catch (error) {
+      // Fallback: client upload for images when API unavailable
+      if (!isVideoFile(file)) {
+        try {
+          const result = await uploadImageToIPFS(file, 2400);
+          onChange({ ...hero, mediaType: "image", imageUrl: result.url });
+          toast.success("Hero image uploaded");
+          return;
+        } catch {
+          /* fall through */
+        }
+      }
+      toast.error(error instanceof Error ? error.message : "Upload failed — try pasting a direct MP4 URL");
     } finally {
       setUploading(false);
     }
   };
+
+  const handleMediaPick = (file: File) => {
+    void uploadMediaFile(file);
+  };
+
+  const HERO_FILE_ACCEPT = "image/*,video/*,.mp4,.mov,.webm,.m4v,application/octet-stream";
 
   return (
     <div className="space-y-3">
@@ -228,37 +252,39 @@ function HeroMediaField({
         )}
       </div>
 
+      <input
+        ref={mediaInputRef}
+        type="file"
+        accept={HERO_FILE_ACCEPT}
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleMediaPick(f);
+          e.target.value = "";
+        }}
+      />
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => mediaInputRef.current?.click()}
+          className={dc.btnPrimary + " inline-flex items-center gap-2 disabled:opacity-60"}
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {hero.mediaType === "video" ? "Upload video" : "Upload image or video"}
+        </button>
+        <span className="text-xs text-[#94B3C1] self-center">MP4, MOV, WebM, or JPG/PNG — auto-detected</span>
+      </div>
+
       {hero.mediaType === "video" ? (
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <input
-              ref={videoInputRef}
-              type="file"
-              accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleVideoFile(f);
-                e.target.value = "";
-              }}
-            />
-            <button
-              type="button"
-              disabled={uploading}
-              onClick={() => videoInputRef.current?.click()}
-              className={dc.btnPrimary + " inline-flex items-center gap-2 disabled:opacity-60"}
-            >
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Upload video
-            </button>
-            <input
-              type="text"
-              value={hero.videoUrl}
-              onChange={(e) => onChange({ ...hero, mediaType: "video", videoUrl: e.target.value })}
-              placeholder="Or paste video URL (MP4 from Runway, etc.)"
-              className={dc.input + " flex-1 min-w-[200px]"}
-            />
-          </div>
+          <input
+            type="text"
+            value={hero.videoUrl}
+            onChange={(e) => onChange({ ...hero, mediaType: "video", videoUrl: e.target.value })}
+            placeholder="Or paste direct video URL (MP4 link)"
+            className={dc.input + " w-full"}
+          />
           <div>
             <span className={dc.labelSm}>Poster image (optional)</span>
             <p className="text-xs text-[#94B3C1] mt-0.5">Your original still — shown while the video loads</p>
@@ -266,18 +292,28 @@ function HeroMediaField({
               <input
                 ref={posterInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.jpg,.jpeg,.png,.webp,.heic"
                 className="hidden"
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
                   if (!f) return;
                   setUploadingPoster(true);
                   try {
-                    const result = await uploadImageToIPFS(f, 2400);
-                    onChange({ ...hero, imageUrl: result.url });
+                    const form = new FormData();
+                    form.append("file", f);
+                    const response = await fetch("/api/upload/media", { method: "POST", body: form });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error);
+                    onChange({ ...hero, imageUrl: data.url });
                     toast.success("Poster image uploaded");
                   } catch {
-                    toast.error("Poster upload failed");
+                    try {
+                      const result = await uploadImageToIPFS(f, 2400);
+                      onChange({ ...hero, imageUrl: result.url });
+                      toast.success("Poster image uploaded");
+                    } catch {
+                      toast.error("Poster upload failed");
+                    }
                   } finally {
                     setUploadingPoster(false);
                     e.target.value = "";
@@ -304,12 +340,12 @@ function HeroMediaField({
           </div>
         </div>
       ) : (
-        <ImageField
-          label=""
+        <input
+          type="text"
           value={hero.imageUrl}
-          onChange={(v) => onChange({ ...hero, imageUrl: v })}
-          aspect="hero"
-          hint="Full-width cover — use landscape photos"
+          onChange={(e) => onChange({ ...hero, imageUrl: e.target.value })}
+          placeholder="Or paste image URL"
+          className={dc.input + " w-full"}
         />
       )}
     </div>
