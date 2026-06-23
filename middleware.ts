@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
   getCanonicalHost,
+  isProductionHost,
   LEGACY_REDIRECT_HOSTS,
   PUBLIC_SITE_URL,
   resolveLegacyPublicPath,
@@ -14,7 +15,7 @@ function redirectLegacyHost(request: NextRequest): NextResponse | null {
   const host = (request.headers.get('host') || '').split(':')[0].toLowerCase();
   const canonicalHost = getCanonicalHost();
 
-  if (!host || host === 'localhost' || host === canonicalHost) {
+  if (!host || host === 'localhost' || isProductionHost(host, canonicalHost)) {
     return null;
   }
 
