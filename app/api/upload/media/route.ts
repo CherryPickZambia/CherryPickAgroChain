@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
+import { resolveUploadMediaType, videoFileNameForUpload } from '@/lib/mediaTypes';
 
 const PINATA_JWT = process.env.PINATA_JWT || process.env.NEXT_PUBLIC_PINATA_JWT || '';
 const PINATA_API_URL = 'https://api.pinata.cloud';
-
-const VIDEO_EXT = /\.(mp4|webm|mov|m4v)$/i;
-const IMAGE_EXT = /\.(jpe?g|png|webp|gif|heic|heif)$/i;
-
-function isVideoFile(file: File): boolean {
-  return file.type.startsWith('video/') || VIDEO_EXT.test(file.name);
-}
-
-function isImageFile(file: File): boolean {
-  return file.type.startsWith('image/') || IMAGE_EXT.test(file.name);
-}
 
 export async function POST(request: NextRequest) {
   if (!PINATA_JWT || PINATA_JWT.length < 10) {
@@ -26,34 +16,45 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file');
+    const intentRaw = formData.get('intent');
+    const intent = intentRaw === 'video' || intentRaw === 'image' ? intentRaw : undefined;
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: 'No file provided.' }, { status: 400 });
     }
 
-    const video = isVideoFile(file);
-    const image = isImageFile(file);
-
-    if (!video && !image) {
-      return NextResponse.json({ error: 'File must be an image or video (MP4, MOV, WebM).' }, { status: 400 });
-    }
-
-    const maxBytes = video ? 200 * 1024 * 1024 : 25 * 1024 * 1024;
-    if (file.size > maxBytes) {
+    const mediaType = await resolveUploadMediaType(file, intent);
+    if (!mediaType) {
       return NextResponse.json(
-        { error: video ? 'Video must be under 200MB.' : 'Image must be under 25MB.' },
+        {
+          error:
+            'Could not recognize this file. For Runway exports, select Video mode first, or rename the file to end in .mp4',
+        },
         { status: 400 },
       );
     }
 
+    const maxBytes = mediaType === 'video' ? 200 * 1024 * 1024 : 25 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      return NextResponse.json(
+        { error: mediaType === 'video' ? 'Video must be under 200MB.' : 'Image must be under 25MB.' },
+        { status: 400 },
+      );
+    }
+
+    const uploadName = mediaType === 'video' ? videoFileNameForUpload(file) : file.name;
+    const uploadBlob = new File([file], uploadName, {
+      type: file.type || (mediaType === 'video' ? 'video/mp4' : 'application/octet-stream'),
+    });
+
     const body = new FormData();
-    body.append('file', file);
+    body.append('file', uploadBlob);
     body.append(
       'pinataMetadata',
       JSON.stringify({
-        name: file.name,
+        name: uploadName,
         keyvalues: {
-          type: video ? 'hero-video' : 'hero-image',
+          type: mediaType === 'video' ? 'hero-video' : 'hero-image',
           uploadedAt: new Date().toISOString(),
         },
       }),
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     const response = await axios.post(`${PINATA_API_URL}/pinning/pinFileToIPFS`, body, {
       headers: { Authorization: `Bearer ${PINATA_JWT}` },
-      timeout: video ? 300000 : 120000,
+      timeout: mediaType === 'video' ? 300000 : 120000,
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
     });
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       url: `https://gateway.pinata.cloud/ipfs/${cid}`,
       cid,
-      mediaType: video ? 'video' : 'image',
+      mediaType,
       size: response.data.PinSize,
     });
   } catch (error: unknown) {

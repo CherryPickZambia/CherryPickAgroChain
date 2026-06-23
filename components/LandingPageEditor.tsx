@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { dc, D, syne, manrope } from "@/lib/dashboardTheme";
 import { uploadImageToIPFS } from "@/lib/ipfsService";
+import { resolveUploadMediaType } from "@/lib/mediaTypes";
 import {
   DEFAULT_LANDING_PAGE_CONTENT,
   loadLandingPageContent,
@@ -158,21 +159,19 @@ function HeroMediaField({
 
   const setMediaType = (mediaType: HeroMediaType) => onChange({ ...hero, mediaType });
 
-  const isVideoFile = (file: File) =>
-    file.type.startsWith("video/") || /\.(mp4|webm|mov|m4v)$/i.test(file.name);
-
   const uploadMediaFile = async (file: File) => {
     setUploading(true);
     try {
       const form = new FormData();
       form.append("file", file);
+      form.append("intent", hero.mediaType);
       const response = await fetch("/api/upload/media", { method: "POST", body: form });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Upload failed");
       }
 
-      if (data.mediaType === "video" || isVideoFile(file)) {
+      if (data.mediaType === "video") {
         onChange({ ...hero, mediaType: "video", videoUrl: data.url });
         toast.success("Hero video uploaded — click Save changes");
       } else {
@@ -180,8 +179,8 @@ function HeroMediaField({
         toast.success("Hero image uploaded — click Save changes");
       }
     } catch (error) {
-      // Fallback: client upload for images when API unavailable
-      if (!isVideoFile(file)) {
+      const sniffed = await resolveUploadMediaType(file, hero.mediaType);
+      if (sniffed === "image") {
         try {
           const result = await uploadImageToIPFS(file, 2400);
           onChange({ ...hero, mediaType: "image", imageUrl: result.url });
@@ -197,11 +196,14 @@ function HeroMediaField({
     }
   };
 
-  const handleMediaPick = (file: File) => {
+  const handleMediaPick = async (file: File) => {
+    const sniffed = await resolveUploadMediaType(file, hero.mediaType);
+    if (hero.mediaType === "video" && sniffed === "image") {
+      toast.error("That looks like an image. Switch to Image mode or pick your Runway video file.");
+      return;
+    }
     void uploadMediaFile(file);
   };
-
-  const HERO_FILE_ACCEPT = "image/*,video/*,.mp4,.mov,.webm,.m4v,application/octet-stream";
 
   return (
     <div className="space-y-3">
@@ -255,7 +257,6 @@ function HeroMediaField({
       <input
         ref={mediaInputRef}
         type="file"
-        accept={HERO_FILE_ACCEPT}
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -273,7 +274,9 @@ function HeroMediaField({
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           {hero.mediaType === "video" ? "Upload video" : "Upload image or video"}
         </button>
-        <span className="text-xs text-[#94B3C1] self-center">MP4, MOV, WebM, or JPG/PNG — auto-detected</span>
+        <span className="text-xs text-[#94B3C1] self-center">
+          All files shown — Runway videos without .mp4 work when Video is selected
+        </span>
       </div>
 
       {hero.mediaType === "video" ? (
