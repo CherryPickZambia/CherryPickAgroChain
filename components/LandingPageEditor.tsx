@@ -2,18 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Save, Loader2, Upload, Plus, Trash2, Image as ImageIcon,
+  Save, Loader2, Upload, Plus, Trash2, Image as ImageIcon, Video,
   ChevronDown, ChevronUp, ExternalLink, RotateCcw, Star,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import { dc, D, syne, manrope } from "@/lib/dashboardTheme";
-import { uploadImageToIPFS } from "@/lib/ipfsService";
+import { uploadImageToIPFS, uploadToIPFS } from "@/lib/ipfsService";
 import {
   DEFAULT_LANDING_PAGE_CONTENT,
   loadLandingPageContent,
   saveLandingPageContent,
   newId,
+  type HeroMediaType,
   type LandingPageContent,
   type LandingTestimonial,
   type LandingCard,
@@ -139,6 +140,178 @@ function ImageField({
           className={dc.input + " flex-1 min-w-[200px]"}
         />
       </div>
+    </div>
+  );
+}
+
+function HeroMediaField({
+  hero,
+  onChange,
+}: {
+  hero: LandingPageContent["hero"];
+  onChange: (hero: LandingPageContent["hero"]) => void;
+}) {
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const posterInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadingPoster, setUploadingPoster] = useState(false);
+
+  const setMediaType = (mediaType: HeroMediaType) => onChange({ ...hero, mediaType });
+
+  const handleVideoFile = async (file: File) => {
+    if (!file.type.startsWith("video/") && !/\.(mp4|webm|mov|m4v)$/i.test(file.name)) {
+      toast.error("Please choose an MP4, WebM, or MOV video");
+      return;
+    }
+    if (file.size > 80 * 1024 * 1024) {
+      toast.error("Video must be under 80MB — try compressing or paste a hosted URL");
+      return;
+    }
+    setUploading(true);
+    try {
+      const result = await uploadToIPFS(file);
+      onChange({ ...hero, mediaType: "video", videoUrl: result.url });
+      toast.success("Hero video uploaded");
+    } catch {
+      toast.error("Video upload failed — try pasting a direct MP4 URL instead");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <span className={dc.labelSm}>Hero background</span>
+      <p className="text-xs text-[#94B3C1]">Use a photo or a looping video (e.g. Runway export). Video autoplays muted.</p>
+
+      <div className="flex gap-2">
+        {(["image", "video"] as HeroMediaType[]).map((type) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => setMediaType(type)}
+            className={
+              "px-4 py-2 rounded-xl text-sm font-semibold transition-all " +
+              (hero.mediaType === type
+                ? "bg-[#0C2D3A] text-[#BFFF00]"
+                : "bg-[#0C2D3A]/5 text-[#0C2D3A] border border-[#0C2D3A]/10")
+            }
+          >
+            {type === "image" ? "Image" : "Video"}
+          </button>
+        ))}
+      </div>
+
+      <div className={`relative overflow-hidden rounded-xl border border-[#0C2D3A]/10 bg-[#0C2D3A]/5 ${ASPECT_CLASS.hero}`}>
+        {hero.mediaType === "video" && hero.videoUrl ? (
+          <video
+            src={hero.videoUrl}
+            poster={hero.imageUrl || undefined}
+            className="absolute inset-0 w-full h-full object-cover"
+            muted
+            loop
+            playsInline
+            autoPlay
+            controls
+          />
+        ) : hero.imageUrl ? (
+          <img src={hero.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-[#94B3C1] gap-2">
+            {hero.mediaType === "video" ? (
+              <Video className="h-8 w-8 opacity-40" />
+            ) : (
+              <ImageIcon className="h-8 w-8 opacity-40" />
+            )}
+            <span className="text-xs">No {hero.mediaType} yet</span>
+          </div>
+        )}
+      </div>
+
+      {hero.mediaType === "video" ? (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleVideoFile(f);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => videoInputRef.current?.click()}
+              className={dc.btnPrimary + " inline-flex items-center gap-2 disabled:opacity-60"}
+            >
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Upload video
+            </button>
+            <input
+              type="text"
+              value={hero.videoUrl}
+              onChange={(e) => onChange({ ...hero, mediaType: "video", videoUrl: e.target.value })}
+              placeholder="Or paste video URL (MP4 from Runway, etc.)"
+              className={dc.input + " flex-1 min-w-[200px]"}
+            />
+          </div>
+          <div>
+            <span className={dc.labelSm}>Poster image (optional)</span>
+            <p className="text-xs text-[#94B3C1] mt-0.5">Your original still — shown while the video loads</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <input
+                ref={posterInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setUploadingPoster(true);
+                  try {
+                    const result = await uploadImageToIPFS(f, 2400);
+                    onChange({ ...hero, imageUrl: result.url });
+                    toast.success("Poster image uploaded");
+                  } catch {
+                    toast.error("Poster upload failed");
+                  } finally {
+                    setUploadingPoster(false);
+                    e.target.value = "";
+                  }
+                }}
+              />
+              <button
+                type="button"
+                disabled={uploadingPoster}
+                onClick={() => posterInputRef.current?.click()}
+                className={dc.btnSecondary + " inline-flex items-center gap-2 disabled:opacity-60"}
+              >
+                {uploadingPoster ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Upload poster
+              </button>
+              <input
+                type="text"
+                value={hero.imageUrl}
+                onChange={(e) => onChange({ ...hero, imageUrl: e.target.value })}
+                placeholder="Or paste poster image URL"
+                className={dc.input + " flex-1 min-w-[200px]"}
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <ImageField
+          label=""
+          value={hero.imageUrl}
+          onChange={(v) => onChange({ ...hero, imageUrl: v })}
+          aspect="hero"
+          hint="Full-width cover — use landscape photos"
+        />
+      )}
     </div>
   );
 }
@@ -290,12 +463,9 @@ export default function LandingPageEditor() {
 
       <Section title="Hero" index={1} defaultOpen>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
-          <ImageField
-            label="Hero background"
-            value={content.hero.imageUrl}
-            onChange={(v) => patch("hero", { ...content.hero, imageUrl: v })}
-            aspect="hero"
-            hint="Full-width cover — use landscape photos"
+          <HeroMediaField
+            hero={content.hero}
+            onChange={(hero) => patch("hero", hero)}
           />
           <div className="space-y-3">
             <Field label="Tagline" value={content.hero.tagline} onChange={(v) => patch("hero", { ...content.hero, tagline: v })} />
@@ -305,7 +475,7 @@ export default function LandingPageEditor() {
             </div>
             <Field label="Meta line" value={content.hero.meta} onChange={(v) => patch("hero", { ...content.hero, meta: v })} />
             <Field label="Description" value={content.hero.description} onChange={(v) => patch("hero", { ...content.hero, description: v })} />
-            <Field label="Image alt text" value={content.hero.imageAlt} onChange={(v) => patch("hero", { ...content.hero, imageAlt: v })} />
+            <Field label="Alt text / accessibility" value={content.hero.imageAlt} onChange={(v) => patch("hero", { ...content.hero, imageAlt: v })} />
           </div>
         </div>
       </Section>

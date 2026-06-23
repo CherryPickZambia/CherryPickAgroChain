@@ -140,13 +140,26 @@ export default function LandingPage() {
 
       {/* ══════ HERO (Sentient immersive + Nourish accent bar) ══════ */}
       <header ref={heroRef} style={{ position: "relative", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        {/* Background image with slow pan */}
+        {/* Background — image or looping hero video */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
-          <img
-            src={content.hero.imageUrl}
-            alt={content.hero.imageAlt}
-            style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.05)", animation: "slowPan 30s infinite alternate linear" }}
-          />
+          {content.hero.mediaType === "video" && content.hero.videoUrl ? (
+            <video
+              src={content.hero.videoUrl}
+              poster={content.hero.imageUrl || undefined}
+              autoPlay
+              muted
+              loop
+              playsInline
+              aria-label={content.hero.imageAlt}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <img
+              src={content.hero.imageUrl}
+              alt={content.hero.imageAlt}
+              style={{ width: "100%", height: "100%", objectFit: "cover", transform: "scale(1.05)", animation: "slowPan 30s infinite alternate linear" }}
+            />
+          )}
         </div>
         {/* Gradient overlay */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(2,5,3,0.3) 0%, rgba(2,5,3,0.7) 50%, rgba(2,5,3,0.95) 100%)", zIndex: 1 }} />

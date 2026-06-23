@@ -27,9 +27,13 @@ export interface LandingFooterColumn {
   links: string[];
 }
 
+export type HeroMediaType = "image" | "video";
+
 export interface LandingPageContent {
   hero: {
+    mediaType: HeroMediaType;
     imageUrl: string;
+    videoUrl: string;
     imageAlt: string;
     tagline: string;
     title: string;
@@ -120,8 +124,10 @@ export const LANDING_PAGE_ROW_ID = "main";
 
 export const DEFAULT_LANDING_PAGE_CONTENT: LandingPageContent = {
   hero: {
+    mediaType: "image",
     imageUrl:
       "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?q=80&w=2940&auto=format&fit=crop",
+    videoUrl: "",
     imageAlt: "Lush agricultural landscape",
     tagline: "Digital Agricultural Infrastructure",
     title: "AgroChain",
@@ -335,6 +341,18 @@ function writeLocalStorage(content: LandingPageContent) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(content));
 }
 
+function normalizeLandingContent(content: LandingPageContent): LandingPageContent {
+  return {
+    ...content,
+    hero: {
+      ...DEFAULT_LANDING_PAGE_CONTENT.hero,
+      ...content.hero,
+      mediaType: content.hero?.mediaType === "video" ? "video" : "image",
+      videoUrl: content.hero?.videoUrl ?? "",
+    },
+  };
+}
+
 export async function loadLandingPageContent(): Promise<LandingPageContent> {
   if (supabase) {
     try {
@@ -345,7 +363,9 @@ export async function loadLandingPageContent(): Promise<LandingPageContent> {
         .maybeSingle();
 
       if (!error && data?.content) {
-        const merged = deepMerge(DEFAULT_LANDING_PAGE_CONTENT, data.content as Partial<LandingPageContent>);
+        const merged = normalizeLandingContent(
+          deepMerge(DEFAULT_LANDING_PAGE_CONTENT, data.content as Partial<LandingPageContent>),
+        );
         writeLocalStorage(merged);
         return merged;
       }
@@ -354,7 +374,8 @@ export async function loadLandingPageContent(): Promise<LandingPageContent> {
     }
   }
 
-  return readLocalStorage() ?? DEFAULT_LANDING_PAGE_CONTENT;
+  const local = readLocalStorage();
+  return normalizeLandingContent(local ?? DEFAULT_LANDING_PAGE_CONTENT);
 }
 
 export async function saveLandingPageContent(
