@@ -184,7 +184,7 @@ export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], i
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
                         <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
                             <h3 className="text-lg font-semibold text-gray-900">Log Farm Activity</h3>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Contract</label>
                                     <select value={form.contract_id} onChange={e => setForm({ ...form, contract_id: e.target.value, batch_id: e.target.value ? '' : form.batch_id })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
@@ -205,7 +205,7 @@ export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], i
                                         {ACTIVITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
                                     </select>
                                 </div>
-                                <div className="col-span-2">
+                                <div className="sm:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
                                     <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g., Applied NPK 20-10-10 fertilizer" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
                                 </div>
@@ -243,13 +243,13 @@ export default function FarmerGrowthPanel({ farmerId, contracts, batches = [], i
                                     </>
                                 )}
 
-                                <div className="col-span-2">
+                                <div className="sm:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                     <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Additional details..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none" />
                                 </div>
 
                                 {/* Photo Upload */}
-                                <div className="col-span-2">
+                                <div className="sm:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Evidence Photos (max 4)</label>
                                     <div className="flex gap-2 flex-wrap">
                                         {photos.map((photo, i) => (

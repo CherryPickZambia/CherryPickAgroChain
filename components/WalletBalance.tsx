@@ -523,7 +523,11 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           reference: `DEP-MOMO-${Date.now()}`
         };
         const result = await lencoService.collectMobileMoney(payload);
-        const transactionReference = result.reference || result.id || payload.reference;
+        // Store OUR reference as the transaction_hash. Lenco echoes this exact
+        // reference back in its webhook (`data.reference`), so the webhook can
+        // reliably match and confirm this row. Using Lenco's own id here would
+        // cause a mismatch and the deposit would stay pending forever.
+        const transactionReference = payload.reference;
 
         if (supabase && walletAddress) {
           await supabase.from('payments').insert({
@@ -535,6 +539,11 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
             status: 'pending',
             confirmed_at: null,
           });
+        }
+
+        // Surface Lenco's own id for support/debugging if it differs from our ref.
+        if (result?.id && result.id !== transactionReference) {
+          console.log(`Lenco collection id ${result.id} mapped to reference ${transactionReference}`);
         }
 
         toast.success(`Requested K${depositAmount} via Mobile Money. Authorize on your phone — balance updates after confirmation.`);

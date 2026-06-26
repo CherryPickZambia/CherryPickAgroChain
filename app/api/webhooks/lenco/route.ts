@@ -44,11 +44,34 @@ export async function POST(req: NextRequest) {
 
         const status = event.status || (event.data && event.data.status);
         const data = event.data || event;
-        const reference = data.reference;
+
+        // Lenco may surface the identifier under different keys depending on the
+        // product (collection vs transfer). We stored OUR reference as the
+        // transaction_hash, but match every plausible field so a deposit is never
+        // stranded due to a reference/id mismatch.
+        const candidateRefs = Array.from(
+            new Set(
+                [
+                    data.reference,
+                    data.transactionReference,
+                    data.transaction_reference,
+                    data.merchantReference,
+                    data.id,
+                    event.reference,
+                    event.id,
+                ].filter((r): r is string => typeof r === "string" && r.length > 0),
+            ),
+        );
+        const reference = candidateRefs[0];
+
+        if (candidateRefs.length === 0) {
+            console.warn("⚠️ Lenco Webhook: no reference/id found in payload");
+            return NextResponse.json({ success: true, message: "No reference to process" });
+        }
 
         // 2. Process payment outcome
-        if ((status === "successful" || status === "success") && reference) {
-            console.log(`Processing successful Lenco payment for reference: ${reference}`);
+        if (status === "successful" || status === "success") {
+            console.log(`Processing successful Lenco payment for references: ${candidateRefs.join(", ")}`);
 
             if (supabase) {
                 const { data: updated, error } = await supabase
@@ -57,7 +80,8 @@ export async function POST(req: NextRequest) {
                         status: 'confirmed',
                         confirmed_at: new Date().toISOString(),
                     })
-                    .eq('transaction_hash', reference)
+                    .in('transaction_hash', candidateRefs)
+                    .eq('status', 'pending')
                     .select();
 
                 if (error) {
@@ -68,20 +92,19 @@ export async function POST(req: NextRequest) {
                 if (updated && updated.length > 0) {
                     console.log(`✅ Balance updated for reference: ${reference}`);
                 } else {
-                    console.warn(`⚠️ No pending payment found for reference: ${reference}`);
+                    console.warn(`⚠️ No pending payment found for references: ${candidateRefs.join(", ")}`);
                 }
             }
         } else if (
-            reference &&
-            (status === "failed" || status === "cancelled" || status === "rejected" || status === "declined")
+            status === "failed" || status === "cancelled" || status === "rejected" || status === "declined"
         ) {
-            console.log(`Marking failed Lenco payment for reference: ${reference}`);
+            console.log(`Marking failed Lenco payment for references: ${candidateRefs.join(", ")}`);
 
             if (supabase) {
                 await supabase
                     .from('payments')
                     .update({ status: 'failed' })
-                    .eq('transaction_hash', reference)
+                    .in('transaction_hash', candidateRefs)
                     .eq('status', 'pending');
             }
         }

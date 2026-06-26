@@ -187,8 +187,8 @@ export default function AdminBiddingPanel() {
                     >
                         <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
                             <h3 className="text-lg font-semibold text-gray-900">New Supply Demand</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="col-span-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="sm:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
                                     <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g., 500kg Premium Mangoes needed for export" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                                 </div>
@@ -229,7 +229,7 @@ export default function AdminBiddingPanel() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Quality Requirements</label>
                                     <input type="text" value={form.quality_requirements} onChange={e => setForm({ ...form, quality_requirements: e.target.value })} placeholder="Grade A, no blemishes" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                                 </div>
-                                <div className="col-span-2">
+                                <div className="sm:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                     <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Additional details..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                                 </div>

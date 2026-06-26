@@ -5,8 +5,8 @@ import { X, Calendar, Package, Droplets, Sprout, FileText, Plus, Trash2, Loader2
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { uploadToIPFS } from "@/lib/ipfsService";
-import CropDiagnostics from "./CropDiagnostics";
 import { getLatestAIDiagnostic } from "@/lib/traceabilityService";
+import { analyzeCropHealth, fileToJpegDataUrl } from "@/lib/aiDiagnostics";
 import { CONTRACT_UNITS } from "@/lib/config";
 import { useEffect } from "react";
 
@@ -132,9 +132,11 @@ export default function FarmerMilestoneEntryModal({
   const [currentChecklistItem, setCurrentChecklistItem] = useState("");
   const [checklistItems, setChecklistItems] = useState<string[]>([]);
 
-  // AI Diagnostics State
+  // AI Diagnostics State — runs on an uploaded evidence photo (same as the officer flow)
   const [aiResult, setAiResult] = useState<AIDiagnosisResult | null>(null);
-  const [showAiScanner, setShowAiScanner] = useState(false);
+  const [selectedAiImageIndex, setSelectedAiImageIndex] = useState<number | null>(null);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiContext, setAiContext] = useState("");
   const [previousDiagnosis, setPreviousDiagnosis] = useState<{ disease?: string, health_score?: number, treatment_rec?: string } | null>(null);
 
   useEffect(() => {
@@ -156,6 +158,8 @@ export default function FarmerMilestoneEntryModal({
       return;
     }
     setEvidenceImages([...evidenceImages, ...files]);
+    // Default the AI selection to the first photo added.
+    setSelectedAiImageIndex((prev) => (prev ?? evidenceImages.length));
 
     files.forEach(file => {
       const reader = new FileReader();
@@ -168,6 +172,50 @@ export default function FarmerMilestoneEntryModal({
     setEvidenceImages(evidenceImages.filter((_, i) => i !== index));
     setImagePreviews(imagePreviews.filter((_, i) => i !== index));
     setUploadedImageUrls(uploadedImageUrls.filter((_, i) => i !== index));
+
+    // Keep the AI selection / result consistent with the remaining photos.
+    if (selectedAiImageIndex === index) {
+      setSelectedAiImageIndex(null);
+      setAiResult(null);
+    } else if (selectedAiImageIndex !== null && selectedAiImageIndex > index) {
+      setSelectedAiImageIndex(selectedAiImageIndex - 1);
+    }
+  };
+
+  const handleAnalyzeEvidencePhoto = async () => {
+    if (selectedAiImageIndex === null || !evidenceImages[selectedAiImageIndex]) {
+      toast.error("Add and select an evidence photo to analyze");
+      return;
+    }
+
+    setAiAnalyzing(true);
+    try {
+      // Normalize to JPEG so iOS HEIC / oversized phone photos analyze reliably.
+      const imageBase64 = await fileToJpegDataUrl(evidenceImages[selectedAiImageIndex], { maxDim: 1280, quality: 0.85 });
+      const additionalContext = [
+        `Farmer evidence for milestone: ${milestoneName}`,
+        notes.trim() ? `Farmer notes: ${notes.trim()}` : "",
+        aiContext.trim(),
+      ].filter(Boolean).join("\n");
+
+      const result = await analyzeCropHealth({
+        imageBase64,
+        additionalContext: additionalContext || undefined,
+      });
+
+      setAiResult({
+        disease: result.diagnosis,
+        confidence: result.confidenceScore / 100,
+        healthScore: result.healthScore,
+        treatmentRec: result.recommendations.length > 0 ? result.recommendations[0] : "",
+      });
+      toast.success("AI analysis attached to your evidence photo");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to analyze photo";
+      toast.error(message);
+    } finally {
+      setAiAnalyzing(false);
+    }
   };
 
   const uploadImages = async () => {
@@ -264,7 +312,8 @@ export default function FarmerMilestoneEntryModal({
     setImagePreviews([]);
     setUploadedImageUrls([]);
     setAiResult(null);
-    setShowAiScanner(false);
+    setSelectedAiImageIndex(null);
+    setAiContext("");
     setShowActivityForm(false);
     toast.success(`${entryType === "activity" ? "Activity" : "Observation"} added`);
   };
@@ -670,83 +719,29 @@ export default function FarmerMilestoneEntryModal({
                     />
                   </div>
 
-                  {/* AI Diagnostics Section */}
-                  <div className="md:col-span-2 bg-emerald-50/50 border border-emerald-100 rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="text-sm font-bold text-emerald-800 flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4" /> AI Diagnostics & Quality Grading
-                        </h4>
-                        <p className="text-xs text-emerald-600 mt-1">Scan crops for disease, predict yield quality, and verify treatment recovery.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowAiScanner(!showAiScanner)}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm ${previousDiagnosis ? 'bg-amber-600 text-white hover:bg-amber-700' : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                          }`}
-                      >
-                        {showAiScanner ? "Hide Scanner" : previousDiagnosis ? "Verify Recovery Scan" : "Enable AI Scan"}
-                      </button>
-                    </div>
-
-                    {previousDiagnosis && !aiResult && (
-                      <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                        <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase mb-1">
-                          <AlertCircle className="w-3.5 h-3.5" /> Recovery Verification Needed
-                        </div>
-                        <p className="text-[11px] text-amber-700 leading-relaxed">
-                          Previous scan detected <strong>{previousDiagnosis.disease}</strong> (Health: {previousDiagnosis.health_score}/100).
-                          Please perform a follow-up scan to verify recovery and treatment success.
-                        </p>
-                      </div>
-                    )}
-
-                    {showAiScanner && (
-                      <div className="bg-white rounded-xl overflow-hidden border border-emerald-100 shadow-sm mt-4">
-                        <CropDiagnostics
-                          onResult={(result) => {
-                            setAiResult({
-                              disease: result.disease,
-                              confidence: result.confidence,
-                              healthScore: result.healthScore,
-                              treatmentRec: result.treatmentRec
-                            });
-                            toast.success("AI Scan Complete! Data appended to log.");
-                            setShowAiScanner(false); // Auto-hide after success
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {aiResult && (
-                      <div className="mt-4 bg-white p-3 rounded-xl border border-emerald-200">
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-xs font-bold text-gray-500 uppercase">AI Assessment Result</span>
-                          <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Health: {aiResult.healthScore}/100</span>
-                        </div>
-                        <p className="text-sm font-semibold text-gray-900 mb-1">{aiResult.disease}</p>
-                        <p className="text-xs text-gray-600 mb-2">Confidence: {(aiResult.confidence * 100).toFixed(1)}%</p>
-                        {aiResult.treatmentRec && (
-                          <div className="bg-amber-50 p-2 rounded text-xs text-amber-800 italic border border-amber-100">
-                            <strong>Recommendation:</strong> {aiResult.treatmentRec}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Evidence Images */}
+                  {/* Evidence Photos + AI Diagnostics (AI runs on a selected evidence photo) */}
                   <div className="md:col-span-2 bg-blue-50/50 border border-blue-100 rounded-2xl p-4">
-                    <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-1 flex items-center gap-2">
                       <Camera className="w-4 h-4" />
                       Evidence Photos {hasContract ? "(Recommended)" : "(Optional)"}
                     </label>
+                    <p className="text-[11px] text-blue-600 mb-3">Tap a photo to select it, then run AI diagnosis — the result is saved with this log for traceability.</p>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
                       {imagePreviews.map((src, idx) => (
-                        <div key={idx} className="relative group aspect-square">
-                          <img src={src} alt="Preview" className="w-full h-full object-cover rounded-lg" />
+                        <div
+                          key={idx}
+                          onClick={() => setSelectedAiImageIndex(idx)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedAiImageIndex(idx); } }}
+                          className={`relative group aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${selectedAiImageIndex === idx ? "border-emerald-500 ring-2 ring-emerald-100" : "border-transparent hover:border-emerald-300"}`}
+                        >
+                          <img src={src} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="absolute left-1 bottom-1 px-1.5 py-0.5 rounded-full bg-black/60 text-white text-[9px] font-semibold">
+                            {selectedAiImageIndex === idx ? "Selected for AI" : `Photo ${idx + 1}`}
+                          </div>
                           <button
-                            onClick={() => removeImage(idx)}
+                            onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
                             className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <X className="w-3 h-3" />
@@ -776,10 +771,83 @@ export default function FarmerMilestoneEntryModal({
                         <CheckCircle className="w-3 h-3" /> {uploadedImageUrls.length} photos ready
                       </p>
                     )}
+
+                    {/* AI Diagnostics on the selected evidence photo */}
+                    <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h4 className="text-sm font-bold text-emerald-900 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" /> AI Diagnostics & Quality Grading
+                          </h4>
+                          <p className="text-[11px] text-emerald-700 mt-1">Detect disease, assess crop health and verify treatment recovery on your evidence photo.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAnalyzeEvidencePhoto}
+                          disabled={aiAnalyzing || selectedAiImageIndex === null || !evidenceImages[selectedAiImageIndex ?? -1]}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                        >
+                          {aiAnalyzing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" /> Analyzing...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4" /> {previousDiagnosis ? "Verify Recovery" : "Analyze Selected Photo"}
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {evidenceImages.length === 0 && (
+                        <p className="text-[11px] text-emerald-700 italic">Add an evidence photo above to run AI analysis on it.</p>
+                      )}
+
+                      {previousDiagnosis && !aiResult && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                          <div className="flex items-center gap-2 text-amber-800 font-bold text-xs uppercase mb-1">
+                            <AlertCircle className="w-3.5 h-3.5" /> Recovery Verification Needed
+                          </div>
+                          <p className="text-[11px] text-amber-700 leading-relaxed">
+                            Previous scan detected <strong>{previousDiagnosis.disease}</strong> (Health: {previousDiagnosis.health_score}/100).
+                            Analyze a fresh evidence photo to verify recovery and treatment success.
+                          </p>
+                        </div>
+                      )}
+
+                      {evidenceImages.length > 0 && (
+                        <textarea
+                          value={aiContext}
+                          onChange={(e) => setAiContext(e.target.value)}
+                          placeholder="Optional context for the AI, e.g. yellowing on leaf edges, recent heavy rain..."
+                          rows={2}
+                          className="w-full px-3 py-2 border border-emerald-200 rounded-lg text-sm bg-white resize-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        />
+                      )}
+
+                      {aiResult && (
+                        <div className="bg-white p-3 rounded-xl border border-emerald-200">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="text-xs font-bold text-gray-500 uppercase">AI Assessment Result</span>
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Health: {aiResult.healthScore}/100</span>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900 mb-1">{aiResult.disease}</p>
+                          <p className="text-xs text-gray-600 mb-2">
+                            Confidence: {(aiResult.confidence * 100).toFixed(1)}%
+                            {selectedAiImageIndex !== null && <span> • Attached to photo {selectedAiImageIndex + 1}</span>}
+                          </p>
+                          {aiResult.treatmentRec && (
+                            <div className="bg-amber-50 p-2 rounded text-xs text-amber-800 italic border border-amber-100">
+                              <strong>Recommendation:</strong> {aiResult.treatmentRec}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {entryType === "activity" && (
-                    <div className="grid grid-cols-2 gap-4 col-span-2">
+                    <div className="grid grid-cols-2 gap-4 md:col-span-2">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Quantity (Optional)</label>
                         <input
