@@ -95,12 +95,17 @@ export default function OfficerDashboard() {
 
       if (error) throw error;
 
-      // Transform to verification tasks (only milestones that still have a contract)
+      // Transform to verification tasks (only milestones that still have a contract).
+      // The DB stores the value as `payment_amount`; map it to the `paymentAmount`
+      // field the UI expects so the value isn't shown as K0.
       const tasks: MilestoneVerificationTask[] = (milestones || [])
         .filter((m: any) => m && m.contract)
         .map((m: any) => ({
           id: m.id as string,
-          milestone: m as MilestoneVerificationTask['milestone'],
+          milestone: {
+            ...m,
+            paymentAmount: Number(m.payment_amount ?? m.paymentAmount ?? 0),
+          } as MilestoneVerificationTask['milestone'],
           submitted_date: (m.completed_date as string) || (m.created_at as string),
           priority: calculatePriority(m),
         }));
