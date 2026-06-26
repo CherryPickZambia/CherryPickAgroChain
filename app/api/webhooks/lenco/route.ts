@@ -2,7 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import crypto from "crypto";
 
-const WEBHOOK_SECRET = process.env.LENCO_WEBHOOK_SECRET;
+// Lenco signs webhooks with HMAC-SHA512 using a key DERIVED from your API token:
+//   webhook_hash_key = SHA256(API_TOKEN)            (hex)
+//   x-lenco-signature = HMAC_SHA512(rawBody, key)   (hex)
+// There is no separate "webhook secret" in the Lenco dashboard — set your Lenco
+// API token (the same one the VPS backend uses) as LENCO_API_TOKEN in Vercel.
+// LENCO_WEBHOOK_SECRET is accepted as a fallback name for that same token value.
+const LENCO_API_TOKEN = process.env.LENCO_API_TOKEN || process.env.LENCO_WEBHOOK_SECRET;
+
+function getWebhookHashKey(token: string): string {
+    return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function computeSignature(payload: string, hashKey: string): string {
+    return crypto.createHmac("sha512", hashKey).update(payload).digest("hex");
+}
 
 /** Constant-time comparison of two hex signatures, length-safe. */
 function signaturesMatch(expectedHex: string, providedHex: string): boolean {
@@ -23,8 +37,8 @@ export async function POST(req: NextRequest) {
 
         // 1. Security Verification — MANDATORY. This webhook credits user balances,
         // so it must never be processed without a valid signature.
-        if (!WEBHOOK_SECRET) {
-            console.error("❌ Lenco Webhook: LENCO_WEBHOOK_SECRET is not configured — rejecting.");
+        if (!LENCO_API_TOKEN) {
+            console.error("❌ Lenco Webhook: LENCO_API_TOKEN is not configured — rejecting.");
             return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
         }
         if (!signature) {
@@ -32,8 +46,20 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const digest = crypto.createHmac("sha512", WEBHOOK_SECRET).update(rawBody).digest("hex");
-        if (!signaturesMatch(digest, signature)) {
+        const hashKey = getWebhookHashKey(LENCO_API_TOKEN);
+        // Verify against the raw body (preferred) and a compacted re-serialization
+        // as a fallback, since some Lenco SDKs sign JSON.stringify(body) rather than
+        // the exact bytes received.
+        const payloadCandidates = [rawBody];
+        try {
+            payloadCandidates.push(JSON.stringify(JSON.parse(rawBody)));
+        } catch {
+            // rawBody isn't valid JSON on its own — ignore the fallback.
+        }
+        const signatureValid = payloadCandidates.some((payload) =>
+            signaturesMatch(computeSignature(payload, hashKey), signature),
+        );
+        if (!signatureValid) {
             console.error("❌ Lenco Webhook: Invalid signature");
             return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
         }
