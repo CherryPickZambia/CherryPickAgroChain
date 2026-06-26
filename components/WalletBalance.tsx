@@ -192,10 +192,13 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         }, 0);
 
         setFiatBalance(fiatTotal);
-        // Recent activity shows confirmed transactions only (not in-flight deposits)
+        // Recent activity shows settled AND in-flight (pending/processing) payments so
+        // the depositor immediately sees their deposit with a status badge. Failed/
+        // cancelled payments are hidden. Note: pending items never affect the balance
+        // above — only settled payments are summed.
         setPaymentHistory(
           mergedPayments
-            .filter((payment) => isSettledPaymentStatus(payment.status))
+            .filter((payment) => normalizePaymentStatus(payment.status) !== 'failed')
             .slice(0, 10)
         );
       }
@@ -709,28 +712,36 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           <div className="mt-6 pt-4 border-t border-white/20">
             <h4 className="text-sm font-medium mb-3" style={{ fontFamily: "'Syne', sans-serif", color: '#BFFF00' }}>Recent Activity</h4>
             <div className="space-y-2">
-              {paymentHistory.slice(-3).map((payment) => (
-                <div key={payment.id} className="flex items-center justify-between py-2 px-3 bg-white/10 rounded-lg">
+              {paymentHistory.slice(0, 3).map((payment) => {
+                const isPending = !isSettledPaymentStatus(payment.status);
+                return (
+                <div key={payment.id} className={`flex items-center justify-between py-2 px-3 rounded-lg ${isPending ? 'bg-white/5 border border-dashed border-amber-300/40' : 'bg-white/10'}`}>
                   <div className="flex items-center gap-2">
                     {isIncomingPayment(payment) ? (
-                      <ArrowDownLeft className="h-4 w-4" style={{ color: '#BFFF00' }} />
+                      <ArrowDownLeft className="h-4 w-4" style={{ color: isPending ? '#fcd34d' : '#BFFF00' }} />
                     ) : (
                       <ArrowUpRight className="h-4 w-4 text-orange-300" />
                     )}
                     <div>
-                      <p className="text-sm font-medium">
+                      <p className="text-sm font-medium flex items-center gap-2">
                         {getPaymentLabel(payment)}
+                        {isPending && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-400/20 text-amber-200 uppercase tracking-wider">
+                            Pending
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-white/60">
                         {new Date(payment.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <span className="font-bold" style={{ color: isIncomingPayment(payment) ? '#BFFF00' : '#ff9966' }}>
+                  <span className="font-bold" style={{ color: isPending ? '#fcd34d' : (isIncomingPayment(payment) ? '#BFFF00' : '#ff9966'), opacity: isPending ? 0.85 : 1 }}>
                     {isIncomingPayment(payment) ? '+' : '-'}{payment.currency === 'ZMW' ? 'K' : '$'}{Math.abs(payment.amount).toFixed(2)}
                   </span>
                 </div>
-              ))}
+                );
+              })}
             </div>
             {paymentHistory.length > 3 && (
               <p className="text-xs text-white/40 mt-2 text-center">
