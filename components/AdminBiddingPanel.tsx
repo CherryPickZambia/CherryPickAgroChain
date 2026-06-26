@@ -10,6 +10,7 @@ import {
     getBidsByDemand,
     updateBidStatus,
     updateSupplyDemandStatus,
+    acceptBidAndCreateContract,
     type SupplyDemand,
     type FarmerBid,
 } from "@/lib/biddingService";
@@ -102,16 +103,48 @@ export default function AdminBiddingPanel() {
         }
     };
 
-    const handleBidAction = async (bidId: string, demandId: string, action: "accepted" | "rejected", farmerName?: string) => {
+    const [actioningBid, setActioningBid] = useState<string | null>(null);
+
+    const handleBidAction = async (
+        bid: FarmerBid & { farmer?: Farmer },
+        demand: SupplyDemand,
+        action: "accepted" | "rejected"
+    ) => {
+        const farmerName = bid.farmer?.name;
+        setActioningBid(bid.id!);
         try {
-            await updateBidStatus(bidId, action, action === "rejected" ? "Bid did not meet requirements" : undefined);
-            toast.success(`Bid ${action === "accepted" ? "accepted" : "rejected"}${farmerName ? ` for ${farmerName}` : ""}`);
-            // Reload bids
-            const bids = await getBidsByDemand(demandId);
-            setDemandBids(prev => ({ ...prev, [demandId]: bids }));
+            if (action === "accepted") {
+                // Accepting a bid stands up an active contract + a Delivery milestone
+                // (100% payment released on verified delivery), then the batch flows
+                // into factory processing for the rest of the traceability chain.
+                await acceptBidAndCreateContract({
+                    bidId: bid.id!,
+                    demandId: demand.id!,
+                    farmerId: bid.farmer_id,
+                    cropType: demand.crop_type,
+                    quantity: bid.proposed_quantity,
+                    pricePerUnit: bid.proposed_price_per_unit,
+                    unit: demand.unit,
+                    deliveryDeadline: bid.delivery_date || demand.delivery_deadline,
+                    requiredQuantity: demand.required_quantity,
+                });
+                toast.success(
+                    `Bid accepted${farmerName ? ` for ${farmerName}` : ""} — contract created with a Delivery milestone. Payment releases once delivery is verified.`,
+                    { duration: 6000 }
+                );
+            } else {
+                await updateBidStatus(bid.id!, "rejected", "Bid did not meet requirements");
+                toast.success(`Bid rejected${farmerName ? ` for ${farmerName}` : ""}`);
+            }
+            // Reload bids + demand statuses
+            const bids = await getBidsByDemand(demand.id!);
+            setDemandBids(prev => ({ ...prev, [demand.id!]: bids }));
+            loadDemands();
         } catch (error) {
             console.error("Error updating bid:", error);
-            toast.error("Failed to update bid");
+            toast.error("Failed to update bid: " + (error instanceof Error ? error.message : "Unknown error"));
+        } finally {
+            setActioningBid(null);
         }
     };
 
@@ -293,8 +326,11 @@ export default function AdminBiddingPanel() {
                                                                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[bid.status]}`}>{bid.status}</span>
                                                                 {bid.status === "submitted" && (
                                                                     <div className="flex gap-2">
-                                                                        <button onClick={() => handleBidAction(bid.id!, demand.id!, "rejected", bid.farmer?.name)} className="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">Reject</button>
-                                                                        <button onClick={() => handleBidAction(bid.id!, demand.id!, "accepted", bid.farmer?.name)} className="px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors">Accept</button>
+                                                                        <button disabled={actioningBid === bid.id} onClick={() => handleBidAction(bid, demand, "rejected")} className="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40">Reject</button>
+                                                                        <button disabled={actioningBid === bid.id} onClick={() => handleBidAction(bid, demand, "accepted")} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-60">
+                                                                            {actioningBid === bid.id && <Loader2 className="h-3 w-3 animate-spin" />}
+                                                                            {actioningBid === bid.id ? "Creating contract..." : "Accept & Create Contract"}
+                                                                        </button>
                                                                     </div>
                                                                 )}
                                                             </div>

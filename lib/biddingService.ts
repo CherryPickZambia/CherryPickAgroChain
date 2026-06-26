@@ -288,24 +288,53 @@ export async function updateBidStatus(
     if (error) throw error;
 }
 
-export async function acceptBidAndCreateContract(
-    bidId: string,
-    demandId: string,
-    farmerId: string,
-    cropType: string,
-    quantity: number,
-    pricePerUnit: number
-): Promise<Contract> {
+export interface AcceptBidParams {
+    bidId: string;
+    demandId: string;
+    farmerId: string;
+    cropType: string;
+    quantity: number;
+    pricePerUnit: number;
+    unit?: string;
+    /** Delivery deadline (ISO/date string). Used as the delivery milestone due date. */
+    deliveryDeadline?: string;
+    /** Total quantity the buyer needs, used to mark the demand filled vs partially filled. */
+    requiredQuantity?: number;
+}
+
+/**
+ * Accept a farmer bid and stand up the fulfilment contract.
+ *
+ * Creates an active contract plus a single "Delivery" milestone worth 100% of
+ * the contract value. The farmer logs the delivery, an officer verifies it and
+ * the admin approves it — at which point payment is released (payment-on-delivery)
+ * and the batch moves into the factory-processing queue for the rest of the
+ * traceability chain (sorting → packaging → distribution).
+ */
+export async function acceptBidAndCreateContract(params: AcceptBidParams): Promise<Contract> {
+    const {
+        bidId,
+        demandId,
+        farmerId,
+        cropType,
+        quantity,
+        pricePerUnit,
+        unit = 'kg',
+        deliveryDeadline,
+        requiredQuantity,
+    } = params;
+
     const client = checkSupabase();
 
     // Accept the bid
     await updateBidStatus(bidId, 'accepted');
 
-    // Reject other bids for same demand (optional, admin may accept multiple)
-    // Not auto-rejecting — admin manages this.
-
-    // Create draft contract
+    const totalValue = quantity * pricePerUnit;
     const contractCode = `BID-${Date.now().toString(36).toUpperCase()}`;
+    const deliveryDate =
+        deliveryDeadline || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Create the active fulfilment contract
     const { data: contract, error } = await client
         .from('contracts')
         .insert({
@@ -314,15 +343,45 @@ export async function acceptBidAndCreateContract(
             crop_type: cropType,
             required_quantity: quantity,
             price_per_kg: pricePerUnit,
-            total_value: quantity * pricePerUnit,
-            status: 'draft',
+            total_value: totalValue,
+            status: 'active',
+            harvest_date: deliveryDate,
         })
         .select()
         .single();
 
     if (error) throw error;
 
-    // --- NEW: Create Traceability Batch ---
+    // --- Delivery milestone: 100% payment released on verified delivery ---
+    try {
+        const { error: milestoneError } = await client
+            .from('milestones')
+            .insert({
+                contract_id: contract.id,
+                milestone_number: 1,
+                name: 'Delivery',
+                description: `Deliver ${quantity} ${unit} of ${cropType} to the buyer/warehouse as per the accepted bid. Payment of K${totalValue.toLocaleString()} is released once delivery is verified.`,
+                payment_percentage: 100,
+                payment_amount: totalValue,
+                expected_date: deliveryDate,
+                completed_date: null,
+                status: 'pending',
+                payment_status: 'pending',
+                metadata: {
+                    is_delivery: true,
+                    source: 'bid',
+                    bid_id: bidId,
+                    demand_id: demandId,
+                },
+            });
+        if (milestoneError) {
+            console.error('Failed to create delivery milestone:', milestoneError);
+        }
+    } catch (msErr) {
+        console.error('Error creating delivery milestone:', msErr);
+    }
+
+    // --- Create Traceability Batch + initial event ---
     try {
         const batch = await createBatchForContract(
             contract.id,
@@ -330,22 +389,30 @@ export async function acceptBidAndCreateContract(
             cropType,
             undefined, // variety
             quantity,
-            'kg' // default unit
+            unit
         );
         console.log('Traceability batch created for contract:', contract.id);
 
-        // --- NEW: Log Initial Event ---
         const { addTraceabilityEvent } = await import('./traceabilityService');
         await addTraceabilityEvent({
             batch_id: batch.id!,
             event_type: 'verification',
-            event_title: 'Contract Created & Batch Initialized',
-            event_description: `Contract ${contractCode} signed for ${quantity}kg of ${cropType}. Initial traceability batch started.`,
+            event_title: 'Bid Accepted — Contract & Delivery Milestone Created',
+            event_description: `Bid accepted for ${quantity} ${unit} of ${cropType} at K${pricePerUnit}/${unit} (total K${totalValue.toLocaleString()}). Awaiting delivery.`,
             actor_name: 'System/Admin',
             actor_type: 'admin',
         });
     } catch (batchError) {
         console.error('Failed to create traceability batch or log initial event:', batchError);
+    }
+
+    // --- Update the supply demand status ---
+    try {
+        const filledStatus =
+            requiredQuantity && quantity < requiredQuantity ? 'partially_filled' : 'filled';
+        await updateSupplyDemandStatus(demandId, filledStatus);
+    } catch (demandErr) {
+        console.error('Failed to update supply demand status:', demandErr);
     }
 
     return contract;

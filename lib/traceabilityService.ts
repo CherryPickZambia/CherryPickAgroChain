@@ -776,7 +776,7 @@ const MILESTONE_EVENT_MAP: Record<string, { eventType: TraceabilityEventType; ti
   'Packaging': { eventType: 'packaging', title: 'Packaging completed', status: 'packaged' },
   'Distribution': { eventType: 'distribution', title: 'Shipped for distribution', status: 'distributed' },
   'Retail Ready': { eventType: 'retail_arrival', title: 'Available at retail location', status: 'at_retail' },
-  'Delivery': { eventType: 'transport_start', title: 'Product dispatched for delivery', status: 'in_transit' },
+  'Delivery': { eventType: 'warehouse_arrival', title: 'Delivered & received at processing facility', status: 'at_warehouse' },
 };
 
 // Create traceability event from milestone status change
