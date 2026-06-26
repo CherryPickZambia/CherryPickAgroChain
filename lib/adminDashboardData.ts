@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { readStoredCoordinates } from "./farmerMapUtils";
 
 const CROP_COLORS = ["#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#0C2D3A", "#3b82f6", "#ec4899"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -42,7 +43,21 @@ export interface FarmerDashboardRow {
   totalEarnings: number;
   completedMilestones: number;
   pendingMilestones: number;
-  contracts: { id: string; cropType: string; status: string }[];
+  contracts: {
+    id: string;
+    cropType: string;
+    status: string;
+    value: number;
+    createdAt: string;
+    harvestDate: string;
+    milestones: {
+      id: string;
+      name: string;
+      status: string;
+      payment: number;
+      dueDate: string;
+    }[];
+  }[];
 }
 
 export interface BuyerDashboardRow {
@@ -193,14 +208,9 @@ export async function getMonthlyPaymentTrend(): Promise<MonthlyTrendPoint[]> {
 }
 
 function resolveFarmerCoordinates(f: Record<string, unknown>): { lat: number; lng: number } {
-  const latRaw = f.location_lat ?? f.gps_lat;
-  const lngRaw = f.location_lng ?? f.gps_lng;
-  const lat = Number(latRaw);
-  const lng = Number(lngRaw);
-  if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
-    return { lat, lng };
-  }
-  return { lat: -15.4, lng: 28.3 };
+  const stored = readStoredCoordinates(f);
+  if (stored) return stored;
+  return { lat: 0, lng: 0 };
 }
 
 export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
@@ -216,23 +226,53 @@ export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
   const farmerIds = farmers.map((f: { id: string }) => f.id as string);
 
   const [contractsRes, paymentsRes, milestonesRes] = await Promise.all([
-    supabase.from("contracts").select("id, farmer_id, crop_type, status").in("farmer_id", farmerIds),
+    supabase.from("contracts").select("id, farmer_id, crop_type, status, total_value, created_at").in("farmer_id", farmerIds),
     supabase
       .from("payments")
       .select("recipient_id, amount")
       .eq("status", "completed")
       .in("recipient_id", farmerIds),
-    supabase.from("milestones").select("status, contract:contracts(farmer_id)").not("contract_id", "is", null),
+    supabase
+      .from("milestones")
+      .select("id, name, status, payment_amount, expected_date, contract_id, contract:contracts(farmer_id)")
+      .not("contract_id", "is", null),
   ]);
 
+  // Group milestone details by contract so the admin farmer modal can render them.
+  const milestonesByContract: Record<string, FarmerDashboardRow["contracts"][number]["milestones"]> = {};
+  const milestoneStats: Record<string, { completed: number; pending: number }> = {};
+  milestonesRes.data?.forEach((m: any) => {
+    const contractId = m.contract_id as string | undefined;
+    if (contractId) {
+      if (!milestonesByContract[contractId]) milestonesByContract[contractId] = [];
+      milestonesByContract[contractId].push({
+        id: (m.id as string) || "",
+        name: (m.name as string) || "Milestone",
+        status: (m.status as string) || "pending",
+        payment: Number(m.payment_amount || 0),
+        dueDate: m.expected_date ? new Date(m.expected_date as string).toLocaleDateString() : "TBD",
+      });
+    }
+
+    const fid = m.contract?.farmer_id as string | undefined;
+    if (!fid) return;
+    if (!milestoneStats[fid]) milestoneStats[fid] = { completed: 0, pending: 0 };
+    if (m.status === "verified" || m.status === "paid") milestoneStats[fid].completed += 1;
+    else if (m.status === "pending" || m.status === "submitted") milestoneStats[fid].pending += 1;
+  });
+
   const contractsByFarmer: Record<string, FarmerDashboardRow["contracts"]> = {};
-  contractsRes.data?.forEach((c: { id: string; farmer_id: string; crop_type?: string; status?: string }) => {
+  contractsRes.data?.forEach((c: any) => {
     const fid = c.farmer_id as string;
     if (!contractsByFarmer[fid]) contractsByFarmer[fid] = [];
     contractsByFarmer[fid].push({
       id: c.id as string,
       cropType: (c.crop_type as string) || "Unknown",
       status: (c.status as string) || "pending",
+      value: Number(c.total_value || 0),
+      createdAt: c.created_at ? new Date(c.created_at as string).toLocaleDateString() : "—",
+      harvestDate: "—",
+      milestones: milestonesByContract[c.id as string] || [],
     });
   });
 
@@ -240,15 +280,6 @@ export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
   paymentsRes.data?.forEach((p: { recipient_id: string; amount?: number | string }) => {
     const fid = p.recipient_id as string;
     earningsByFarmer[fid] = (earningsByFarmer[fid] || 0) + Number(p.amount || 0);
-  });
-
-  const milestoneStats: Record<string, { completed: number; pending: number }> = {};
-  milestonesRes.data?.forEach((m: any) => {
-    const fid = m.contract?.farmer_id as string | undefined;
-    if (!fid) return;
-    if (!milestoneStats[fid]) milestoneStats[fid] = { completed: 0, pending: 0 };
-    if (m.status === "verified" || m.status === "paid") milestoneStats[fid].completed += 1;
-    else if (m.status === "pending" || m.status === "submitted") milestoneStats[fid].pending += 1;
   });
 
   return farmers.map((f: Record<string, unknown>) => {

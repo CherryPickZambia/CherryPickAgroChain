@@ -385,7 +385,7 @@ export default function FarmerDashboard() {
         name: profileForm.name,
         email: profileForm.email || null,
         phone: profileForm.phone || null,
-        location_address: address || null,
+        location_address: address || undefined,
         location_lat: shouldGeocode ? null : hasCoords ? profileForm.location_lat : null,
         location_lng: shouldGeocode ? null : hasCoords ? profileForm.location_lng : null,
         farm_size: Number(profileForm.farm_size) || 0,

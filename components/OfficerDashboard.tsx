@@ -57,112 +57,6 @@ export default function OfficerDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Sample demo data for when database is unavailable
-  const DEMO_VERIFICATIONS: MilestoneVerificationTask[] = [
-    {
-      id: "demo-1",
-      milestone: {
-        id: "demo-1",
-        name: "Land Preparation Complete",
-        description: "Initial land clearing and soil preparation for mango planting",
-        status: "submitted",
-        paymentAmount: 500,
-        expected_date: "2024-12-15",
-        completed_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        contract: {
-          id: "contract-1",
-          crop_type: "Mangoes",
-          farmer_id: "farmer-1",
-          farmer: {
-            name: "John Mwale",
-            wallet_address: "0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1",
-            location_address: "Mkushi, Central Province",
-          },
-        },
-      } as unknown as MilestoneVerificationTask["milestone"],
-      submitted_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: "medium",
-    },
-    {
-      id: "demo-2",
-      milestone: {
-        id: "demo-2",
-        name: "Seedling Transplant",
-        description: "Pineapple seedlings transplanted to main field",
-        status: "submitted",
-        paymentAmount: 750,
-        expected_date: "2024-12-20",
-        completed_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-        contract: {
-          id: "contract-2",
-          crop_type: "Pineapples",
-          farmer_id: "farmer-2",
-          farmer: {
-            name: "Mary Banda",
-            wallet_address: "0x8ba1F109551bD432803012645Ac136ddd64DBA72",
-            location_address: "Chisamba, Central Province",
-          },
-        },
-      } as unknown as MilestoneVerificationTask["milestone"],
-      submitted_date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: "high",
-    },
-    {
-      id: "demo-3",
-      milestone: {
-        id: "demo-3",
-        name: "Fertilizer Application",
-        description: "First round of NPK fertilizer applied to tomato crops",
-        status: "submitted",
-        paymentAmount: 300,
-        expected_date: "2024-12-18",
-        completed_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        contract: {
-          id: "contract-3",
-          crop_type: "Tomatoes",
-          farmer_id: "farmer-3",
-          farmer: {
-            name: "Peter Phiri",
-            wallet_address: "0x9f2dF0fed2C77648de5860a4dc508cd0572B6C1a",
-            location_address: "Mazabuka, Southern Province",
-          },
-        },
-      } as unknown as MilestoneVerificationTask["milestone"],
-      submitted_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: "low",
-    },
-    {
-      id: "demo-4",
-      milestone: {
-        id: "demo-4",
-        name: "Harvest Ready Inspection",
-        description: "Cashew nuts ready for harvest - quality inspection needed",
-        status: "submitted",
-        paymentAmount: 1000,
-        expected_date: "2024-12-10",
-        completed_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        contract: {
-          id: "contract-4",
-          crop_type: "Cashews",
-          farmer_id: "farmer-4",
-          farmer: {
-            name: "Grace Tembo",
-            wallet_address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
-            location_address: "Chipata, Eastern Province",
-          },
-        },
-      } as unknown as MilestoneVerificationTask["milestone"],
-      submitted_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      priority: "high",
-    },
-  ];
-
-  const DEMO_HISTORY: VerificationHistory[] = [
-    { id: 'h1', type: 'milestone', crop_type: 'Maize', farmer_name: 'David Zulu', status: 'approved', verified_date: '2024-12-01', notes: 'Excellent crop condition', fee_earned: 50 },
-    { id: 'h2', type: 'milestone', crop_type: 'Soybeans', farmer_name: 'Sarah Mumba', status: 'approved', verified_date: '2024-11-28', notes: 'All requirements met', fee_earned: 50 },
-    { id: 'h3', type: 'milestone', crop_type: 'Groundnuts', farmer_name: 'James Sakala', status: 'rejected', verified_date: '2024-11-25', notes: 'Insufficient evidence provided', fee_earned: 0 },
-  ];
-
   // Load milestone verification tasks from Supabase
   useEffect(() => {
     loadVerifications();
@@ -174,9 +68,8 @@ export default function OfficerDashboard() {
 
       // Check if Supabase is available
       if (!supabase) {
-        // Use demo data
-        setPendingVerifications(DEMO_VERIFICATIONS);
-        setHistory(DEMO_HISTORY);
+        setPendingVerifications([]);
+        setHistory([]);
         setLoading(false);
         return;
       }
@@ -202,20 +95,17 @@ export default function OfficerDashboard() {
 
       if (error) throw error;
 
-      // Transform to verification tasks
-      const tasks: MilestoneVerificationTask[] = (milestones || []).map((m: any) => ({
-        id: m.id as string,
-        milestone: m as MilestoneVerificationTask['milestone'],
-        submitted_date: (m.completed_date as string) || (m.created_at as string),
-        priority: calculatePriority(m),
-      }));
+      // Transform to verification tasks (only milestones that still have a contract)
+      const tasks: MilestoneVerificationTask[] = (milestones || [])
+        .filter((m: any) => m && m.contract)
+        .map((m: any) => ({
+          id: m.id as string,
+          milestone: m as MilestoneVerificationTask['milestone'],
+          submitted_date: (m.completed_date as string) || (m.created_at as string),
+          priority: calculatePriority(m),
+        }));
 
-      // If no data from DB, use demo data
-      if (tasks.length === 0) {
-        setPendingVerifications(DEMO_VERIFICATIONS);
-      } else {
-        setPendingVerifications(tasks);
-      }
+      setPendingVerifications(tasks);
 
       // Load verification history
       const { data: historyData, error: historyError } = await supabase
@@ -245,13 +135,12 @@ export default function OfficerDashboard() {
         }));
         setHistory(historyItems);
       } else {
-        setHistory(DEMO_HISTORY);
+        setHistory([]);
       }
     } catch (error: unknown) {
       console.error('Error loading verifications:', error instanceof Error ? error.message : JSON.stringify(error));
-      // Use demo data on error
-      setPendingVerifications(DEMO_VERIFICATIONS);
-      setHistory(DEMO_HISTORY);
+      setPendingVerifications([]);
+      setHistory([]);
     } finally {
       setLoading(false);
     }
@@ -274,8 +163,8 @@ export default function OfficerDashboard() {
   };
 
   const filteredVerifications = pendingVerifications.filter(v => {
-    const cropType = v.milestone.contract?.crop_type || '';
-    const farmerName = v.milestone.contract?.farmer?.name || '';
+    const cropType = v.milestone?.contract?.crop_type || '';
+    const farmerName = v.milestone?.contract?.farmer?.name || '';
     const matchesSearch = cropType.toLowerCase().includes(searchQuery.toLowerCase()) ||
       farmerName.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
@@ -434,14 +323,14 @@ export default function OfficerDashboard() {
                           {verification.priority}
                         </span>
                         <span className="text-lg font-bold text-emerald-600">
-                          K{verification.milestone.paymentAmount?.toLocaleString() || 0}
+                          K{verification.milestone?.paymentAmount?.toLocaleString() || 0}
                         </span>
                       </div>
 
-                      <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{verification.milestone.name}</h3>
-                      <p className="text-sm text-gray-600 mb-2">{verification.milestone.contract?.farmer?.name || 'Unknown Farmer'}</p>
+                      <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">{verification.milestone?.name || 'Milestone'}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{verification.milestone?.contract?.farmer?.name || 'Unknown Farmer'}</p>
                       <span className="inline-block px-2 py-1 bg-emerald-50 text-emerald-700 text-xs rounded-full mb-3">
-                        {verification.milestone.contract?.crop_type || 'Unknown Crop'}
+                        {verification.milestone?.contract?.crop_type || 'Unknown Crop'}
                       </span>
 
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
@@ -478,6 +367,12 @@ export default function OfficerDashboard() {
               <h2 className="text-xl font-bold text-gray-900">Verification History</h2>
             </div>
             <div className="divide-y divide-gray-100">
+              {history.length === 0 && (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm text-gray-600">No verification history yet</p>
+                </div>
+              )}
               {history.map((item, index) => (
                 <motion.div
                   key={item.id}

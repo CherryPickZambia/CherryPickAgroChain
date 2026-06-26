@@ -476,7 +476,7 @@ export default function FarmerMilestoneEntryModal({
                       </div>
 
                       {activityType === 'fertilizer' && (
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
                             <label className="block text-xs text-gray-700 mb-1">Brand *</label>
                             <input
@@ -606,11 +606,11 @@ export default function FarmerMilestoneEntryModal({
                     </div>
 
                     {showIoTForm && (
-                      <div className="bg-white p-3 rounded-lg border border-emerald-100 mb-3 grid grid-cols-2 gap-2">
+                      <div className="bg-white p-3 rounded-lg border border-emerald-100 mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <select
                           value={iotType}
                           onChange={(e) => setIoTType(e.target.value as IoTReading["type"])}
-                          className="px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          className="px-3 py-2 border border-gray-300 rounded text-sm"
                         >
                           <option value="temperature">Temperature</option>
                           <option value="humidity">Humidity</option>
@@ -624,7 +624,7 @@ export default function FarmerMilestoneEntryModal({
                             value={iotValue}
                             onChange={(e) => setIoTValue(e.target.value)}
                             placeholder="Value"
-                            className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm"
+                            className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded text-sm"
                           />
                           <button
                             type="button"

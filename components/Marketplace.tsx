@@ -22,44 +22,6 @@ import { base, baseSepolia } from "viem/chains";
 
 const ADMIN_WALLET = "0x742d35Cc6634C0532925a3b844Bc9e7595f8E2B1";
 
-// ─── SAMPLE DATA ────────────────────────────────────────────────────────────
-
-const SAMPLE_BULK_ORDERS: BulkOrder[] = [
-  {
-    id: "bulk-1",
-    buyerId: "buyer-1",
-    buyerName: "Fresh Foods Ltd",
-    cropType: "Mangoes",
-    quantity: 2000,
-    targetPrice: 16,
-    deliveryDate: "2024-12-01",
-    location: "Lusaka",
-    status: "open",
-    bids: 3,
-    description: "Premium Kent mangoes for export. Must be Grade A or Premium.",
-    endTime: new Date(Date.now() + 86400000 * 2).toISOString(),
-    bidsList: [
-      { bidderName: "Farmer Mulenga", bidderAddress: "0x123...", price: 15.5, quantity: 2000, timestamp: new Date(Date.now() - 3600000).toISOString() },
-      { bidderName: "AgroPro Zambia", bidderAddress: "0x456...", price: 15.8, quantity: 1500, timestamp: new Date(Date.now() - 7200000).toISOString() },
-    ],
-  },
-  {
-    id: "bulk-2",
-    buyerId: "buyer-2",
-    buyerName: "Market Suppliers Co",
-    cropType: "Tomatoes",
-    quantity: 5000,
-    targetPrice: 10,
-    deliveryDate: "2024-11-25",
-    location: "Ndola",
-    status: "open",
-    bids: 5,
-    description: "Fresh roma tomatoes for processing. Regular supply preferred.",
-    endTime: new Date(Date.now() + 3600000 * 5).toISOString(),
-    bidsList: [],
-  },
-];
-
 // ─── TYPES ───────────────────────────────────────────────────────────────────
 
 interface MarketplaceListing {
@@ -200,7 +162,7 @@ export default function Marketplace() {
 
   // Data
   const [listings, setListings] = useState<MarketplaceListing[]>([]);
-  const [bulkOrders, setBulkOrders] = useState<BulkOrder[]>(SAMPLE_BULK_ORDERS);
+  const [bulkOrders, setBulkOrders] = useState<BulkOrder[]>([]);
 
   // Auction
   const [showBidModal, setShowBidModal] = useState(false);

@@ -885,6 +885,52 @@ h6 { font-size: 1rem; }
 }
 
 /* ============================================
+   MOBILE FORM USABILITY
+   - Prevent iOS Safari auto-zoom (and the layout jump/overlap it causes)
+     by ensuring all form controls render at >= 16px on small screens.
+   - Guarantee typed text is always visible (some inputs inherit a light color).
+   ============================================ */
+
+input,
+textarea,
+select {
+  color: #0f172a;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+}
+
+textarea {
+  /* Let multi-line fields grow with content rather than clipping it. */
+  min-height: 3rem;
+}
+
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select,
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="search"] {
+    font-size: 16px !important;
+    line-height: 1.4;
+  }
+
+  /* Modals: use the full small-screen viewport so fields are reachable
+     and content does not overlap the sticky footer. */
+  .fixed.inset-0 > .bg-white.rounded-3xl,
+  .fixed.inset-0 > div > .bg-white.rounded-3xl {
+    max-height: 100vh;
+    border-radius: 1rem;
+  }
+}
+
+/* ============================================
    ANIMATIONS
    ============================================ */
 

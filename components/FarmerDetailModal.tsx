@@ -207,11 +207,11 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                               </div>
                               <div>
                                 <p className="font-medium text-gray-900">{contract.cropType}</p>
-                                <p className="text-sm text-gray-500">{contract.milestones.length} milestones</p>
+                                <p className="text-sm text-gray-500">{(contract.milestones?.length || 0)} milestones</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-gray-900">ZK {contract.value.toLocaleString()}</p>
+                              <p className="font-semibold text-gray-900">ZK {(contract.value || 0).toLocaleString()}</p>
                               <span className="text-xs px-2 py-0.5 rounded-full" style={{
                                   background: contract.status === 'active' ? 'rgba(191,255,0,0.15)' : contract.status === 'completed' ? 'rgba(12,45,58,0.08)' : 'rgba(90,118,132,0.1)',
                                   color: '#0C2D3A', fontFamily: "'Manrope', sans-serif"
@@ -248,10 +248,13 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                         <div className="p-4">
                           <div className="mb-3 flex items-center justify-between text-sm">
                             <span className="text-gray-500">Contract Value</span>
-                            <span className="font-bold text-gray-900">ZK {contract.value.toLocaleString()}</span>
+                            <span className="font-bold text-gray-900">ZK {(contract.value || 0).toLocaleString()}</span>
                           </div>
                           <div className="space-y-2">
-                            {contract.milestones.map((milestone, i) => (
+                            {(contract.milestones || []).length === 0 && (
+                              <p className="text-xs text-gray-400 italic">No milestones recorded yet.</p>
+                            )}
+                            {(contract.milestones || []).map((milestone, i) => (
                               <div key={milestone.id} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                                 <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{
                                     background: milestone.status === 'verified' ? '#0C2D3A' : milestone.status === 'submitted' ? '#BFFF00' : milestone.status === 'rejected' ? '#dc2626' : '#E6E2D6',

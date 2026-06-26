@@ -20,6 +20,7 @@ export async function geocodeAddress(query: string): Promise<GeocodeResult | nul
     headers: {
       Accept: 'application/json',
       'Accept-Language': 'en',
+      'User-Agent': 'AgroChain360/1.0 (https://agrochain360.com)',
     },
   });
 

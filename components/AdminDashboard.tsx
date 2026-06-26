@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Users, FileText, TrendingUp, DollarSign, Activity, ArrowUp, ArrowDown,
   MapPin, Clock, CheckCircle, CheckCircle2, Settings, Package, Search, Plus, Sun, Menu,
@@ -51,6 +51,7 @@ import {
   type GrowthActivityRow,
   type MarketplaceOrderRow,
 } from "@/lib/adminDashboardData";
+import { buildFarmMapEntries } from "@/lib/farmerMapUtils";
 
 // Pending verification interface
 interface VerifiedProduct {
@@ -277,6 +278,11 @@ export default function AdminDashboard() {
   const loadFarmers = async () => {
     try {
       setLoadingFarmers(true);
+      try {
+        await fetch("/api/farmers/ensure-coordinates", { method: "POST" });
+      } catch (backfillError) {
+        console.warn("Coordinate backfill skipped:", backfillError);
+      }
       const mappedFarmers = await getFarmersWithStats();
       setFarmersList(mappedFarmers);
       setUsers(mappedFarmers);
@@ -329,6 +335,12 @@ export default function AdminDashboard() {
       setLoadingBuyers(false);
     }
   };
+
+  const dashboardMapFarms = useMemo(() => buildFarmMapEntries(farmersList), [farmersList]);
+  const farmersTabMapFarms = useMemo(
+    () => buildFarmMapEntries(farmersList, { active: "#10b981", pending: "#f59e0b" }),
+    [farmersList],
+  );
 
   // Approve farmer function
   const approveFarmer = async (farmerId: string, farmerName: string) => {
@@ -904,19 +916,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="relative h-96 rounded-xl overflow-hidden">
                     <FarmMap
-                      farms={farmersList.map(f => ({
-                        id: f.id,
-                        name: `${f.name}'s Farm`,
-                        farmer: f.name,
-                        phone: f.phone || "—",
-                        location: f.location || "Zambia",
-                        lat: f.locationLat,
-                        lng: f.locationLng,
-                        crops: f.crops,
-                        hectares: f.farmSize,
-                        status: f.verified ? "active" as const : "pending" as const,
-                        color: f.verified ? "#BFFF00" : "#f59e0b",
-                      }))}
+                      farms={dashboardMapFarms}
                       onFarmClick={(farm) => {
                         const farmer = farmersList.find(x => x.id === farm.id);
                         if (farmer) handleFarmerClick(farmer);
@@ -1259,19 +1259,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="relative h-96 bg-white overflow-hidden p-0 rounded-xl">
                   <FarmMap
-                    farms={farmersList.map(f => ({
-                      id: f.id,
-                      name: `${f.name}'s Farm`,
-                      farmer: f.name,
-                      phone: f.phone || "Unknown",
-                      location: f.location || "Zambia",
-                      lat: f.locationLat || -15.4,
-                      lng: f.locationLng || 28.3,
-                      crops: f.crops || [],
-                      hectares: f.farmSize || 0,
-                      status: f.verified ? "active" : "pending",
-                      color: f.verified ? "#10b981" : "#f59e0b"
-                    }))}
+                    farms={farmersTabMapFarms}
                     onFarmClick={(farm) => {
                       const farmer = farmersList.find(f => f.id === farm.id);
                       if (farmer) handleFarmerClick(farmer);
