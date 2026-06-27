@@ -3,6 +3,9 @@ import { createDpoToken, dpoPaymentUrl, isDpoConfigured } from '@/lib/dpo/servic
 
 export async function POST(request: NextRequest) {
   if (!isDpoConfigured()) {
+    console.error(
+      '[DPO] create-token blocked: not configured. Missing DPO_COMPANY_TOKEN and/or DPO_SERVICE_TYPE env vars.',
+    );
     return NextResponse.json(
       { success: false, error: 'Card payments are not configured. Please contact support.' },
       { status: 503 },
@@ -44,10 +47,14 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.success || !result.transToken) {
+    console.error(
+      `[DPO] create-token failed for ref ${reference}: result=${result.result || 'n/a'} explanation=${result.explanation || result.error || 'unknown'}`,
+    );
     return NextResponse.json(
       {
         success: false,
         error: result.error || result.explanation || 'Could not start card payment.',
+        dpoResult: result.result,
       },
       { status: 502 },
     );

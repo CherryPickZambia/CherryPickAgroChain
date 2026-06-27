@@ -279,6 +279,62 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
     await loadBalances();
   }, [loadBalances]);
 
+  // Admin-only manual reconciliation: mark a pending deposit as received. Used to
+  // settle deposits that completed at the provider but never got a webhook callback.
+  const [reconcilingId, setReconcilingId] = useState<string | null>(null);
+  const markDepositReceived = useCallback(async (payment: PaymentHistory) => {
+    if (!supabase || userRole !== 'admin') return;
+    setReconcilingId(payment.id);
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
+        .eq('id', payment.id);
+
+      if (error) {
+        toast.error('Could not mark as received. Please try again.');
+        console.error('Manual reconcile error:', error);
+        return;
+      }
+
+      toast.success('Deposit marked as received.');
+      await loadBalances();
+    } finally {
+      setReconcilingId(null);
+    }
+  }, [loadBalances, userRole]);
+
+  const markAllPendingReceived = useCallback(async () => {
+    if (!supabase || userRole !== 'admin') return;
+    const pendingIds = paymentHistory
+      .filter((p) => !isSettledPaymentStatus(p.status) && isIncomingPayment(p) && isFiatCurrency(p.currency))
+      .map((p) => p.id);
+
+    if (pendingIds.length === 0) {
+      toast('No pending deposits to settle.', { icon: 'ℹ️' });
+      return;
+    }
+
+    setReconcilingId('all');
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({ status: 'confirmed', confirmed_at: new Date().toISOString() })
+        .in('id', pendingIds);
+
+      if (error) {
+        toast.error('Could not settle pending deposits.');
+        console.error('Bulk reconcile error:', error);
+        return;
+      }
+
+      toast.success(`${pendingIds.length} pending deposit(s) marked as received.`);
+      await loadBalances();
+    } finally {
+      setReconcilingId(null);
+    }
+  }, [isIncomingPayment, loadBalances, paymentHistory, userRole]);
+
   useEffect(() => {
     if (walletAddress) {
       void loadBalances();
@@ -710,10 +766,23 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         {/* Recent Activity */}
         {paymentHistory.length > 0 && (
           <div className="mt-6 pt-4 border-t border-white/20">
-            <h4 className="text-sm font-medium mb-3" style={{ fontFamily: "'Syne', sans-serif", color: '#BFFF00' }}>Recent Activity</h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium" style={{ fontFamily: "'Syne', sans-serif", color: '#BFFF00' }}>Recent Activity</h4>
+              {userRole === 'admin' && paymentHistory.some((p) => !isSettledPaymentStatus(p.status) && isIncomingPayment(p) && isFiatCurrency(p.currency)) && (
+                <button
+                  onClick={markAllPendingReceived}
+                  disabled={reconcilingId === 'all'}
+                  className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-400/20 text-amber-200 hover:bg-amber-400/30 disabled:opacity-50 uppercase tracking-wider flex items-center gap-1"
+                >
+                  {reconcilingId === 'all' && <Loader2 className="h-3 w-3 animate-spin" />}
+                  Settle all pending
+                </button>
+              )}
+            </div>
             <div className="space-y-2">
               {paymentHistory.slice(0, 3).map((payment) => {
                 const isPending = !isSettledPaymentStatus(payment.status);
+                const canReconcile = userRole === 'admin' && isPending && isIncomingPayment(payment) && isFiatCurrency(payment.currency);
                 return (
                 <div key={payment.id} className={`flex items-center justify-between py-2 px-3 rounded-lg ${isPending ? 'bg-white/5 border border-dashed border-amber-300/40' : 'bg-white/10'}`}>
                   <div className="flex items-center gap-2">
@@ -736,9 +805,22 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                       </p>
                     </div>
                   </div>
-                  <span className="font-bold" style={{ color: isPending ? '#fcd34d' : (isIncomingPayment(payment) ? '#BFFF00' : '#ff9966'), opacity: isPending ? 0.85 : 1 }}>
-                    {isIncomingPayment(payment) ? '+' : '-'}{payment.currency === 'ZMW' ? 'K' : '$'}{Math.abs(payment.amount).toFixed(2)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold" style={{ color: isPending ? '#fcd34d' : (isIncomingPayment(payment) ? '#BFFF00' : '#ff9966'), opacity: isPending ? 0.85 : 1 }}>
+                      {isIncomingPayment(payment) ? '+' : '-'}{payment.currency === 'ZMW' ? 'K' : '$'}{Math.abs(payment.amount).toFixed(2)}
+                    </span>
+                    {canReconcile && (
+                      <button
+                        onClick={() => markDepositReceived(payment)}
+                        disabled={reconcilingId === payment.id}
+                        title="Mark this deposit as received"
+                        className="text-[10px] font-bold px-2 py-1 rounded-md bg-emerald-400/20 text-emerald-200 hover:bg-emerald-400/30 disabled:opacity-50 flex items-center gap-1 whitespace-nowrap"
+                      >
+                        {reconcilingId === payment.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                        Received
+                      </button>
+                    )}
+                  </div>
                 </div>
                 );
               })}
