@@ -1861,8 +1861,17 @@ export default function AdminDashboard() {
                         !verifiedBatchCodes.has(b.batch_code) &&
                         (b.current_status === 'at_warehouse' || b.current_status === 'harvested' || b.current_status === 'in_transit' || b.current_status === 'processing')
                       );
+                      // A contract and its linked traceability batch are the SAME physical
+                      // item. When the batch is already shown above, hide the duplicate
+                      // contract row so one batch = one processing task (the batch carries
+                      // the crop through processing; the contract is just the agreement).
+                      const shownBatchContractIds = new Set(
+                        activeBatches.map(b => (b as any).contract_id).filter(Boolean)
+                      );
                       const completedContracts = contracts.filter(c =>
-                        c.status === 'completed' && c.contract_code && !verifiedBatchCodes.has(c.contract_code)
+                        c.status === 'completed' && c.contract_code &&
+                        !verifiedBatchCodes.has(c.contract_code) &&
+                        !shownBatchContractIds.has(c.id)
                       );
 
                       if (activeBatches.length === 0 && completedContracts.length === 0) {
@@ -1874,6 +1883,14 @@ export default function AdminDashboard() {
                           {/* Render Batches */}
                           {activeBatches.map((batch) => {
                             const hasSavedProgress = !!savedProcessingData[batch.batch_code];
+                            const linkedContract = contracts.find(c => c.id === (batch as any).contract_id);
+                            const linkedCode = (linkedContract?.contract_code || '').toUpperCase();
+                            const sourceLabel = !linkedContract ? 'Independent' : linkedCode.startsWith('BID-') ? 'Market-Sourced' : 'Farm-Grown';
+                            const sourceStyle = !linkedContract
+                              ? 'border-gray-200 text-gray-500'
+                              : linkedCode.startsWith('BID-')
+                                ? 'border-sky-200 text-sky-600'
+                                : 'border-emerald-200 text-emerald-600';
                             return (
                               <button
                                 key={batch.id || batch.batch_code}
@@ -1897,7 +1914,7 @@ export default function AdminDashboard() {
                                         In Progress
                                       </span>
                                     )}
-                                    <span className="px-2 py-0.5 text-[10px] border border-emerald-200 text-emerald-600 rounded-full uppercase font-bold">Batch</span>
+                                    <span className={`px-2 py-0.5 text-[10px] border rounded-full uppercase font-bold ${sourceStyle}`}>{sourceLabel}</span>
                                   </div>
                                   <p className="text-sm text-gray-600">{batch.farmer_name} • {batch.crop_type} • {batch.total_quantity || 0} {batch.unit || 'kg'}</p>
                                 </div>

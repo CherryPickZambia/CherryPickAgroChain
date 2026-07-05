@@ -6,6 +6,7 @@ import { SUPPORTED_CROPS } from "@/lib/config";
 import { generateContractId, generateQRCode, calculateMilestonePayment } from "@/lib/utils";
 import { type SmartContract } from "@/lib/types";
 import { createContract, createMilestone, getFarmers } from "@/lib/supabaseService";
+import { createBatchForContract } from "@/lib/traceabilityService";
 import toast from "react-hot-toast";
 
 interface Milestone {
@@ -257,6 +258,23 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
       });
 
       const savedMilestones = await Promise.all(milestonePromises);
+
+      // Auto-create the single linked traceability batch so this farmer-grown
+      // contract has exactly one batch that flows through milestone logging and
+      // warehouse processing (mirrors the bidding route, which already does this).
+      // Non-fatal: contract creation must still succeed if batch creation fails.
+      try {
+        await createBatchForContract(
+          savedContract.id,
+          formData.farmerId,
+          formData.cropType,
+          formData.variety || undefined,
+          parseFloat(formData.requiredQuantity) || undefined,
+          formData.quantityUnit || "kg",
+        );
+      } catch (batchErr: any) {
+        console.error("Failed to auto-create traceability batch for contract:", batchErr?.message || batchErr);
+      }
 
       // Transform to SmartContract format
       const contract: SmartContract = {

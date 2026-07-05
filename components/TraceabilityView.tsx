@@ -254,15 +254,28 @@ export default function TraceabilityView({
           <div style={{ height: "120px" }} />
           <div style={{ position: "relative", padding: "0 24px" }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-              {contract ? (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", color: LIME, fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "5px 10px", borderRadius: 999, textTransform: "uppercase", fontWeight: 700 }}>
-                  ✓ Cherry Pick Verified Contract
-                </span>
-              ) : (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "5px 10px", borderRadius: 999, textTransform: "uppercase", fontWeight: 700 }}>
-                  Independent Farmer Batch
-                </span>
-              )}
+              {(() => {
+                const isMarketSourced = !!contract?.contract_code && contract.contract_code.toUpperCase().startsWith("BID-");
+                if (contract && isMarketSourced) {
+                  return (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.35)", color: "#7dd3fc", fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "5px 10px", borderRadius: 999, textTransform: "uppercase", fontWeight: 700 }}>
+                      ✓ Market-Sourced · Verified from Delivery
+                    </span>
+                  );
+                }
+                if (contract) {
+                  return (
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", color: LIME, fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "5px 10px", borderRadius: 999, textTransform: "uppercase", fontWeight: 700 }}>
+                      ✓ Cherry Pick Contract · Farm-Grown
+                    </span>
+                  );
+                }
+                return (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "5px 10px", borderRadius: 999, textTransform: "uppercase", fontWeight: 700 }}>
+                    Independent Farmer Batch
+                  </span>
+                );
+              })()}
               {contract?.contract_code && (
                 <span style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#9aa89d", fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "5px 10px", borderRadius: 999 }}>
                   {contract.contract_code} · {contract.status}
