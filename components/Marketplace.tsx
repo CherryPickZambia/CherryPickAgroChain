@@ -14,6 +14,7 @@ import { syncWalletSessionCookie } from "@/lib/authSession";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { getMarketplaceListings, createMarketplaceOrder, type MarketplaceListing as DBListing } from "@/lib/database";
+import { getUserByWallet } from "@/lib/supabaseService";
 import { lencoService } from "@/lib/lenco-service";
 import { DPO_PENDING_CHECKOUT_KEY, startDpoCardPayment } from "@/lib/dpo/client";
 import { transferUSDC } from "@/lib/blockchain/contractInteractions";
@@ -145,6 +146,25 @@ export default function Marketplace() {
     syncWalletSessionCookie(evmAddress);
   }, [evmAddress]);
 
+  // Enforce the intended access model: checkout is only valid under a Buyer
+  // account. Admins/officers/farmers can browse here but must not purchase.
+  const [viewerRole, setViewerRole] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!evmAddress) { setViewerRole(null); return; }
+      try {
+        const user = await getUserByWallet(evmAddress);
+        if (!cancelled) setViewerRole(user?.role ?? null);
+      } catch {
+        if (!cancelled) setViewerRole(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [evmAddress]);
+
+  const canCheckout = viewerRole === null || viewerRole === "buyer";
+
   // Cart & checkout
   const [showCart, setShowCart] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<"cart" | "payment" | "success">("cart");
@@ -180,6 +200,18 @@ export default function Marketplace() {
 
   const calculateTotal = () => cart.reduce((sum, item) => sum + item.listing.pricePerKg * item.qty, 0);
 
+  // The amount actually charged at checkout. In auction-winner mode the cart is
+  // empty, so we must charge the winning bid (price × quantity) — previously
+  // calculateTotal() returned 0 and buyers were charged ZK 0 for auction wins.
+  const getCheckoutAmount = () => {
+    if (auctionWinnerMode && auctionToPay) {
+      const price = parseFloat(bidForm.price || "0");
+      const qty = parseInt(bidForm.quantity || "0", 10);
+      return (isNaN(price) ? 0 : price) * (isNaN(qty) ? 0 : qty);
+    }
+    return calculateTotal();
+  };
+
   const updateCartQty = (listingId: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id !== listingId) return item;
@@ -190,10 +222,17 @@ export default function Marketplace() {
 
   const handleCheckout = async () => {
     if (!evmAddress) { toast.error("Please connect your wallet first"); return; }
+    if (!canCheckout) {
+      toast.error(`Checkout is only available under a Buyer account. You are signed in as ${viewerRole}.`);
+      return;
+    }
     setIsProcessingPayment(true);
     try {
-      let success = false;
+      let success = false;        // whether we should record an order at all
+      let paymentConfirmed = false; // whether the payment has actually settled
       let txHash = "";
+      const checkoutAmount = getCheckoutAmount();
+      if (checkoutAmount <= 0) { toast.error("Order total is invalid. Please review your cart or bid."); setIsProcessingPayment(false); return; }
 
       if (selectedPaymentMethod === "usdc") {
         const walletClient = createWalletClient({
@@ -202,8 +241,8 @@ export default function Marketplace() {
         });
         toast.loading("Initiating USDC transfer...", { id: "payment" });
         try {
-          const result = await transferUSDC(walletClient, ADMIN_WALLET as `0x${string}`, calculateTotal());
-          success = result.success; txHash = result.transactionHash;
+          const result = await transferUSDC(walletClient, ADMIN_WALLET as `0x${string}`, checkoutAmount);
+          success = result.success; paymentConfirmed = result.success; txHash = result.transactionHash;
         } catch (err: any) {
           toast.error(`USDC Transfer failed: ${err.message}`);
           setIsProcessingPayment(false); toast.dismiss("payment"); return;
@@ -213,19 +252,23 @@ export default function Marketplace() {
         if (!momoDetails.phone) { toast.error("Please enter mobile money number"); setIsProcessingPayment(false); return; }
         toast.loading("Sending MoMo payment request...", { id: "payment" });
         try {
-          const result = await lencoService.collectMobileMoney({ amount: calculateTotal(), phone: momoDetails.phone, operator: momoDetails.network, reference: `MP-${Date.now()}` });
+          const result = await lencoService.collectMobileMoney({ amount: checkoutAmount, phone: momoDetails.phone, operator: momoDetails.network, reference: `MP-${Date.now()}` });
           const momoStatus = (result.status || '').toLowerCase();
-          // MoMo payments are often 'pending' initially — user authorizes on their phone
-          success = momoStatus === "success" || momoStatus === "successful" || momoStatus === "pending" || momoStatus === "processing" || result.success === true;
+          const isConfirmed = momoStatus === "success" || momoStatus === "successful" || result.success === true;
+          const isPending = momoStatus === "pending" || momoStatus === "processing";
+          // Record the order for pending payments too, but do NOT mark it paid
+          // until the provider confirms — pending is not success.
+          success = isConfirmed || isPending;
+          paymentConfirmed = isConfirmed;
           txHash = result.reference || result.id || `MP-${Date.now()}`;
-          if (momoStatus === "pending" || momoStatus === "processing") {
-            toast.success("Please check your phone to authorize the payment.", { duration: 8000 });
+          if (isPending) {
+            toast.success("Please check your phone to authorize the payment. Your order will be confirmed once payment settles.", { duration: 8000 });
           }
         } catch (err: any) { toast.error(`MoMo Payment failed: ${err.message}`); setIsProcessingPayment(false); toast.dismiss("payment"); return; }
         toast.dismiss("payment");
       } else if (selectedPaymentMethod === "card") {
         const reference = `MP-CARD-${Date.now()}`;
-        const total = calculateTotal();
+        const total = checkoutAmount;
         const nameParts = (cardContact.fullName || "Market Buyer").trim().split(/\s+/, 2);
         const firstName = nameParts[0];
         const lastName = nameParts[1] || nameParts[0];
@@ -271,14 +314,16 @@ export default function Marketplace() {
       }
 
       if (success) {
+        const orderPaymentStatus = paymentConfirmed ? "completed" : "pending";
         if (auctionWinnerMode && auctionToPay) {
-          await createMarketplaceOrder({ listing_id: auctionToPay.id, buyer_address: evmAddress, farmer_address: ADMIN_WALLET, quantity: parseInt(bidForm.quantity), unit_price: parseFloat(bidForm.price), total_amount: parseFloat(bidForm.price) * parseInt(bidForm.quantity), payment_status: "completed", payment_tx_hash: txHash, delivery_status: "pending" });
+          await createMarketplaceOrder({ listing_id: auctionToPay.id, buyer_address: evmAddress, farmer_address: ADMIN_WALLET, quantity: parseInt(bidForm.quantity), unit_price: parseFloat(bidForm.price), total_amount: parseFloat(bidForm.price) * parseInt(bidForm.quantity), payment_status: orderPaymentStatus, payment_tx_hash: txHash, delivery_status: "pending" });
         } else {
           for (const item of cart) {
-            await createMarketplaceOrder({ listing_id: item.id, buyer_address: evmAddress, farmer_address: item.listing.farmerAddress, quantity: item.qty, unit_price: item.listing.pricePerKg, total_amount: item.listing.pricePerKg * item.qty, payment_status: "completed", payment_tx_hash: txHash, delivery_status: "pending" });
+            await createMarketplaceOrder({ listing_id: item.id, buyer_address: evmAddress, farmer_address: item.listing.farmerAddress, quantity: item.qty, unit_price: item.listing.pricePerKg, total_amount: item.listing.pricePerKg * item.qty, payment_status: orderPaymentStatus, payment_tx_hash: txHash, delivery_status: "pending" });
           }
         }
-        setCart([]); setCheckoutStep("success"); toast.success("Payment successful!");
+        setCart([]); setCheckoutStep("success");
+        toast.success(paymentConfirmed ? "Payment successful!" : "Order placed — awaiting payment confirmation.");
       } else { toast.error("Payment failed. Please try again."); }
     } catch (error: any) {
       toast.error(error.message || "Unknown error");
@@ -566,7 +611,7 @@ export default function Marketplace() {
                     {/* Total */}
                     <div className="p-5 bg-gray-900 rounded-2xl text-white">
                       <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-1">Total Payment</p>
-                      <p className="text-3xl font-black">ZK {calculateTotal().toLocaleString()}</p>
+                      <p className="text-3xl font-black">ZK {getCheckoutAmount().toLocaleString()}</p>
                     </div>
                   </div>
                 )}
@@ -593,13 +638,18 @@ export default function Marketplace() {
               {/* Drawer Footer */}
               {(cart.length > 0 || auctionWinnerMode) && checkoutStep !== "success" && (
                 <div className="p-5 border-t border-gray-100">
+                  {!canCheckout && (
+                    <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+                      You are browsing as <strong>{viewerRole}</strong>. Checkout is only available under a Buyer account.
+                    </div>
+                  )}
                   {checkoutStep === "cart" ? (
-                    <button onClick={() => setCheckoutStep("payment")}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#0C2D3A] hover:bg-[#0C2D3A] text-white rounded-xl font-bold text-sm transition-colors shadow-sm">
+                    <button onClick={() => setCheckoutStep("payment")} disabled={!canCheckout}
+                      className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#0C2D3A] hover:bg-[#0C2D3A] text-white rounded-xl font-bold text-sm transition-colors disabled:opacity-50 shadow-sm">
                       Proceed to Checkout
                     </button>
                   ) : (
-                    <button onClick={handleCheckout} disabled={isProcessingPayment}
+                    <button onClick={handleCheckout} disabled={isProcessingPayment || !canCheckout}
                       className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#0C2D3A] hover:bg-[#0C2D3A] text-white rounded-xl font-bold text-sm transition-colors disabled:opacity-50 shadow-sm">
                       {isProcessingPayment ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : selectedPaymentMethod === "card" ? "Continue to secure payment" : "Complete Payment"}
                     </button>

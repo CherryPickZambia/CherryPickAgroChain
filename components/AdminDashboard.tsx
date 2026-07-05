@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
-import { getUsersByRole, getAllContracts } from "@/lib/supabaseService";
+import { getUsersByRole, getAllContracts, getOrCreateUser } from "@/lib/supabaseService";
 import AdminApprovalModal from "./AdminApprovalModal";
 import { getVerificationEvidence } from "@/lib/ipfsService";
 import { STANDARD_MILESTONES, payMilestoneApproval, getUSDCBalance, calculateVerifierFee, getVerifierFeeBreakdown } from "@/lib/blockchain/contractInteractions";
@@ -669,9 +669,13 @@ export default function AdminDashboard() {
   // Handle promoting a user to officer
   const handlePromoteToOfficer = async (user: FarmerUI) => {
     try {
-      if (supabase) {
-        await supabase.from('users').update({ role: 'officer' }).eq('id', user.id);
+      if (!user.wallet) {
+        toast.error("This farmer has no wallet address on file, so their role cannot be changed.");
+        return;
       }
+      // Match the users table by wallet address (not the farmers row id). Using
+      // getOrCreateUser also creates/updates the users row if it was missing.
+      await getOrCreateUser(user.wallet, 'officer', user.name);
       setUsers(prev => prev.map(u =>
         u.id === user.id ? { ...u, role: "officer" } : u
       ));
@@ -688,9 +692,11 @@ export default function AdminDashboard() {
   // Handle demoting an officer
   const handleDemoteOfficer = async (user: FarmerUI) => {
     try {
-      if (supabase) {
-        await supabase.from('users').update({ role: 'farmer' }).eq('id', user.id);
+      if (!user.wallet) {
+        toast.error("This officer has no wallet address on file, so their role cannot be changed.");
+        return;
       }
+      await getOrCreateUser(user.wallet, 'farmer', user.name);
       setUsers(prev => prev.map(u =>
         u.id === user.id ? { ...u, role: "farmer" } : u
       ));

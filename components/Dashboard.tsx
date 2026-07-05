@@ -39,16 +39,15 @@ export default function Dashboard() {
   useEffect(() => {
     const loadUserRole = async () => {
       if (!evmAddress) {
+        // CDP may still be restoring the wallet session (e.g. right after
+        // navigating back from the marketplace or on a fresh load). Keep the
+        // loader up until CDP reports it is initialized so we never flash the
+        // public landing page at an already signed-in user.
         if (isInitialized) {
           setIsLoading(false);
           setIsInitialCheck(false);
-          return;
         }
-        const timer = setTimeout(() => {
-          setIsLoading(false);
-          setIsInitialCheck(false);
-        }, 900);
-        return () => clearTimeout(timer);
+        return;
       }
 
       console.log("🔐 Authenticator checking wallet:", evmAddress);
@@ -103,6 +102,17 @@ export default function Dashboard() {
 
     loadUserRole();
   }, [evmAddress, isInitialized, searchParams]);
+
+  // Safety net: if CDP initialization stalls, don't leave the user stuck on the
+  // loader forever. After a generous window, fall through to whatever state we
+  // have (landing page if still no wallet).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setIsLoading(false);
+      setIsInitialCheck(false);
+    }, 8000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Save role to localStorage and database when it changes - PERMANENT, no role change allowed
   // Users can only choose farmer, buyer, or verifier (officer)

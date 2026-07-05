@@ -48,6 +48,17 @@ export default function OfficerVerificationModal({
   const [officerNotes, setOfficerNotes] = useState("");
   const [verifying, setVerifying] = useState(false);
 
+  const CHECKLIST_ITEMS = [
+    { id: 'soil_moisture', label: 'Soil Moisture Adequate' },
+    { id: 'ph_level', label: 'Soil pH Level Acceptable' },
+    { id: 'pest_control', label: 'Pest Control Measures in Place' },
+    { id: 'irrigation', label: 'Irrigation System Functional' },
+    { id: 'crop_health', label: 'Crop Health Satisfactory' },
+    { id: 'safety_compliance', label: 'Safety & Compliance Met' },
+  ] as const;
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const toggleChecklist = (id: string) => setChecklist(prev => ({ ...prev, [id]: !prev[id] }));
+
   const handleEvidenceSubmit = async (evidenceData: {
     images: string[];
     iotReadings: IoTReading[];
@@ -81,6 +92,7 @@ export default function OfficerVerificationModal({
         ai_analysis: evidence.aiAnalysis || null,
         officer_name: milestone.contract?.farmer?.name || 'Officer',
         officer_wallet: officerWallet,
+        checklist,
       }, officerId);
 
       toast.success("Milestone verified successfully! Farmer can now track this milestone as complete.");
@@ -262,16 +274,14 @@ export default function OfficerVerificationModal({
               <div className="mb-6">
                 <h3 className="mb-3" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>Field Verification Checklist</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: 'soil_moisture', label: 'Soil Moisture Adequate' },
-                    { id: 'ph_level', label: 'Soil pH Level Acceptable' },
-                    { id: 'pest_control', label: 'Pest Control Measures in Place' },
-                    { id: 'irrigation', label: 'Irrigation System Functional' },
-                    { id: 'crop_health', label: 'Crop Health Satisfactory' },
-                    { id: 'safety_compliance', label: 'Safety & Compliance Met' },
-                  ].map(item => (
+                  {CHECKLIST_ITEMS.map(item => (
                     <label key={item.id} className="flex items-center gap-2.5 p-3 rounded-xl cursor-pointer transition-colors hover:bg-gray-50" style={{ border: '1px solid rgba(12,45,58,0.1)' }}>
-                      <input type="checkbox" className="w-4 h-4 rounded text-[#0C2D3A] focus:ring-[#0C2D3A]" />
+                      <input
+                        type="checkbox"
+                        checked={!!checklist[item.id]}
+                        onChange={() => toggleChecklist(item.id)}
+                        className="w-4 h-4 rounded text-[#0C2D3A] focus:ring-[#0C2D3A]"
+                      />
                       <span className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#0C2D3A' }}>{item.label}</span>
                     </label>
                   ))}

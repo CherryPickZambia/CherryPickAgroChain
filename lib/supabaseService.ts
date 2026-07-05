@@ -449,6 +449,7 @@ export async function officerVerifyMilestone(
     ai_analysis?: EvidenceAIAnalysis | null;
     officer_name?: string;
     officer_wallet?: string;
+    checklist?: Record<string, boolean>;
   },
   officerId?: string
 ) {
@@ -468,6 +469,7 @@ export async function officerVerifyMilestone(
           iot_readings: evidence.iot_readings,
           notes: evidence.notes,
           ai_analysis: evidence.ai_analysis || null,
+          checklist: evidence.checklist || null,
           officer_id: officerId,
           verified_at: new Date().toISOString(),
         },
@@ -508,6 +510,7 @@ export async function officerVerifyMilestone(
     officer_images: evidence.images,
     officer_iot_readings: evidence.iot_readings,
     officer_ai_analysis: evidence.ai_analysis || null,
+    officer_checklist: evidence.checklist || existingMetadata.officer_checklist || null,
     verified_at: new Date().toISOString(),
     evidence_id: evidenceData?.id || null,
   };
@@ -540,8 +543,8 @@ export async function officerVerifyMilestone(
         event_type: 'verification',
         event_title: `Milestone Verified by Officer: ${milestoneData.name}`,
         event_description: evidence.notes || `Officer verified milestone ${milestoneData.name}.`,
-        actor_name: 'Extension Officer',
-        actor_type: 'admin',
+        actor_name: evidence.officer_name || 'Extension Officer',
+        actor_type: 'verifier',
         photos: evidence.images,
       });
     }
