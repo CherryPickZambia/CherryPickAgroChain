@@ -80,7 +80,7 @@ export default function AdminConsumerQR() {
               {stat("Scans (7 days)", analytics?.scansLast7Days ?? 0, Smartphone)}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
               <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", padding: 24 }}>
                 <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, color: DEEP, marginBottom: 14 }}>Most Scanned Batches</div>
                 {(analytics?.topBatches || []).length === 0 ? (
@@ -103,6 +103,19 @@ export default function AdminConsumerQR() {
                     <div key={d.device} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(12,45,58,0.05)" }}>
                       <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 13, color: DEEP, fontWeight: 600 }}>{d.device}</span>
                       <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 13, color: MUTE }}>{d.scans}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", padding: 24 }}>
+                <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, color: DEEP, marginBottom: 14 }}>By Country</div>
+                {(analytics?.byCountry || []).length === 0 ? (
+                  <p style={{ fontFamily: "'Manrope',sans-serif", color: MUTE, fontSize: 14 }}>No data yet.</p>
+                ) : (
+                  analytics!.byCountry.map((c) => (
+                    <div key={c.country} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid rgba(12,45,58,0.05)" }}>
+                      <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 13, color: DEEP, fontWeight: 600 }}>{c.country}</span>
+                      <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 13, color: MUTE }}>{c.scans}</span>
                     </div>
                   ))
                 )}

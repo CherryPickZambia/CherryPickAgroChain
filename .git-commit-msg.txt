@@ -1,0 +1,7 @@
+Add geo-IP country precision to QR scan analytics
+
+- recordScan now resolves country/city via a keyless, CORS-friendly
+  geo-IP provider (configurable via NEXT_PUBLIC_GEOIP_URL) with a 2.5s
+  timeout, falling back to timezone-derived location on any failure
+- Aggregate scans by country and surface a "By Country" breakdown in the
+  admin Consumer QR analytics view
