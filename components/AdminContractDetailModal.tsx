@@ -116,7 +116,7 @@ export default function AdminContractDetailModal({ isOpen, onCloseAction, contra
                 .from('milestones')
                 .select('*')
                 .eq('contract_id', contractId)
-                .order('sequence_order', { ascending: true });
+                .order('milestone_number', { ascending: true });
 
             if (milestoneError) throw milestoneError;
             setMilestones(milestoneData || []);

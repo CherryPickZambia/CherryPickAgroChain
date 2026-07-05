@@ -130,7 +130,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       supabase.from("farmers").select("id", { count: "exact", head: true }).eq("status", "approved"),
       supabase.from("contracts").select("id", { count: "exact", head: true }).eq("status", "active"),
       supabase.from("marketplace_listings").select("id", { count: "exact", head: true }).eq("status", "active"),
-      supabase.from("payments").select("amount").eq("status", "completed"),
+      supabase.from("payments").select("amount").in("status", ["completed", "confirmed"]),
       supabase.from("milestones").select("id", { count: "exact", head: true }).eq("status", "submitted"),
       supabase.from("milestones").select("id", { count: "exact", head: true }).in("status", ["verified", "paid"]),
     ]);

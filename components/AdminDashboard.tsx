@@ -622,20 +622,13 @@ export default function AdminDashboard() {
     toast.success("Job logged locally. Farm activities sync from farmer milestone logs.");
   };
 
-  // Handle creating a new contract
-  const handleCreateContract = (contract: any) => {
-    const newContract = {
-      id: `C00${contracts.length + 1}`,
-      contract_code: contract.contractCode,
-      farmer: contract.farmerName || "New Farmer",
-      crop: contract.cropType,
-      amount: `ZK ${Number(contract.totalValue || 0).toLocaleString()}`,
-      status: "pending",
-      date: new Date().toISOString().split('T')[0],
-    };
-    setContracts([newContract, ...contracts]);
+  // Handle creating a new contract. Reload from the DB so the list reflects the
+  // real persisted row (correct id, contract_code, created date, farmer, value) —
+  // building an optimistic row here caused "contract undefined", an invalid date,
+  // and a fake id that failed to open the detail modal until a manual refresh.
+  const handleCreateContract = async () => {
     setShowContractModal(false);
-    toast.success("Contract created successfully!");
+    await loadContracts();
   };
 
   // Handle farmer card click

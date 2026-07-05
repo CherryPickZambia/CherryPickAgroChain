@@ -116,7 +116,7 @@ export default function AdminTraceabilityHistoryModal({
           .from('milestones')
           .select('*')
           .eq('contract_id', contractId)
-          .order('sequence_order', { ascending: true });
+          .order('milestone_number', { ascending: true });
         setMilestones(milestoneData || []);
 
         // Load batches for this contract
