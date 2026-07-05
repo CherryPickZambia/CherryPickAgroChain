@@ -110,6 +110,15 @@ export default function OfficerDashboard() {
           priority: calculatePriority(m),
         }));
 
+      // Surface the most urgent work first: sort by priority (high → low),
+      // then oldest submission within the same priority band.
+      const priorityRank: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      tasks.sort((a, b) => {
+        const pr = (priorityRank[a.priority] ?? 3) - (priorityRank[b.priority] ?? 3);
+        if (pr !== 0) return pr;
+        return new Date(a.submitted_date || 0).getTime() - new Date(b.submitted_date || 0).getTime();
+      });
+
       setPendingVerifications(tasks);
 
       // Load verification history

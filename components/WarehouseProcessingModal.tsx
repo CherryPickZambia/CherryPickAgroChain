@@ -34,6 +34,13 @@ export interface ProcessingResult {
         grade: string;
         notes: string;
     };
+    compliance?: {
+        gmp: boolean;
+        haccp: boolean;
+        hygiene: boolean;
+        pestControl: boolean;
+        traceabilityLabel: boolean;
+    };
     sorting: {
         completed: boolean;
         gradeA: number;
@@ -122,6 +129,13 @@ export default function WarehouseProcessingModal({
             passed: false,
             grade: "",
             notes: ""
+        },
+        compliance: savedData?.compliance || {
+            gmp: false,
+            haccp: false,
+            hygiene: false,
+            pestControl: false,
+            traceabilityLabel: false,
         },
         sorting: savedData?.sorting || {
             completed: false,
@@ -243,7 +257,16 @@ export default function WarehouseProcessingModal({
                 expiryDate: processing.expiryDate,
                 storageConditions: processing.storageConditions,
                 isOrganic: false,
-                certifications: [],
+                certifications: (() => {
+                    const c = processing.compliance;
+                    if (!c) return [];
+                    const certs: string[] = [];
+                    if (c.gmp) certs.push('GMP');
+                    if (c.haccp) certs.push('HACCP');
+                    if (c.hygiene) certs.push('Hygiene Verified');
+                    if (c.pestControl) certs.push('Pest Control');
+                    return certs;
+                })(),
                 productName: processing.productName,
                 productImage: processing.productImage,
                 aiDefectScan: processing.aiDefectScan
@@ -384,34 +407,27 @@ export default function WarehouseProcessingModal({
                                         </select>
                                     </div>
 
-                                    <div className="flex items-center">
-                                        <div className="flex items-center gap-4">
-                                            <label className="flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={processing.qualityCheck.passed}
-                                                    onChange={(e) => setProcessing(prev => ({
-                                                        ...prev,
-                                                        qualityCheck: { ...prev.qualityCheck, passed: e.target.checked }
-                                                    }))}
-                                                    className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
-                                                />
-                                                <span className="ml-3 text-sm font-medium text-gray-700">Quality Check Passed</span>
-                                            </label>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setProcessing(prev => ({
-                                                        ...prev,
-                                                        qualityCheck: { ...prev.qualityCheck, passed: false, notes: prev.qualityCheck.notes ? prev.qualityCheck.notes + '\n[FAILED] Quality check failed - batch rejected.' : '[FAILED] Quality check failed - batch rejected.' }
-                                                    }));
-                                                    toast.error('Quality check marked as FAILED');
-                                                }}
-                                                className="px-3 py-1.5 bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-bold hover:bg-red-200 transition-colors"
-                                            >
-                                                ✕ Mark as Failed
-                                            </button>
-                                        </div>
+                                    <div className="flex flex-col sm:flex-row items-stretch gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setProcessing(prev => ({ ...prev, qualityCheck: { ...prev.qualityCheck, passed: true } }))}
+                                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-bold text-sm transition-all ${processing.qualityCheck.passed ? "bg-emerald-600 text-white border-emerald-600 shadow-md" : "bg-white text-emerald-700 border-emerald-200 hover:border-emerald-400"}`}
+                                        >
+                                            <CheckCircle2 className="w-5 h-5" /> Quality Check Passed
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setProcessing(prev => ({
+                                                    ...prev,
+                                                    qualityCheck: { ...prev.qualityCheck, passed: false, notes: prev.qualityCheck.notes ? prev.qualityCheck.notes + '\n[FAILED] Quality check failed - batch rejected.' : '[FAILED] Quality check failed - batch rejected.' }
+                                                }));
+                                                toast.error('Quality check marked as FAILED');
+                                            }}
+                                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-bold text-sm transition-all ${processing.qualityCheck.notes.includes('[FAILED]') ? "bg-red-600 text-white border-red-600 shadow-md" : "bg-white text-red-700 border-red-200 hover:border-red-400"}`}
+                                        >
+                                            <AlertCircle className="w-5 h-5" /> Mark as Failed
+                                        </button>
                                     </div>
                                 </div>
 
@@ -434,7 +450,7 @@ export default function WarehouseProcessingModal({
                                     </div>
 
                                     {showAiScanner && (
-                                        <div className="bg-white rounded-xl overflow-hidden border border-emerald-100 shadow-sm mt-4" style={{ minHeight: 320 }}>
+                                        <div className="bg-white rounded-xl overflow-hidden border border-emerald-100 shadow-sm mt-4" style={{ minHeight: 480 }}>
                                             <CropDiagnostics
                                                 cropType={batch?.cropType}
                                                 onResult={(result) => {
@@ -470,6 +486,39 @@ export default function WarehouseProcessingModal({
                                             </div>
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Compliance checklist (GMP / HACCP / hygiene) */}
+                                <div className="mt-4 bg-amber-50/60 border border-amber-100 rounded-2xl p-4">
+                                    <h4 className="text-sm font-bold text-amber-800 flex items-center gap-2 mb-1">
+                                        <ClipboardCheck className="w-4 h-4" /> Food Safety &amp; Compliance
+                                    </h4>
+                                    <p className="text-xs text-amber-600 mb-3">Confirm processing compliance before the batch can move to distribution.</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {([
+                                            { key: 'gmp', label: 'GMP (Good Manufacturing Practice)' },
+                                            { key: 'haccp', label: 'HACCP hazard controls verified' },
+                                            { key: 'hygiene', label: 'Staff hygiene & sanitation confirmed' },
+                                            { key: 'pestControl', label: 'Pest control checks passed' },
+                                            { key: 'traceabilityLabel', label: 'Traceability label / lot code applied' },
+                                        ] as const).map(item => {
+                                            const checked = !!(processing.compliance as any)?.[item.key];
+                                            return (
+                                                <label key={item.key} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 cursor-pointer transition-all ${checked ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-gray-200 hover:border-emerald-200'}`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={checked}
+                                                        onChange={(e) => setProcessing(prev => ({
+                                                            ...prev,
+                                                            compliance: { ...(prev.compliance || { gmp: false, haccp: false, hygiene: false, pestControl: false, traceabilityLabel: false }), [item.key]: e.target.checked }
+                                                        }))}
+                                                        className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
+                                                    />
+                                                    <span className="text-sm font-medium text-gray-700">{item.label}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
 
                                 <div className="mt-4">
@@ -569,46 +618,25 @@ export default function WarehouseProcessingModal({
                                 {processing.processing.applicable && (
                                     <div className="space-y-4 pt-2">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Processing Type</label>
-                                            <select
-                                                value={processing.processing.methods[0] || ""}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setProcessing(prev => ({
-                                                        ...prev,
-                                                        processing: { ...prev.processing, methods: val ? [val] : [] }
-                                                    }));
-                                                }}
-                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                                            >
-                                                <option value="">Select Processing Type</option>
-                                                <option value="Dehydration">Dehydration</option>
-                                                <option value="Freezing">Freezing</option>
-                                                <option value="Juicing">Juicing</option>
-                                                <option value="Other">Other</option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-3">All Applied Methods (select additional if any)</label>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                {processingMethods.map(method => (
-                                                    <label
-                                                        key={method}
-                                                        className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${processing.processing.methods.includes(method)
-                                                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                                            : 'border-gray-200 hover:border-gray-300'
-                                                            }`}
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={processing.processing.methods.includes(method)}
-                                                            onChange={() => handleMethodToggle(method)}
-                                                            className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
-                                                        />
-                                                        <span className="ml-2 text-sm">{method}</span>
-                                                    </label>
-                                                ))}
+                                            <label className="block text-sm font-medium text-gray-700 mb-3">Applied Processing Methods <span className="text-gray-400 font-normal">(tap all that apply)</span></label>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                {processingMethods.map(method => {
+                                                    const active = processing.processing.methods.includes(method);
+                                                    return (
+                                                        <button
+                                                            type="button"
+                                                            key={method}
+                                                            onClick={() => handleMethodToggle(method)}
+                                                            className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all text-sm font-medium ${active
+                                                                ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm'
+                                                                : 'border-gray-200 text-gray-600 hover:border-emerald-300'
+                                                                }`}
+                                                        >
+                                                            {active && <CheckCircle2 className="w-4 h-4" />}
+                                                            {method}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
 

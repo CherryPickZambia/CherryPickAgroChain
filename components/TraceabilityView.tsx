@@ -246,9 +246,29 @@ export default function TraceabilityView({
             <a href="/" style={{ textDecoration: "none" }}>
               <img src={LOGO_SRC} alt="AgroChain 360" style={{ height: 36, width: "auto", objectFit: "contain" }} />
             </a>
+            <div style={{ display: "flex", gap: 8 }}>
+              <a href="/" style={{ textDecoration: "none", color: "#fff", fontSize: 12, fontFamily: "'Space Mono', monospace", padding: "6px 12px", borderRadius: 8, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}>Home</a>
+              <a href="/lookup" style={{ textDecoration: "none", color: "#020503", fontSize: 12, fontFamily: "'Space Mono', monospace", padding: "6px 12px", borderRadius: 8, background: LIME, fontWeight: 700 }}>Lookup</a>
+            </div>
           </div>
           <div style={{ height: "120px" }} />
           <div style={{ position: "relative", padding: "0 24px" }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+              {contract ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)", color: LIME, fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "5px 10px", borderRadius: 999, textTransform: "uppercase", fontWeight: 700 }}>
+                  ✓ Cherry Pick Verified Contract
+                </span>
+              ) : (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "#fff", fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "5px 10px", borderRadius: 999, textTransform: "uppercase", fontWeight: 700 }}>
+                  Independent Farmer Batch
+                </span>
+              )}
+              {contract?.contract_code && (
+                <span style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#9aa89d", fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "5px 10px", borderRadius: 999 }}>
+                  {contract.contract_code} · {contract.status}
+                </span>
+              )}
+            </div>
             <p style={{ color: "#4ade80", fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, marginBottom: 8, textTransform: "uppercase", fontWeight: 700 }}>
               {variety}
             </p>

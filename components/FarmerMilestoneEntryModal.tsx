@@ -64,6 +64,8 @@ interface FarmerMilestoneEntryModalProps {
   batchId?: string;
   /** Unit from the contract (e.g. "kg", "bags"). When provided it is the default and preferred unit. */
   defaultUnit?: string;
+  /** The milestone/stage description from the contract, shown so the farmer knows what is expected. */
+  milestoneDescription?: string;
 }
 
 // @ts-ignore - Next.js client component props warning
@@ -76,6 +78,7 @@ export default function FarmerMilestoneEntryModal({
   hasContract = true,
   batchId,
   defaultUnit,
+  milestoneDescription,
 }: FarmerMilestoneEntryModalProps) {
   const [activities, setActivities] = useState<FarmActivity[]>([]);
   const [showActivityForm, setShowActivityForm] = useState(false);
@@ -113,6 +116,12 @@ export default function FarmerMilestoneEntryModal({
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState("");
   const [location, setLocation] = useState("");
+
+  // Harvest storage capture (compliance) + field-level validation highlighting
+  const [storageLocation, setStorageLocation] = useState("");
+  const [storageConditions, setStorageConditions] = useState("");
+  const [errorFields, setErrorFields] = useState<Record<string, boolean>>({});
+  const clearError = (field: string) => setErrorFields(prev => (prev[field] ? { ...prev, [field]: false } : prev));
 
   // Logistics State for Delivery
   const [transportCompany, setTransportCompany] = useState("");
@@ -249,16 +258,38 @@ export default function FarmerMilestoneEntryModal({
 
   const addActivity = () => {
     const isDelivery = milestoneName.toLowerCase().includes("delivery");
+    const isHarvest = activityType === "harvesting";
+    // Location is mandatory where traceability depends on it: any contract
+    // milestone log, plus harvest and delivery events.
+    const locationRequired = hasContract || isDelivery || isHarvest;
 
-    if (isDelivery && (!transportCompany || !driverName || !vehicleReg || !contactNumber || !dispatchLocation)) {
-      toast.error("Please fill in all logistics details for delivery");
-      return;
+    const errs: Record<string, boolean> = {};
+    if (!description.trim()) errs.description = true;
+    if (locationRequired && !location.trim()) errs.location = true;
+    if (isDelivery) {
+      if (!transportCompany) errs.transportCompany = true;
+      if (!driverName) errs.driverName = true;
+      if (!vehicleReg) errs.vehicleReg = true;
+      if (!contactNumber) errs.contactNumber = true;
+      if (!dispatchLocation) errs.dispatchLocation = true;
     }
 
-    if (!description.trim()) {
-      toast.error("Please enter a description");
+    if (Object.keys(errs).length > 0) {
+      setErrorFields(errs);
+      toast.error(
+        errs.location && !errs.description
+          ? "Location is required for this activity"
+          : "Please complete the highlighted fields",
+      );
       return;
     }
+    setErrorFields({});
+
+    // Fold harvest storage details into notes so record continuity is preserved.
+    const storageNote = isHarvest && (storageLocation.trim() || storageConditions.trim())
+      ? `Storage location: ${storageLocation.trim() || "—"}. Storage conditions: ${storageConditions.trim() || "—"}.`
+      : "";
+    const combinedNotes = [notes.trim(), storageNote].filter(Boolean).join("\n");
 
     const newActivity: FarmActivity = {
       id: Date.now().toString(),
@@ -268,7 +299,7 @@ export default function FarmerMilestoneEntryModal({
       quantity: quantity ? parseFloat(quantity) : undefined,
       unit: quantity ? unit : undefined,
       date,
-      notes: notes.trim() || undefined,
+      notes: combinedNotes || undefined,
       recommendations: recommendations.trim() || undefined,
       followUpChecklist: checklistItems.length > 0 ? checklistItems : undefined,
       fertilizerDetails: activityType === 'fertilizer' ? {
@@ -307,6 +338,9 @@ export default function FarmerMilestoneEntryModal({
     setContactNumber("");
     setDispatchLocation("");
     setLocation("");
+    setStorageLocation("");
+    setStorageConditions("");
+    setErrorFields({});
     setIotReadings([]);
     setEvidenceImages([]);
     setImagePreviews([]);
@@ -440,6 +474,12 @@ export default function FarmerMilestoneEntryModal({
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
             {hasContract && (
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
+                {milestoneDescription && (
+                  <div className="mb-2 pb-2 border-b border-blue-100">
+                    <p className="text-[11px] uppercase tracking-wide font-bold text-blue-700 mb-1">What this stage requires</p>
+                    <p className="text-sm text-blue-900 leading-relaxed">{milestoneDescription}</p>
+                  </div>
+                )}
                 <p className="text-xs text-blue-800 leading-relaxed font-medium">
                   <strong>Instructions:</strong> Record all farming activities for this milestone.
                   Upload evidence photos if available. An officer will visit for verification.
@@ -571,16 +611,16 @@ export default function FarmerMilestoneEntryModal({
                       <input
                         type="text"
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        onChange={(e) => { setDescription(e.target.value); clearError("description"); }}
                         placeholder="e.g. Planting Mangoes"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
+                        className={`w-full px-4 py-3 border rounded-2xl text-sm focus:ring-2 transition-all ${errorFields.description ? "border-red-400 ring-2 ring-red-100" : "border-gray-200 focus:ring-emerald-100 focus:border-emerald-400"}`}
                       />
                     ) : (
                       <div className="space-y-2">
                         <select
                           value={description}
-                          onChange={(e) => setDescription(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all bg-white"
+                          onChange={(e) => { setDescription(e.target.value); clearError("description"); }}
+                          className={`w-full px-4 py-3 border rounded-2xl text-sm focus:ring-2 transition-all bg-white ${errorFields.description ? "border-red-400 ring-2 ring-red-100" : "border-gray-200 focus:ring-emerald-100 focus:border-emerald-400"}`}
                         >
                           <option value="">Select Observation...</option>
                           {observationOptions.map(opt => (
@@ -709,15 +749,43 @@ export default function FarmerMilestoneEntryModal({
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Location (Optional)</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Location {(hasContract || milestoneName.toLowerCase().includes("delivery") || activityType === "harvesting") ? <span className="text-red-500">*</span> : "(Optional)"}
+                    </label>
                     <input
                       type="text"
                       value={location}
-                      onChange={(e) => setLocation(e.target.value)}
+                      onChange={(e) => { setLocation(e.target.value); clearError("location"); }}
                       placeholder="e.g. Plot 4, North-West Sector"
-                      className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
+                      className={`w-full px-4 py-3 border rounded-2xl text-sm focus:ring-2 transition-all ${errorFields.location ? "border-red-400 ring-2 ring-red-100" : "border-gray-200 focus:ring-emerald-100 focus:border-emerald-400"}`}
                     />
+                    {errorFields.location && <p className="text-xs text-red-500 mt-1">Location is required for this activity.</p>}
                   </div>
+
+                  {activityType === "harvesting" && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Storage Location</label>
+                        <input
+                          type="text"
+                          value={storageLocation}
+                          onChange={(e) => setStorageLocation(e.target.value)}
+                          placeholder="e.g. Cold room B, Warehouse 2"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Storage Conditions</label>
+                        <input
+                          type="text"
+                          value={storageConditions}
+                          onChange={(e) => setStorageConditions(e.target.value)}
+                          placeholder="e.g. 4°C, dry, ventilated"
+                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {/* Evidence Photos + AI Diagnostics (AI runs on a selected evidence photo) */}
                   <div className="md:col-span-2 bg-blue-50/50 border border-blue-100 rounded-2xl p-4">
@@ -837,8 +905,21 @@ export default function FarmerMilestoneEntryModal({
                             {selectedAiImageIndex !== null && <span> • Attached to photo {selectedAiImageIndex + 1}</span>}
                           </p>
                           {aiResult.treatmentRec && (
-                            <div className="bg-amber-50 p-2 rounded text-xs text-amber-800 italic border border-amber-100">
-                              <strong>Recommendation:</strong> {aiResult.treatmentRec}
+                            <div className="bg-amber-50 p-2 rounded text-xs text-amber-800 border border-amber-100">
+                              <p className="italic mb-2"><strong>Recommendation:</strong> {aiResult.treatmentRec}</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const rec = aiResult.treatmentRec.trim();
+                                  if (rec && !checklistItems.includes(rec)) {
+                                    setChecklistItems(prev => [...prev, rec]);
+                                    toast.success("Added AI recommendation to follow-up checklist");
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-600 text-white text-[11px] font-semibold hover:bg-amber-700 transition-colors"
+                              >
+                                <ListTodo className="w-3 h-3" /> Add to follow-up checklist
+                              </button>
                             </div>
                           )}
                         </div>

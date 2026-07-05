@@ -110,7 +110,37 @@ export default function LandingPage() {
 
   useEffect(() => {
     injectStyles();
-    loadLandingPageContent().then(setContent);
+    (async () => {
+      const loaded = await loadLandingPageContent();
+      setContent(loaded);
+      // Overlay live platform metrics onto the impact counters when real data exists.
+      try {
+        const { supabase } = await import("@/lib/supabase");
+        if (!supabase) return;
+        const [farmersRes, paymentsRes] = await Promise.all([
+          supabase.from("farmers").select("id", { count: "exact", head: true }),
+          supabase.from("payments").select("amount, status"),
+        ]);
+        const farmerCount = farmersRes.count || 0;
+        const value = (paymentsRes.data || [])
+          .filter((p: any) => ["completed", "confirmed"].includes((p.status || "").toLowerCase()))
+          .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+        const fmtValue = value >= 1_000_000 ? `K${(value / 1_000_000).toFixed(1)}M` : value >= 1000 ? `K${(value / 1000).toFixed(0)}K` : `K${value.toFixed(0)}`;
+        setContent(prev => ({
+          ...prev,
+          metrics: {
+            ...prev.metrics,
+            items: prev.metrics.items.map(it => {
+              if (it.id === "m-1" && farmerCount > 0) return { ...it, value: `${farmerCount}+` };
+              if (it.id === "m-2" && value > 0) return { ...it, value: fmtValue };
+              return it;
+            }),
+          },
+        }));
+      } catch {
+        /* keep editorial defaults if live data unavailable */
+      }
+    })();
     return () => {
       const el = document.getElementById("cp-v3");
       if (el) el.remove();

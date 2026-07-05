@@ -219,7 +219,7 @@ export default function CropDiagnostics({
               <img
                 src={selectedImage}
                 alt="Selected crop"
-                className="w-full h-64 object-cover rounded-2xl"
+                className="w-full h-80 md:h-96 object-cover rounded-2xl"
               />
               <button
                 onClick={handleReset}

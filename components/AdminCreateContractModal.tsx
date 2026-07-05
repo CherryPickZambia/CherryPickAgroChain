@@ -154,6 +154,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
       } else {
         setMilestones([...milestones, newM]);
       }
+      toast.success("Milestone added");
     }
   };
 
@@ -229,6 +230,7 @@ export default function AdminCreateContractModal({ onCloseAction, onContractCrea
         total_value: totalAmount,
         status: "active",
         harvest_date: formData.expectedHarvestDate || null,
+        quantity_unit: formData.quantityUnit || "kg",
       });
 
       // Create milestones in Supabase

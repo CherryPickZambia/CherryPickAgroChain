@@ -153,6 +153,106 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   }
 }
 
+export interface UpcomingObligation {
+  id: string;
+  contractCode: string;
+  milestoneName: string;
+  cropType: string;
+  amount: number;
+  dueDate: string;
+  status: string;
+}
+
+export interface ContractFinancials {
+  totalContractValue: number;
+  totalPaid: number;
+  totalOutstanding: number;
+  dueNext30Days: number;
+  pendingMilestoneCount: number;
+  availableFiat: number;
+  liquidityGap: number; // negative means shortfall vs 30-day obligations
+  upcoming: UpcomingObligation[];
+}
+
+// Aggregates milestone-based cash-flow exposure for wallet/liquidity planning.
+export async function getContractFinancials(): Promise<ContractFinancials> {
+  const empty: ContractFinancials = {
+    totalContractValue: 0, totalPaid: 0, totalOutstanding: 0, dueNext30Days: 0,
+    pendingMilestoneCount: 0, availableFiat: 0, liquidityGap: 0, upcoming: [],
+  };
+  if (!supabase) return empty;
+
+  try {
+    const [contractsRes, milestonesRes, paymentsRes] = await Promise.all([
+      supabase.from("contracts").select("id, contract_code, crop_type, total_value, status"),
+      supabase.from("milestones").select("id, contract_id, name, status, payment_amount, expected_date"),
+      supabase.from("payments").select("amount, status, payment_type"),
+    ]);
+
+    const contracts = contractsRes.data || [];
+    const milestones = milestonesRes.data || [];
+    const payments = paymentsRes.data || [];
+
+    const contractById: Record<string, { code: string; crop: string }> = {};
+    let totalContractValue = 0;
+    contracts.forEach((c: any) => {
+      contractById[c.id] = { code: c.contract_code || c.id?.slice(0, 8), crop: c.crop_type || "—" };
+      if (c.status !== "cancelled") totalContractValue += Number(c.total_value || 0);
+    });
+
+    let totalPaid = 0;
+    let totalOutstanding = 0;
+    let dueNext30Days = 0;
+    let pendingMilestoneCount = 0;
+    const now = Date.now();
+    const in30 = now + 30 * 24 * 60 * 60 * 1000;
+    const upcoming: UpcomingObligation[] = [];
+
+    milestones.forEach((m: any) => {
+      const amount = Number(m.payment_amount || 0);
+      const status = (m.status || "").toLowerCase();
+      if (["paid", "completed"].includes(status)) {
+        totalPaid += amount;
+      } else if (status !== "rejected") {
+        totalOutstanding += amount;
+        pendingMilestoneCount += 1;
+        const due = m.expected_date ? new Date(m.expected_date).getTime() : 0;
+        if (due && due <= in30) dueNext30Days += amount;
+        upcoming.push({
+          id: m.id,
+          contractCode: contractById[m.contract_id]?.code || "—",
+          milestoneName: m.name || "Milestone",
+          cropType: contractById[m.contract_id]?.crop || "—",
+          amount,
+          dueDate: m.expected_date || "",
+          status,
+        });
+      }
+    });
+
+    upcoming.sort((a, b) => (a.dueDate || "9999").localeCompare(b.dueDate || "9999"));
+
+    // Available fiat = confirmed/completed inbound payments to platform ledger.
+    const availableFiat = payments
+      .filter((p: any) => ["completed", "confirmed"].includes((p.status || "").toLowerCase()))
+      .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+
+    return {
+      totalContractValue,
+      totalPaid,
+      totalOutstanding,
+      dueNext30Days,
+      pendingMilestoneCount,
+      availableFiat,
+      liquidityGap: availableFiat - dueNext30Days,
+      upcoming: upcoming.slice(0, 12),
+    };
+  } catch (e) {
+    console.error("getContractFinancials:", e);
+    return empty;
+  }
+}
+
 export async function getCropDistribution(): Promise<CropDistributionItem[]> {
   if (!supabase) return [];
 

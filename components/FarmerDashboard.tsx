@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package, Camera, Crosshair, Map as MapIcon, Wallet } from "lucide-react";
+import { FileText, CheckCircle, Clock, DollarSign, QrCode, Calendar, TrendingUp, AlertCircle, Download, ChevronDown, ChevronUp, Loader2, Sprout, User, MapPin, Phone, Mail, Edit2, Save, X, Plus, ShoppingBag, Package, Camera, Crosshair, Map as MapIcon, Wallet, BadgeCheck } from "lucide-react";
 import { useEvmAddress } from "@coinbase/cdp-hooks";
 import MilestoneCard from "./MilestoneCard";
 import WalletBalance from "./WalletBalance";
@@ -812,6 +812,19 @@ export default function FarmerDashboard() {
               )}
             </div>
 
+            {/* System Farmer ID (read-only, unique) */}
+            {farmerData?.id && (
+              <div className="group">
+                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Farmer ID (Traceability)</label>
+                <div className="flex items-center gap-3 bg-gray-50/80 border border-gray-100 rounded-xl px-4 py-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center shrink-0">
+                    <BadgeCheck className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800 font-mono">CP-{String(farmerData.id).slice(0, 8).toUpperCase()}</span>
+                </div>
+              </div>
+            )}
+
             {/* NRC/ID Number */}
             <div className="group">
               <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">NRC / ID Number</label>
@@ -1375,11 +1388,11 @@ export default function FarmerDashboard() {
                         <div className="flex items-center gap-6 text-sm text-gray-600">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4" />
-                            <span>Required: {contract.requiredQuantity} kg</span>
+                            <span>Required: {contract.requiredQuantity} {contract.unit || 'kg'}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-4 w-4" />
-                            <span>K{contract.discountedPrice}/kg</span>
+                            <span>K{contract.discountedPrice}/{contract.unit || 'kg'}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
@@ -1446,8 +1459,8 @@ export default function FarmerDashboard() {
                         </div>
                         <div>
                           <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">Target Volume</p>
-                          <p className="text-xl font-bold text-gray-900">{contract.requiredQuantity.toLocaleString()} kg</p>
-                          <p className="text-xs text-gray-500 mt-1">K{contract.discountedPrice} per kg</p>
+                          <p className="text-xl font-bold text-gray-900">{contract.requiredQuantity.toLocaleString()} {contract.unit || 'kg'}</p>
+                          <p className="text-xs text-gray-500 mt-1">K{contract.discountedPrice} per {contract.unit || 'kg'}</p>
                         </div>
                         <div>
                           <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">Final Delivery</p>

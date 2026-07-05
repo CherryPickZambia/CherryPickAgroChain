@@ -216,7 +216,7 @@ export default function AdminContractDetailModal({ isOpen, onCloseAction, contra
                                         <h3 className="text-xl mb-2" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>{contract.crop_type}</h3>
                                         <div className="space-y-1 text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
                                             <p><span className="font-semibold">Variety:</span> {contract.variety || 'N/A'}</p>
-                                            <p><span className="font-semibold">Target:</span> {contract.required_quantity.toLocaleString()} kg</p>
+                                            <p><span className="font-semibold">Target:</span> {contract.required_quantity.toLocaleString()} {(contract as any).quantity_unit || 'kg'}</p>
                                         </div>
                                     </div>
 
@@ -228,6 +228,29 @@ export default function AdminContractDetailModal({ isOpen, onCloseAction, contra
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* Milestone progress summary */}
+                                {milestones.length > 0 && (() => {
+                                    const done = milestones.filter(m => ['verified', 'paid', 'completed'].includes((m.status || '').toLowerCase())).length;
+                                    const pct = Math.round((done / milestones.length) * 100);
+                                    const paidAmount = milestones.filter(m => ['paid', 'completed'].includes((m.status || '').toLowerCase())).reduce((s, m) => s + Number((m as any).payment_amount || 0), 0);
+                                    const outstanding = Number(contract.total_value || 0) - paidAmount;
+                                    return (
+                                        <div className="p-5 rounded-2xl" style={{ background: '#0C2D3A' }}>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-sm font-semibold text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>Milestone Progress</p>
+                                                <p className="text-sm font-bold" style={{ color: '#BFFF00' }}>{done} of {milestones.length} complete ({pct}%)</p>
+                                            </div>
+                                            <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.15)' }}>
+                                                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: '#BFFF00' }} />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 mt-4 text-sm" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                                                <div><p className="text-white/60">Paid to date</p><p className="text-white font-bold">K{paidAmount.toLocaleString()}</p></div>
+                                                <div><p className="text-white/60">Outstanding</p><p className="text-white font-bold">K{outstanding.toLocaleString()}</p></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Milestones Timeline */}
                                 <div className="card-premium">

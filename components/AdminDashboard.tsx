@@ -41,8 +41,10 @@ import {
   getRecentPayments,
   getRecentGrowthActivities,
   getRecentMarketplaceOrders,
+  getContractFinancials,
   formatRevenue,
   computeAnalyticsGrowth,
+  type ContractFinancials,
   type AdminDashboardStats,
   type CropDistributionItem,
   type MonthlyTrendPoint,
@@ -52,6 +54,7 @@ import {
   type MarketplaceOrderRow,
 } from "@/lib/adminDashboardData";
 import { buildFarmMapEntries } from "@/lib/farmerMapUtils";
+import { loadPlatformSettings, savePlatformSettings, DEFAULT_SETTINGS, type PlatformSettings } from "@/lib/platformSettings";
 
 // Pending verification interface
 interface VerifiedProduct {
@@ -196,6 +199,9 @@ export default function AdminDashboard() {
   });
   const [cropData, setCropData] = useState<CropDistributionItem[]>([]);
   const [costData, setCostData] = useState<MonthlyTrendPoint[]>([]);
+  const [financials, setFinancials] = useState<ContractFinancials | null>(null);
+  const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [recentPayments, setRecentPayments] = useState<PaymentDashboardRow[]>([]);
   const [recentActivities, setRecentActivities] = useState<GrowthActivityRow[]>([]);
   const [buyersList, setBuyersList] = useState<BuyerDashboardRow[]>([]);
@@ -299,18 +305,20 @@ export default function AdminDashboard() {
   const loadDashboardMetrics = async () => {
     try {
       setLoadingDashboard(true);
-      const [stats, crops, trend, payments, activities] = await Promise.all([
+      const [stats, crops, trend, payments, activities, fin] = await Promise.all([
         getAdminDashboardStats(),
         getCropDistribution(),
         getMonthlyPaymentTrend(),
         getRecentPayments(20),
         getRecentGrowthActivities(5),
+        getContractFinancials(),
       ]);
       setDashboardStats(stats);
       setCropData(crops);
       setCostData(trend);
       setRecentPayments(payments);
       setRecentActivities(activities);
+      setFinancials(fin);
     } catch (error) {
       console.error("Error loading dashboard metrics:", error);
     } finally {
@@ -615,7 +623,22 @@ export default function AdminDashboard() {
     if (selectedView === 'analytics' || selectedView === 'dashboard') {
       loadDashboardMetrics();
     }
+    if (selectedView === 'settings' || selectedView === 'buyers') {
+      loadPlatformSettings().then(setSettings).catch(() => {});
+    }
   }, [selectedView]);
+
+  const handleSaveSettings = async () => {
+    try {
+      setSavingSettings(true);
+      await savePlatformSettings(settings);
+      toast.success("Settings saved");
+    } catch (e) {
+      toast.error("Failed to save settings");
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   // Handle creating a new job (local only — growth activities come from farmer logs)
   const handleCreateJob = (_newJob: JobData) => {
@@ -1404,6 +1427,7 @@ export default function AdminDashboard() {
             const totalOrders = BUYERS.reduce((s, b) => s + b.orders, 0);
             const totalSpent = BUYERS.reduce((s, b) => s + b.spent, 0);
             const avgOrder = totalOrders > 0 ? Math.round(totalSpent / totalOrders) : 0;
+            const platformCommission = Math.round(totalSpent * ((settings.platformFeePercent || 0) / 100));
 
             if (loadingBuyers) {
               return (
@@ -1434,7 +1458,8 @@ export default function AdminDashboard() {
                       {[
                         { label: "Total Buyers", value: String(BUYERS.length), bg: BK.lime, color: BK.deep, name: "Registered" },
                         { label: "Total Orders", value: String(totalOrders), bg: BK.deep, color: "#fff", name: "Marketplace" },
-                        { label: "Total Spent", value: `ZK ${totalSpent.toLocaleString()}`, bg: BK.stone, color: BK.deep, name: "Revenue" },
+                        { label: "Total Spent", value: `ZK ${totalSpent.toLocaleString()}`, bg: BK.stone, color: BK.deep, name: "Buyer spend" },
+                        { label: "Platform Commission", value: `ZK ${platformCommission.toLocaleString()}`, bg: "#fff", color: BK.deep, name: `${settings.platformFeePercent || 0}% of spend` },
                         { label: "Avg Order Value", value: avgOrder > 0 ? `ZK ${avgOrder.toLocaleString()}` : "—", bg: "#fff", color: BK.deep, name: "Per Transaction" },
                       ].map((s, i) => (
                         <motion.div key={i} whileHover={{ scale: 1.02 }} transition={{ duration: 0.3 }}
@@ -2322,6 +2347,52 @@ export default function AdminDashboard() {
                   )}
                 </div>
               </div>
+
+              {/* Contracts & Liquidity */}
+              <div style={{ padding: "0 40px 48px" }}>
+                <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>03. Contracts &amp; Liquidity</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
+                  {[
+                    { label: "Total Contract Value", value: `K${(financials?.totalContractValue ?? 0).toLocaleString()}`, sub: "all active agreements" },
+                    { label: "Paid to Date", value: `K${(financials?.totalPaid ?? 0).toLocaleString()}`, sub: "released to farmers" },
+                    { label: "Outstanding", value: `K${(financials?.totalOutstanding ?? 0).toLocaleString()}`, sub: `${financials?.pendingMilestoneCount ?? 0} pending milestones` },
+                    { label: "Due in 30 Days", value: `K${(financials?.dueNext30Days ?? 0).toLocaleString()}`, sub: "upcoming obligations" },
+                  ].map((s, i) => (
+                    <div key={i} style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", padding: 20 }}>
+                      <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.8rem", color: "#5A7684", marginBottom: 6 }}>{s.label}</div>
+                      <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "1.5rem", color: "#0C2D3A" }}>{s.value}</div>
+                      <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.72rem", color: "#9aa5a8", marginTop: 4 }}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Liquidity check */}
+                <div style={{ background: (financials?.liquidityGap ?? 0) >= 0 ? "rgba(191,255,0,0.12)" : "rgba(220,38,38,0.08)", border: `1px solid ${(financials?.liquidityGap ?? 0) >= 0 ? "rgba(191,255,0,0.4)" : "rgba(220,38,38,0.3)"}`, borderRadius: 16, padding: 20, marginBottom: 24 }}>
+                  <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.85rem", fontWeight: 700, color: "#0C2D3A" }}>
+                    {(financials?.liquidityGap ?? 0) >= 0
+                      ? `Wallet covers upcoming 30-day obligations (surplus K${(financials?.liquidityGap ?? 0).toLocaleString()}).`
+                      : `Funding needed: obligations exceed available fiat by K${Math.abs(financials?.liquidityGap ?? 0).toLocaleString()} for the next 30 days.`}
+                  </div>
+                  <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.75rem", color: "#5A7684", marginTop: 4 }}>Available fiat: K{(financials?.availableFiat ?? 0).toLocaleString()}</div>
+                </div>
+                {/* Upcoming obligations table */}
+                <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", overflow: "hidden" }}>
+                  {(financials?.upcoming?.length ?? 0) === 0 ? (
+                    <p style={{ fontFamily: "'Manrope',sans-serif", color: "#5A7684", textAlign: "center", padding: "32px 0" }}>No upcoming milestone obligations.</p>
+                  ) : (
+                    <div>
+                      {financials!.upcoming.map((o) => (
+                        <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid rgba(12,45,58,0.05)" }}>
+                          <div>
+                            <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "#0C2D3A" }}>{o.milestoneName} · {o.cropType}</div>
+                            <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.72rem", color: "#9aa5a8" }}>{o.contractCode} • due {o.dueDate ? new Date(o.dueDate).toLocaleDateString() : "—"} • {o.status}</div>
+                          </div>
+                          <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, color: "#0C2D3A" }}>K{o.amount.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -2392,28 +2463,53 @@ export default function AdminDashboard() {
                 <h1 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: "clamp(2rem,5vw,4rem)", lineHeight: 0.9, letterSpacing: "-0.04em", color: "#0C2D3A", marginBottom: 48 }}>PLATFORM<br />SETTINGS</h1>
               </div>
               <div style={{ padding: "0 40px 48px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
-                  {[
-                    { title: "General", items: [{ k: "Platform Name", v: "Cherry Pick" }, { k: "Currency", v: "ZMW (Kwacha)" }, { k: "Time Zone", v: "Africa/Lusaka" }, { k: "Language", v: "English" }] },
-                    { title: "Verification", items: [{ k: "Officer Fee", v: "5% (≤K2,000) / K150 flat" }, { k: "Auto-approve Farmers", v: "Enabled", accent: true }, { k: "Min Listing Quality", v: "Grade B" }] },
-                    { title: "Payment", items: [{ k: "Platform Fee", v: "2.5%" }, { k: "Payment Network", v: "Base (Coinbase L2)" }] },
-                  ].map((section, si) => (
-                    <div key={si} style={{ background: "#fff", borderRadius: 24, border: "1px solid rgba(12,45,58,0.06)", padding: 32 }}>
-                      <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 20 }}>{`0${si + 1}. ${section.title}`}</div>
-                      <h3 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "1.25rem", color: "#0C2D3A", marginBottom: 20 }}>{section.title} Settings</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {section.items.map((item, ii) => (
-                          <div key={ii} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", borderRadius: 12, border: "1px solid rgba(12,45,58,0.06)", transition: "border-color .2s" }}
-                            onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(191,255,0,0.3)")}
-                            onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(12,45,58,0.06)")}>
-                            <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.85rem", color: "#5A7684" }}>{item.k}</span>
-                            <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "0.85rem", color: (item as any).accent ? "#6fba00" : "#0C2D3A" }}>{item.v}</span>
+                {(() => {
+                  const labelStyle: React.CSSProperties = { fontFamily: "'Manrope',sans-serif", fontSize: "0.8rem", color: "#5A7684", marginBottom: 6, display: "block" };
+                  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 14px", borderRadius: 12, border: "1px solid rgba(12,45,58,0.15)", fontFamily: "'Manrope',sans-serif", fontSize: "0.9rem", color: "#0C2D3A", background: "#fff" };
+                  const cardStyle: React.CSSProperties = { background: "#fff", borderRadius: 24, border: "1px solid rgba(12,45,58,0.06)", padding: 32 };
+                  const headStyle: React.CSSProperties = { fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 20 };
+                  return (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
+                        <div style={cardStyle}>
+                          <div style={headStyle}>01. General</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                            <div><label style={labelStyle}>Platform Name</label><input style={inputStyle} value={settings.platformName} onChange={e => setSettings({ ...settings, platformName: e.target.value })} /></div>
+                            <div><label style={labelStyle}>Currency</label><input style={inputStyle} value={settings.currency} onChange={e => setSettings({ ...settings, currency: e.target.value })} /></div>
+                            <div><label style={labelStyle}>Time Zone</label><input style={inputStyle} value={settings.timezone} onChange={e => setSettings({ ...settings, timezone: e.target.value })} /></div>
+                            <div><label style={labelStyle}>Language</label><input style={inputStyle} value={settings.language} onChange={e => setSettings({ ...settings, language: e.target.value })} /></div>
                           </div>
-                        ))}
+                        </div>
+                        <div style={cardStyle}>
+                          <div style={headStyle}>02. Verification</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                            <div><label style={labelStyle}>Officer Fee (%)</label><input type="number" style={inputStyle} value={settings.officerFeePercent} onChange={e => setSettings({ ...settings, officerFeePercent: parseFloat(e.target.value) || 0 })} /></div>
+                            <div><label style={labelStyle}>Officer Flat Fee (K, above threshold)</label><input type="number" style={inputStyle} value={settings.officerFeeFlat} onChange={e => setSettings({ ...settings, officerFeeFlat: parseFloat(e.target.value) || 0 })} /></div>
+                            <div><label style={labelStyle}>Officer Fee Threshold (K)</label><input type="number" style={inputStyle} value={settings.officerFeeThreshold} onChange={e => setSettings({ ...settings, officerFeeThreshold: parseFloat(e.target.value) || 0 })} /></div>
+                            <div><label style={labelStyle}>Min Listing Quality</label><input style={inputStyle} value={settings.minListingQuality} onChange={e => setSettings({ ...settings, minListingQuality: e.target.value })} /></div>
+                            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                              <input type="checkbox" checked={settings.autoApproveFarmers} onChange={e => setSettings({ ...settings, autoApproveFarmers: e.target.checked })} style={{ width: 18, height: 18 }} />
+                              <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.85rem", color: "#0C2D3A" }}>Auto-approve farmers</span>
+                            </label>
+                          </div>
+                        </div>
+                        <div style={cardStyle}>
+                          <div style={headStyle}>03. Payment</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                            <div><label style={labelStyle}>Platform Fee (%)</label><input type="number" style={inputStyle} value={settings.platformFeePercent} onChange={e => setSettings({ ...settings, platformFeePercent: parseFloat(e.target.value) || 0 })} /></div>
+                            <div><label style={labelStyle}>Payment Network</label><input style={inputStyle} value={settings.paymentNetwork} onChange={e => setSettings({ ...settings, paymentNetwork: e.target.value })} /></div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 24 }}>
+                        <button onClick={handleSaveSettings} disabled={savingSettings}
+                          style={{ padding: "12px 28px", borderRadius: 12, background: "#0C2D3A", color: "#BFFF00", fontFamily: "'Syne',sans-serif", fontWeight: 700, border: "none", cursor: savingSettings ? "default" : "pointer", opacity: savingSettings ? 0.6 : 1 }}>
+                          {savingSettings ? "Saving..." : "Save Settings"}
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}

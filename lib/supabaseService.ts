@@ -232,7 +232,20 @@ export async function createContract(contract: Omit<Contract, 'id' | 'created_at
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    // Gracefully degrade if an optional column (e.g. quantity_unit) hasn't been
+    // migrated yet: strip the offending column and retry rather than failing the
+    // whole contract creation.
+    const msg = `${error.message || ''} ${error.details || ''}`.toLowerCase();
+    if (msg.includes('quantity_unit')) {
+      const { quantity_unit, ...rest } = contract as Record<string, unknown>;
+      void quantity_unit;
+      const retry = await client.from('contracts').insert(rest).select().single();
+      if (retry.error) throw retry.error;
+      return retry.data;
+    }
+    throw error;
+  }
   return data;
 }
 

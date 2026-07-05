@@ -246,6 +246,7 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
         onCloseAction={() => setShowEntryModal(false)}
         milestoneId={milestone.id}
         milestoneName={milestone.name}
+        milestoneDescription={milestone.description}
         onSubmitAction={handleFarmerEntries}
         batchId={milestone.batchId}
         defaultUnit={contractUnit}

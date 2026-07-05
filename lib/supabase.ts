@@ -78,6 +78,7 @@ export interface Database {
           completed_at?: string;
           blockchain_tx?: string;
           ipfs_metadata?: string;
+          quantity_unit?: string;
         };
         Insert: Omit<Database['public']['Tables']['contracts']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['contracts']['Insert']>;

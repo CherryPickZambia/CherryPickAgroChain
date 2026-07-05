@@ -221,7 +221,7 @@ export default function Dashboard() {
             <Logo size={36} />
             <div>
               <p className="text-sm font-bold" style={{ ...syne, color: D.deep }}>Cherry Pick</p>
-              <p className="text-xs" style={{ ...manrope, color: D.muted }}>AgroChain platform</p>
+              <p className="text-xs" style={{ ...manrope, color: D.muted }}>AgroChain 360 platform</p>
             </div>
           </div>
           <AuthButton />

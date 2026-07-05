@@ -781,9 +781,9 @@ export default function Marketplace() {
             </div>
             <div className="grid grid-cols-3 gap-3 shrink-0">
               {[
-                { label: "Farmers", value: "120+", icon: BadgeCheck },
+                { label: "Farmers", value: new Set(listings.map(l => l.farmerId || l.farmerName).filter(Boolean)).size.toString(), icon: BadgeCheck },
                 { label: "Live listings", value: filteredListings.length.toString(), icon: Package2 },
-                { label: "Provinces", value: "9", icon: MapPin },
+                { label: "Provinces", value: new Set(listings.map(l => (l.location || "").split(",").pop()?.trim()).filter(Boolean)).size.toString(), icon: MapPin },
               ].map((s) => (
                 <div key={s.label} className="bg-white/10 border border-white/10 rounded-xl p-3 sm:p-4 text-center">
                   <s.icon className="h-4 w-4 text-white/50 mx-auto mb-1.5" />

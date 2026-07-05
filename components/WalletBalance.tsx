@@ -393,6 +393,17 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
+  // Human label for the funding source of a deposit/withdrawal so admins can
+  // distinguish bank vs mobile money vs card at a glance.
+  const getFundingSource = (payment: PaymentHistory): string => {
+    const raw = `${payment.payment_type || ''} ${(payment as any).payment_method || ''} ${(payment as any).transaction_hash || ''} ${(payment as any).reference || ''}`.toLowerCase();
+    if (payment.currency && payment.currency !== 'ZMW') return 'Crypto';
+    if (/momo|mobile|mtn|airtel|zamtel|collect/.test(raw)) return 'Mobile Money';
+    if (/bank|transfer|eft/.test(raw)) return 'Bank';
+    if (/card|dpo|visa|master/.test(raw)) return 'Card';
+    return '';
+  };
+
   const getPaymentLabel = (payment: PaymentHistory) => {
     const paymentType = payment.payment_type || payment.type;
 
@@ -400,9 +411,12 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
     if (paymentType === 'platform_fee') return 'Verification Fee';
     if (paymentType === 'refund') return 'Refund';
 
+    const source = getFundingSource(payment);
+    const suffix = source ? ` · ${source}` : '';
+
     // Infer from addresses if no payment_type
-    if (payment.to_address === walletAddress) return 'Deposit';
-    if (payment.from_address === walletAddress) return 'Withdrawal';
+    if (payment.to_address === walletAddress) return `Deposit${suffix}`;
+    if (payment.from_address === walletAddress) return `Withdrawal${suffix}`;
 
     return 'Payment';
   };

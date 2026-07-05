@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, QrCode, ArrowRight, Loader2, Sprout, Star, Leaf, ShieldCheck } from "lucide-react";
+import { Plus, Search, QrCode, ArrowRight, Loader2, Sprout, Star, Leaf, ShieldCheck, BadgeCheck } from "lucide-react";
 import { getBatchesByFarmer, getBatchTraceability, Batch, TraceabilityEvent } from "@/lib/traceabilityService";
+import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 import CreateBatchModal from "./CreateBatchModal";
 import LogEventModal from "./LogEventModal";
 import Link from "next/link";
@@ -59,6 +61,31 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
     const [showLogModal, setShowLogModal] = useState(false);
+    const [requestingId, setRequestingId] = useState<string | null>(null);
+
+    // Let farmers request Cherry Pick verification / value-add for an independent batch.
+    const handleRequestVerification = async (batch: Batch) => {
+        if (!batch.id || !supabase) return;
+        setRequestingId(batch.id);
+        try {
+            const { error } = await supabase.from('verification_requests').insert({
+                batch_id: batch.id,
+                farmer_id: farmerId,
+                status: 'pending',
+                priority: 'normal',
+                verification_type: 'independent_batch',
+                fee: 0,
+                distance_km: 0,
+            });
+            if (error) throw error;
+            toast.success("Verification requested. A Cherry Pick officer will review this batch.");
+        } catch (e: any) {
+            console.error("Request verification failed:", e?.message || e);
+            toast.error("Could not submit verification request. Please try again later.");
+        } finally {
+            setRequestingId(null);
+        }
+    };
 
     const fetchBatches = async () => {
         try {
@@ -154,15 +181,20 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
 
                         return (
                             <div key={batch.id} className={`bg-white rounded-2xl p-6 shadow-sm border hover:shadow-md transition-shadow ${isIndependent ? 'border-blue-200' : 'border-gray-100'}`}>
-                                {/* Independent Batch Label */}
-                                {isIndependent && (
-                                    <div className="flex items-center gap-2 mb-3 -mt-2">
+                                {/* Batch classification label */}
+                                <div className="flex items-center gap-2 mb-3 -mt-2">
+                                    {isIndependent ? (
                                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
                                             <Leaf className="w-3 h-3" />
                                             Farmer Independent Batch
                                         </span>
-                                    </div>
-                                )}
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                                            <BadgeCheck className="w-3 h-3" />
+                                            Cherry Pick Verified Contract
+                                        </span>
+                                    )}
+                                </div>
 
                                 {metadata.batch_image && (
                                     <div className="mb-4 h-48 -mx-6 -mt-6 rounded-t-2xl overflow-hidden relative group">
@@ -293,6 +325,16 @@ export default function BatchList({ farmerId, userId }: BatchListProps) {
                                     </div>
                                 )}
 
+                                {isIndependent && (
+                                    <button
+                                        onClick={() => handleRequestVerification(batch)}
+                                        disabled={requestingId === batch.id}
+                                        className="w-full mb-2 flex items-center justify-center gap-2 bg-[#0C2D3A] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#0C2D3A]/90 transition-colors disabled:opacity-50"
+                                    >
+                                        {requestingId === batch.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                                        Request Cherry Pick Verification
+                                    </button>
+                                )}
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleLogEvent(batch.id!)}
