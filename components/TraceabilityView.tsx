@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { TraceabilityEvent, Batch } from "@/lib/traceabilityService";
+import { recordScan } from "@/lib/qrAnalytics";
+import ComplaintModal from "@/components/ComplaintModal";
 
 interface TraceabilityViewProps {
   batch: Batch;
@@ -34,7 +36,6 @@ const SURFACE = "#07120a";
 const SECONDARY = "#9aa89d";
 
 const DEFAULT_IMG_HERO = "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80";
-const DEFAULT_FARM_IMG = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80";
 const LOGO_SRC = "/logo-new.png";
 
 function FarmerAvatar({ src, name }: { src?: string | null; name: string }) {
@@ -131,6 +132,25 @@ function FadeIn({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
   );
 }
 
+function Counter({ target, suffix = "", prefix = "", duration = 1400 }: { target: number; suffix?: string; prefix?: string; duration?: number }) {
+  const [ref, inView] = useInView(0.4);
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!inView) return;
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setVal(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, target, duration]);
+  return <span ref={ref as any}>{prefix}{val.toLocaleString()}{suffix}</span>;
+}
+
 function MapZambia() {
   const [pulse, setPulse] = useState(false);
   useEffect(() => { setTimeout(() => setPulse(true), 800); }, []);
@@ -160,6 +180,9 @@ export default function TraceabilityView({
 }: TraceabilityViewProps) {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [complaintOpen, setComplaintOpen] = useState(false);
+  const [scanRef, setScanRef] = useState<string>("");
+  const [stats, setStats] = useState<{ farmers: number; batches: number; scans: number; kgTraced: number; incomeSupported: number }>({ farmers: 0, batches: 0, scans: 0, kgTraced: 0, incomeSupported: 0 });
 
   let metadata: any = {};
   try {
@@ -178,7 +201,6 @@ export default function TraceabilityView({
   const farmerName = farmer?.name || "Verified Smallholder";
   const farmSize = farmer?.farm_size || 0;
   const farmerExp = farmer?.years_farming ?? metadata.farmer_experience ?? "";
-  const impactIncrease = metadata.income_increase || "25";
 
   // Compute accurate batch weight: prefer post-processing total weight from packaging info
   const computedWeight = (() => {
@@ -216,11 +238,62 @@ export default function TraceabilityView({
   const GROWTH_TYPES = new Set(['planting', 'growth_update', 'input_application', 'irrigation', 'pest_control', 'harvest']);
   const growthUpdates = sortedEvents.filter(e => e.actor_type === 'farmer' || GROWTH_TYPES.has(e.event_type as string));
 
-  const impacts = [
-    { icon: "👩🏾‍🌾", color: "#fff", bg: "rgba(255,255,255,0.04)", label: "Community", value: "Supports smallholder families" },
-    { icon: "🍃", color: LIME, bg: "rgba(74,222,128,0.06)", label: "Eco-Friendly", value: `Saved waste with precision care` },
-    { icon: "🇿🇲", color: "#fff", bg: "rgba(255,255,255,0.04)", label: "Local Pride", value: "100% Zambian tracked" },
-  ];
+  // Behind-the-scenes gallery: every photo captured along the journey plus any
+  // curated batch/farmer imagery from metadata.
+  const galleryPhotos = (() => {
+    const set: string[] = [];
+    const push = (u?: string | null) => { if (u && typeof u === "string" && !set.includes(u)) set.push(u); };
+    sortedEvents.forEach(e => (e.photos || []).forEach(push));
+    push(metadata.batch_image);
+    push(metadata.productImage);
+    push(metadata.farmer_image);
+    if (Array.isArray(metadata.gallery)) metadata.gallery.forEach(push);
+    return set;
+  })();
+  const galleryVideos: string[] = Array.isArray(metadata.videos) ? metadata.videos.filter((v: any) => typeof v === "string") : [];
+
+  const currentStatus = (metadata.status || (batch as any).status || (contract?.status) || "Verified").toString();
+  const productName = cropType;
+  const processingDate = metadata.productionDate ? formatDateDayMonth(metadata.productionDate) : (batch.harvest_date ? formatDateDayMonth(batch.harvest_date) : "");
+  const mapsQuery = encodeURIComponent(location);
+  const farmerBio = farmer?.bio || `${farmerName.split(" ")[0]} grows ${cropType.toLowerCase()} in ${location} using careful, sustainable practices. By choosing this product you are helping create a reliable market for farmers like ${farmerName.split(" ")[0]}.`;
+
+  // Capture the scan for analytics and keep the reference for the feedback loop.
+  useEffect(() => {
+    let active = true;
+    recordScan({ batchCode: batch.batch_code, batchId: (batch as any).id })
+      .then(ref => { if (active) setScanRef(ref); })
+      .catch(() => {});
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batch.batch_code]);
+
+  // Live platform impact counters (best-effort; falls back to sensible values).
+  useEffect(() => {
+    (async () => {
+      try {
+        const { supabase } = await import("@/lib/supabase");
+        if (!supabase) return;
+        const [farmersRes, batchesRes, scansRes, paymentsRes] = await Promise.all([
+          supabase.from("farmers").select("id", { count: "exact", head: true }),
+          supabase.from("batches").select("total_quantity"),
+          supabase.from("qr_scans").select("id", { count: "exact", head: true }),
+          supabase.from("payments").select("amount, status"),
+        ]);
+        const kgTraced = (batchesRes.data || []).reduce((s: number, b: any) => s + Number(b.total_quantity || 0), 0);
+        const incomeSupported = (paymentsRes.data || [])
+          .filter((p: any) => ["completed", "confirmed"].includes((p.status || "").toLowerCase()))
+          .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+        setStats({
+          farmers: farmersRes.count || 0,
+          batches: (batchesRes.data || []).length,
+          scans: scansRes.count || 0,
+          kgTraced: Math.round(kgTraced),
+          incomeSupported: Math.round(incomeSupported),
+        });
+      } catch { /* keep zero fallbacks */ }
+    })();
+  }, []);
 
   return (
     <div style={{ background: isPublic ? DARK : "transparent", minHeight: isPublic ? "100vh" : "auto", fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -282,37 +355,63 @@ export default function TraceabilityView({
                 </span>
               )}
             </div>
-            <p style={{ color: "#4ade80", fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, marginBottom: 8, textTransform: "uppercase", fontWeight: 700 }}>
-              {variety}
+            <p style={{ color: "#4ade80", fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, marginBottom: 12, textTransform: "uppercase", fontWeight: 700 }}>
+              Thank you for choosing Cherry-Pick
             </p>
-            <h1 style={{ color: "#fff", fontFamily: "'Playfair Display', serif", fontSize: 42, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.1, letterSpacing: "-0.03em" }}>
-              {cropType}
+            <h1 style={{ color: "#fff", fontFamily: "'Playfair Display', serif", fontSize: 44, fontWeight: 800, margin: "0 0 16px", lineHeight: 1.05, letterSpacing: "-0.03em" }}>
+              Every Pack Has<br />A Story.
             </h1>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
-              <span style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 11, fontFamily: "'Space Mono', monospace", padding: "6px 12px", borderRadius: 8 }}>
-                {batch.batch_code}
-              </span>
-              <span style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", fontSize: 11, padding: "6px 12px", borderRadius: 8 }}>
-                📍 {location}
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "16px", backdropFilter: "blur(8px)" }}>
-              <img src={DEFAULT_FARM_IMG} alt="Farm" style={{ width: 80, height: 70, borderRadius: 12, objectFit: "cover", flexShrink: 0 }} />
-              <div>
-                <p style={{ color: "#9aa89d", fontSize: 10, fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 2, marginBottom: 4 }}>The Origin</p>
-                <p style={{ color: "#fff", fontSize: 13, lineHeight: 1.5, fontFamily: "'Inter', sans-serif", fontStyle: "normal", margin: 0 }}>
-                  Grown by smallholder farmers in {location} and traced securely.
-                </p>
-              </div>
-            </div>
+            <p style={{ color: "#cdd8cf", fontSize: 15, lineHeight: 1.65, maxWidth: 460, margin: "0 0 28px", fontFamily: "'Inter', sans-serif" }}>
+              Every better choice creates healthier lifestyles, supports local farmers and contributes to a more resilient food system. This pack has travelled an incredible journey before reaching your hands. Let&apos;s discover it together.
+            </p>
+            <button
+              onClick={() => { const el = document.getElementById("cp-product"); if (el) el.scrollIntoView({ behavior: "smooth" }); }}
+              style={{ background: LIME, color: "#020503", border: "none", borderRadius: 14, padding: "15px 28px", fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Inter', sans-serif", boxShadow: "0 6px 20px rgba(74,222,128,0.25)", display: "inline-flex", alignItems: "center", gap: 8 }}
+            >
+              Begin the Journey ↓
+            </button>
           </div>
         </div>
 
         <div style={{ height: 16 }} />
 
-        {/* FARMER SECTION */}
+        {/* SECTION 2 — YOUR PRODUCT */}
+        <div id="cp-product" style={{ position: "relative", top: -80 }} />
+        <FadeIn delay={0.05}>
+          <div style={{ margin: "8px 16px 24px", background: "rgba(255,255,255,0.04)", borderRadius: 24, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ position: "relative", height: 210 }}>
+              <img src={heroImage} alt={productName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(2,5,3,0.1) 30%, rgba(2,5,3,0.9) 100%)" }} />
+              <span style={{ position: "absolute", top: 14, right: 14, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(74,222,128,0.16)", border: "1px solid rgba(74,222,128,0.4)", color: LIME, fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1, padding: "6px 10px", borderRadius: 999, textTransform: "uppercase", fontWeight: 700, backdropFilter: "blur(4px)" }}>
+                ✓ Verified by Cherry-Pick
+              </span>
+              <div style={{ position: "absolute", left: 20, bottom: 16, right: 20 }}>
+                <p style={{ color: LIME, fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 3, margin: "0 0 4px", textTransform: "uppercase", fontWeight: 700 }}>Your Product</p>
+                <h2 style={{ color: "#fff", fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 800, margin: 0, lineHeight: 1.05 }}>{productName}</h2>
+                <p style={{ color: "#cdd8cf", fontSize: 12, margin: "4px 0 0", fontFamily: "'Space Mono', monospace" }}>{variety}</p>
+              </div>
+            </div>
+            <div style={{ padding: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {specs.map((s, i) => (
+                  <div key={i} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 16, padding: "14px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, marginBottom: 8, border: "1px solid rgba(255,255,255,0.06)" }}>{s.icon}</div>
+                    <div style={{ fontSize: 10, color: "#9aa89d", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{s.label}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.18)", borderRadius: 14, padding: "12px 16px" }}>
+                <span style={{ fontSize: 10, color: "#9aa89d", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 1 }}>Current Status</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: LIME, textTransform: "capitalize" }}>{currentStatus}</span>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+
+        {/* SECTION 3 — MEET YOUR FARMER */}
         <FadeIn delay={0.1}>
-          <div style={{ margin: "24px 16px", background: "rgba(255,255,255,0.04)", borderRadius: 24, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+          <div style={{ margin: "0 16px 24px", background: "rgba(255,255,255,0.04)", borderRadius: 24, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
             <div style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "12px 20px" }}>
               <span style={{ color: "#4ade80", fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, textTransform: "uppercase", fontWeight: 600 }}>Meet Your Farmer</span>
             </div>
@@ -321,7 +420,7 @@ export default function TraceabilityView({
                 <FarmerAvatar src={farmerImage} name={farmerName} />
                 <div style={{ flex: 1, paddingTop: 4, minWidth: 180 }}>
                   <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 800, color: "#fff", margin: "0 0 4px" }}>{farmerName}</h2>
-                  <p style={{ color: "#9aa89d", fontSize: 12, fontFamily: "'Space Mono', monospace", letterSpacing: 0.5, marginBottom: 12, fontWeight: 600 }}>Lead Farmer · {location.split(',')[0]}</p>
+                  <p style={{ color: "#9aa89d", fontSize: 12, fontFamily: "'Space Mono', monospace", letterSpacing: 0.5, marginBottom: 12, fontWeight: 600 }}>📍 {location}</p>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {farmSize > 0 && (
                       <div style={{ textAlign: "center", background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "8px 16px", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -339,33 +438,26 @@ export default function TraceabilityView({
                 </div>
               </div>
               <div style={{ borderLeft: `3px solid #4ade80`, paddingLeft: 16, marginBottom: 20 }}>
-                <p style={{ fontSize: 14, lineHeight: 1.6, color: "#9aa89d", fontFamily: "'Inter', sans-serif", fontStyle: "normal", margin: 0 }}>
-                  "{farmerName.split(' ')[0]} partners with Cherry-Pick. By verifying crops on AgroChain 360, household income increased by <strong style={{ color: "#fff", fontStyle: "normal" }}>{impactIncrease}%</strong>, ensuring community resilience."
+                <p style={{ fontSize: 14, lineHeight: 1.65, color: "#cdd8cf", fontFamily: "'Inter', sans-serif", margin: 0 }}>
+                  {farmerBio}
                 </p>
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ background: "rgba(191,255,0,0.1)", border: "1px solid rgba(191,255,0,0.25)", color: "#fff", fontSize: 11, padding: "6px 12px", borderRadius: 20, fontWeight: 600 }}>✓ Verified Journey</span>
-                <span style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#9aa89d", fontSize: 11, padding: "6px 12px", borderRadius: 20, fontWeight: 600 }}>🌳 Impact Driven</span>
-              </div>
-            </div>
-          </div>
-        </FadeIn>
-
-        {/* SPECS SECTION */}
-        <FadeIn delay={0.1}>
-          <div style={{ margin: "0 16px 24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-              <span style={{ fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, color: "#9aa89d", textTransform: "uppercase" }}>Farm & Quality Specs</span>
-              <div style={{ height: 1, flex: 1, background: "rgba(255,255,255,0.06)" }} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {specs.map((s, i) => (
-                <div key={i} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 16, padding: "16px", boxShadow: "0 2px 10px rgba(0,0,0,0.1)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, marginBottom: 10, border: "1px solid rgba(255,255,255,0.06)" }}>{s.icon}</div>
-                  <div style={{ fontSize: 10, color: "#9aa89d", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{s.value}</div>
+              {/* GPS map */}
+              <div style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 14, marginBottom: 16 }}>
+                <MapZambia />
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: "#9aa89d", fontSize: 10, fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 1, margin: "0 0 2px" }}>Farm Location</p>
+                  <p style={{ color: "#fff", fontSize: 13, fontWeight: 600, margin: 0 }}>{location}</p>
                 </div>
-              ))}
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <a href={`https://www.google.com/maps/search/?api=1&query=${mapsQuery}`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: 140, textAlign: "center", textDecoration: "none", background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.3)", color: LIME, fontSize: 13, fontWeight: 700, padding: "12px 16px", borderRadius: 12 }}>
+                  View Farm on Map
+                </a>
+                <a href="/marketplace" style={{ flex: 1, minWidth: 140, textAlign: "center", textDecoration: "none", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 13, fontWeight: 700, padding: "12px 16px", borderRadius: 12 }}>
+                  Meet More Farmers
+                </a>
+              </div>
             </div>
           </div>
         </FadeIn>
@@ -452,7 +544,7 @@ export default function TraceabilityView({
         <FadeIn delay={0.1}>
           <div style={{ margin: "0 16px 24px", background: "rgba(255,255,255,0.04)", borderRadius: 24, padding: "24px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-              <span style={{ fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, color: "#9aa89d", textTransform: "uppercase" }}>The Full Journey</span>
+              <span style={{ fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, color: "#4ade80", textTransform: "uppercase", fontWeight: 700 }}>Follow Your Food</span>
               <div style={{ height: 1, flex: 1, background: "rgba(255,255,255,0.06)" }} />
             </div>
             {sortedEvents.length === 0 ? (
@@ -498,26 +590,74 @@ export default function TraceabilityView({
                     </div>
                   </div>
                 ))}
+                {/* You — the final step of the journey */}
+                <div style={{ position: "relative", marginTop: 24 }}>
+                  <div style={{ position: "absolute", left: -25, top: 2, width: 16, height: 16, borderRadius: "50%", background: LIME, border: `2px solid ${LIME}`, zIndex: 2 }} />
+                  <div style={{ paddingLeft: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>🍒</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: LIME, fontFamily: "'Inter', sans-serif" }}>You</span>
+                    </div>
+                    <p style={{ fontSize: 12, color: "#9aa89d", margin: "2px 0 0", fontFamily: "'Inter', sans-serif" }}>This pack reached your hands. Thank you for being part of the journey.</p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </FadeIn>
 
-        {/* IMPACT SECTION */}
+        {/* SECTION 5 — BEHIND THE SCENES */}
+        {(galleryPhotos.length > 0 || galleryVideos.length > 0) && (
+          <FadeIn delay={0.1}>
+            <div style={{ margin: "0 16px 24px", background: "rgba(255,255,255,0.04)", borderRadius: 24, padding: "24px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, color: "#4ade80", textTransform: "uppercase", fontWeight: 700 }}>Behind The Scenes</span>
+                <div style={{ height: 1, flex: 1, background: "rgba(255,255,255,0.06)" }} />
+              </div>
+              <p style={{ color: "#9aa89d", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px", fontFamily: "'Inter', sans-serif" }}>
+                Authentic moments from the farm, drying, processing and packaging — captured along the way.
+              </p>
+              {galleryVideos.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 12 }}>
+                  {galleryVideos.slice(0, 3).map((v, i) => (
+                    <video key={i} src={v} controls playsInline style={{ width: "100%", borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", background: "#000" }} />
+                  ))}
+                </div>
+              )}
+              {galleryPhotos.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {galleryPhotos.slice(0, 9).map((p, i) => (
+                    <img key={i} src={p} alt="Behind the scenes" style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </FadeIn>
+        )}
+
+        {/* SECTION 6 — YOUR IMPACT (live counters) */}
         <FadeIn delay={0.1}>
           <div style={{ margin: "0 16px 24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-              <span style={{ fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, color: "#4ade80", textTransform: "uppercase" }}>Your Impact</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, color: "#4ade80", textTransform: "uppercase", fontWeight: 700 }}>Your Impact</span>
               <div style={{ height: 1, flex: 1, background: "rgba(255,255,255,0.06)" }} />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {impacts.map((item, i) => (
-                <div key={i} style={{ background: item.bg, borderRadius: 20, padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, boxShadow: "0 2px 8px rgba(0,0,0,0.1)", flexShrink: 0, border: "1px solid rgba(255,255,255,0.08)" }}>{item.icon}</div>
-                  <div>
-                    <p style={{ fontSize: 10, fontFamily: "'Space Mono', monospace", letterSpacing: 1.5, color: "#9aa89d", textTransform: "uppercase", margin: "0 0 4px", fontWeight: 700 }}>{item.label}</p>
-                    <p style={{ fontSize: 14, color: "#fff", margin: 0, fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>{item.value}</p>
-                  </div>
+            <p style={{ color: "#9aa89d", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px", fontFamily: "'Inter', sans-serif" }}>
+              Every Cherry-Pick purchase helps transform seasonal abundance into opportunity.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {[
+                { icon: "👩🏾‍🌾", label: "Farmers Supported", node: <Counter target={Math.max(1, stats.farmers)} suffix="+" /> },
+                { icon: "📦", label: "Kg Traced & Rescued", node: <Counter target={Math.max(0, stats.kgTraced)} suffix=" kg" /> },
+                { icon: "💚", label: "Farmer Income Supported", node: <Counter target={Math.max(0, stats.incomeSupported)} prefix="K" /> },
+                { icon: "🔗", label: "Batches Traced", node: <Counter target={Math.max(1, stats.batches)} /> },
+                { icon: "📱", label: "QR Scans Completed", node: <Counter target={Math.max(1, stats.scans)} /> },
+                { icon: "🌳", label: "Local Jobs Supported", node: <Counter target={Math.max(1, Math.round(stats.farmers * 1.5))} /> },
+              ].map((it, i) => (
+                <div key={i} style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "16px" }}>
+                  <div style={{ fontSize: 22, marginBottom: 8 }}>{it.icon}</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", fontFamily: "'Playfair Display', serif", lineHeight: 1 }}>{it.node}</div>
+                  <div style={{ fontSize: 10, color: "#9aa89d", fontFamily: "'Space Mono', monospace", textTransform: "uppercase", letterSpacing: 1, marginTop: 6 }}>{it.label}</div>
                 </div>
               ))}
             </div>
@@ -553,22 +693,80 @@ export default function TraceabilityView({
           </FadeIn>
         )}
 
-        {/* SHARE SECTION */}
-        {isPublic && (
-          <FadeIn delay={0.1}>
-            <div style={{ margin: "0 16px 32px" }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <button style={{ background: "#4ade80", color: "#020503", border: "none", borderRadius: 16, padding: "16px", fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 4px 14px rgba(74,222,128,0.15)", fontFamily: "'Inter', sans-serif" }}>
-                  ⭐ Rate this Batch
-                </button>
-                <div style={{ display: "flex", gap: 12 }}>
-                  <button style={{ flex: 1, background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>🛒 Buy Again</button>
-                  <button onClick={() => { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }} style={{ flex: 1, background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>📸 Share</button>
-                </div>
+        {/* SECTION 7 — CONTINUE THE JOURNEY */}
+        <FadeIn delay={0.1}>
+          <div style={{ margin: "0 16px 24px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <span style={{ fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, color: "#4ade80", textTransform: "uppercase", fontWeight: 700 }}>Continue The Journey</span>
+              <div style={{ height: 1, flex: 1, background: "rgba(255,255,255,0.06)" }} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ background: "linear-gradient(135deg, rgba(74,222,128,0.12), rgba(74,222,128,0.02))", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 20, padding: 20 }}>
+                <p style={{ color: "#fff", fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 800, margin: "0 0 4px" }}>Buy More Cherry-Pick</p>
+                <p style={{ color: "#9aa89d", fontSize: 13, margin: "0 0 16px", fontFamily: "'Inter', sans-serif" }}>Fresh, traceable snacks delivered from verified Zambian farms.</p>
+                <a href="https://cherrypickfoods.com/shop" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", background: LIME, color: "#020503", textDecoration: "none", fontSize: 14, fontWeight: 800, padding: "12px 24px", borderRadius: 12 }}>Shop Now →</a>
+              </div>
+              <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 20 }}>
+                <p style={{ color: "#fff", fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 800, margin: "0 0 4px" }}>Buy Direct From Farmers</p>
+                <p style={{ color: "#9aa89d", fontSize: 13, margin: "0 0 16px", fontFamily: "'Inter', sans-serif" }}>Explore fresh produce available through the AgroChain 360 Marketplace.</p>
+                <a href="/marketplace" style={{ display: "inline-block", background: "rgba(255,255,255,0.08)", color: "#fff", textDecoration: "none", fontSize: 14, fontWeight: 800, padding: "12px 24px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.12)" }}>Visit Marketplace →</a>
               </div>
             </div>
-          </FadeIn>
-        )}
+          </div>
+        </FadeIn>
+
+        {/* SECTION 8 — JOIN THE CHERRY-PICK LIFESTYLE */}
+        <FadeIn delay={0.1}>
+          <div style={{ margin: "0 16px 24px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 24, padding: 24, textAlign: "center" }}>
+            <p style={{ color: "#4ade80", fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, textTransform: "uppercase", fontWeight: 700, margin: "0 0 10px" }}>The Cherry-Pick Lifestyle</p>
+            <h2 style={{ color: "#fff", fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 800, margin: "0 0 12px" }}>Choose Better. Live Better.</h2>
+            <p style={{ color: "#cdd8cf", fontSize: 14, lineHeight: 1.7, margin: "0 auto 22px", maxWidth: 460, fontFamily: "'Inter', sans-serif" }}>
+              Small choices shape healthier lives. Follow us for recipes, healthy-living inspiration and stories from the farmers growing your food.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+              {[
+                { label: "Instagram", icon: "📸", href: "https://instagram.com/cherrypickfoods" },
+                { label: "Facebook", icon: "👍", href: "https://facebook.com/cherrypickfoods" },
+                { label: "TikTok", icon: "🎵", href: "https://tiktok.com/@cherrypickfoods" },
+                { label: "WhatsApp", icon: "💬", href: "https://wa.me/260000000000" },
+                { label: "Newsletter", icon: "✉️", href: "https://cherrypickfoods.com" },
+              ].map((s) => (
+                <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 12, fontWeight: 600, padding: "10px 14px", borderRadius: 999 }}>
+                  <span>{s.icon}</span> {s.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+
+        {/* SECTION 9 — HELP US IMPROVE */}
+        <FadeIn delay={0.1}>
+          <div style={{ margin: "0 16px 32px", background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.15)", borderRadius: 20, padding: 22, textAlign: "center" }}>
+            <p style={{ color: "#9aa89d", fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 2, textTransform: "uppercase", margin: "0 0 6px" }}>Help Us Improve</p>
+            <p style={{ color: "#cdd8cf", fontSize: 13, lineHeight: 1.6, margin: "0 0 16px", fontFamily: "'Inter', sans-serif" }}>
+              Something not right with this pack? Let us know — your report is linked directly to this batch for a fast investigation.
+            </p>
+            <button
+              onClick={() => setComplaintOpen(true)}
+              style={{ background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14, padding: "14px 28px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", display: "inline-flex", alignItems: "center", gap: 8 }}
+            >
+              ⚠️ Report an Issue
+            </button>
+          </div>
+        </FadeIn>
+
+        <ComplaintModal
+          open={complaintOpen}
+          onClose={() => setComplaintOpen(false)}
+          context={{
+            batchCode: batch.batch_code,
+            batchId: (batch as any).id,
+            productName,
+            processingDate,
+            scanReference: scanRef,
+            farmerBatch: contract?.contract_code,
+          }}
+        />
 
         {/* FOOTER */}
         <div style={{ background: "rgba(255,255,255,0.02)", padding: "32px 24px 48px", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.06)" }}>

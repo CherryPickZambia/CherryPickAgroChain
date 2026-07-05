@@ -7,7 +7,7 @@ import {
   ShoppingBag, User, UserPlus, Shield, XCircle, AlertCircle, Eye,
   MoreVertical, Filter, Download, Calendar, Leaf, Globe, Phone, Mail,
   ChevronRight, ExternalLink, Landmark, Award, BarChart3, PieChart,
-  Wallet, Zap, Target, RefreshCw, QrCode, Truck, Loader2, Layout
+  Wallet, Zap, Target, RefreshCw, QrCode, Truck, Loader2, Layout, MessageSquare
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
@@ -32,6 +32,7 @@ import { AuthButton } from "@coinbase/cdp-react";
 import WalletBalance from "./WalletBalance";
 import { dc } from "@/lib/dashboardTheme";
 import LandingPageEditor from "./LandingPageEditor";
+import AdminConsumerQR from "./AdminConsumerQR";
 import {
   getAdminDashboardStats,
   getCropDistribution,
@@ -680,6 +681,7 @@ export default function AdminDashboard() {
     { icon: User, label: "Buyers", id: "buyers" },
     { icon: CheckCircle2, label: "Officers", id: "officers" },
     { icon: QrCode, label: "Traceability", id: "traceability" },
+    { icon: MessageSquare, label: "Consumer QR", id: "consumer" },
     { icon: TrendingUp, label: "Analytics", id: "analytics" },
     { icon: DollarSign, label: "Payments", id: "payments" },
     { icon: Award, label: "Bidding", id: "bidding" },
@@ -2470,6 +2472,10 @@ export default function AdminDashboard() {
 
           {selectedView === "landing" && (
             <LandingPageEditor />
+          )}
+
+          {selectedView === "consumer" && (
+            <AdminConsumerQR />
           )}
 
           {/* Settings View — ARKTOS */}
