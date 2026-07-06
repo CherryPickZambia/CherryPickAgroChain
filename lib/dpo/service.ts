@@ -55,14 +55,20 @@ function parseXml(xmlString: string): Record<string, string> {
   return out;
 }
 
+// Trim env values and strip accidental surrounding quotes — a trailing newline
+// or a pasted-in quote is the most common cause of a DPO 802 (invalid token).
+function envClean(value: string | undefined): string {
+  return (value || '').trim().replace(/^['"]|['"]$/g, '').trim();
+}
+
 function config() {
   return {
-    apiUrl: process.env.DPO_API_URL || 'https://secure.3gdirectpay.com/API/v6/',
-    paymentUrl: process.env.DPO_PAYMENT_URL || 'https://secure.3gdirectpay.com/payv2.php',
-    companyToken: process.env.DPO_COMPANY_TOKEN || '',
-    serviceType: process.env.DPO_SERVICE_TYPE || '',
-    currency: process.env.DPO_CURRENCY || 'ZMW',
-    ptl: process.env.DPO_PTL || '24',
+    apiUrl: envClean(process.env.DPO_API_URL) || 'https://secure.3gdirectpay.com/API/v6/',
+    paymentUrl: envClean(process.env.DPO_PAYMENT_URL) || 'https://secure.3gdirectpay.com/payv2.php',
+    companyToken: envClean(process.env.DPO_COMPANY_TOKEN),
+    serviceType: envClean(process.env.DPO_SERVICE_TYPE),
+    currency: envClean(process.env.DPO_CURRENCY) || 'ZMW',
+    ptl: envClean(process.env.DPO_PTL) || '24',
   };
 }
 
@@ -150,10 +156,33 @@ export async function createDpoToken(data: DpoCreateTokenInput): Promise<DpoCrea
       };
     }
 
-    const explanation =
-      result === '802'
-        ? 'Card payments are not active on this DPO merchant account yet.'
-        : parsed.ResultExplanation || 'Could not initiate card payment.';
+    // Map the most common createToken failures to actionable messages.
+    // NOTE: 802 = "Company Token does not exist" (DPO auth error), NOT a card
+    // activation issue — the token value/environment is what needs fixing.
+    let explanation: string;
+    switch (result) {
+      case '801':
+        explanation = 'DPO Company Token is missing. Set DPO_COMPANY_TOKEN.';
+        break;
+      case '802':
+        explanation =
+          'DPO rejected the Company Token (invalid or wrong environment). Verify DPO_COMPANY_TOKEN matches the credentials from DPO for this environment (test vs live).';
+        break;
+      case '904':
+        explanation = `Currency ${currency} is not supported on this DPO account.`;
+        break;
+      case '905':
+      case '906':
+        explanation = 'DPO transaction/monthly limit exceeded. Contact DPO support.';
+        break;
+      default:
+        explanation = parsed.ResultExplanation || 'Could not initiate card payment.';
+    }
+
+    // Always keep DPO's own explanation available for logs/debugging.
+    if (parsed.ResultExplanation && !explanation.includes(parsed.ResultExplanation)) {
+      explanation = `${explanation} (DPO: ${parsed.ResultExplanation})`;
+    }
 
     return {
       success: false,

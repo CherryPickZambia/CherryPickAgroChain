@@ -158,12 +158,16 @@ export default function LookupPage() {
             {/* Hero Section */}
             <div className="cp-hero" style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>
                 <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}>
-                    <span style={{ ...meta, color: C.accent, display: "block", marginBottom: 24 }}>Traceability Portal</span>
+                    <span style={{ ...meta, color: C.accent, display: "block", marginBottom: 24 }}>Thank you for choosing Cherry-Pick</span>
 
-                    <h1 style={{ ...serif, fontSize: "clamp(2.5rem, 6vw, 4.5rem)", margin: "0 0 24px", maxWidth: 700 }}>
-                        Trace Your<br />
-                        <em style={{ fontStyle: "italic", color: C.accent }}>Product Journey</em>
+                    <h1 style={{ ...serif, fontSize: "clamp(2.5rem, 6vw, 4.5rem)", margin: "0 0 24px", maxWidth: 720 }}>
+                        Every Pack Has<br />
+                        <em style={{ fontStyle: "italic", color: C.accent }}>A Story.</em>
                     </h1>
+
+                    <p style={{ ...body, maxWidth: 560, margin: "0 0 20px", fontSize: "1.05rem", color: C.primary }}>
+                        Every better choice creates healthier lifestyles, supports local farmers and contributes to a more resilient food system. This pack has travelled an incredible journey before reaching your hands — let&apos;s discover it together.
+                    </p>
 
                     <p style={{ ...body, maxWidth: 520, margin: "0 0 48px" }}>
                         Enter the batch code from your product packaging to reveal its complete farm-to-shelf story, verified on blockchain.
@@ -328,6 +332,55 @@ export default function LookupPage() {
                             </motion.div>
                         );
                     })}
+                </div>
+            </div>
+
+            {/* Continue The Journey */}
+            <div className="cp-section" style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>
+                <span style={{ ...meta, color: C.accent, display: "block", marginBottom: 16 }}>Continue The Journey</span>
+                <h2 style={{ ...serif, fontSize: "clamp(2rem, 4vw, 3rem)", margin: "0 0 48px", maxWidth: 640 }}>
+                    Keep supporting<br /><em style={{ fontStyle: "italic", color: C.accent }}>local farmers.</em>
+                </h2>
+                <div className="cp-features-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div style={{ background: "rgba(74,222,128,0.05)", border: `1px solid ${C.borderG}`, borderRadius: 12, padding: "36px 32px" }}>
+                        <p style={{ fontFamily: FD, fontSize: 24, color: C.white, fontWeight: 500, margin: "0 0 8px" }}>Buy More Cherry-Pick</p>
+                        <p style={{ ...body, fontSize: 14, margin: "0 0 24px" }}>Fresh, traceable snacks delivered from verified Zambian farms.</p>
+                        <a href="https://cherrypickfoods.com/shop" target="_blank" rel="noopener noreferrer" className="cp-btn cp-btn-accent"><span>Shop Now <ArrowRight style={{ width: 14, height: 14 }} /></span></a>
+                    </div>
+                    <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: 12, padding: "36px 32px" }}>
+                        <p style={{ fontFamily: FD, fontSize: 24, color: C.white, fontWeight: 500, margin: "0 0 8px" }}>Buy Direct From Farmers</p>
+                        <p style={{ ...body, fontSize: 14, margin: "0 0 24px" }}>Explore fresh produce available through the AgroChain 360 Marketplace.</p>
+                        <Link href="/marketplace" className="cp-btn"><span>Visit Marketplace <ArrowRight style={{ width: 14, height: 14 }} /></span></Link>
+                    </div>
+                </div>
+            </div>
+
+            {/* Join The Cherry-Pick Lifestyle */}
+            <div className="cp-section" style={{ position: "relative", zIndex: 10, background: C.surface, borderTop: `1px solid ${C.border}` }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px", textAlign: "center" }}>
+                    <span style={{ ...meta, color: C.accent, display: "block", marginBottom: 16 }}>The Cherry-Pick Lifestyle</span>
+                    <h2 style={{ ...serif, fontSize: "clamp(2.2rem, 5vw, 3.4rem)", margin: "0 auto 20px", maxWidth: 640 }}>
+                        Choose Better. <em style={{ fontStyle: "italic", color: C.accent }}>Live Better.</em>
+                    </h2>
+                    <p style={{ ...body, fontSize: 15, margin: "0 auto 36px", maxWidth: 560 }}>
+                        Small choices shape healthier lives. Follow us for recipes, healthy-living inspiration and stories from the farmers growing your food.
+                    </p>
+                    <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+                        {[
+                            { label: "Instagram", href: "https://instagram.com/cherrypickfoods" },
+                            { label: "Facebook", href: "https://facebook.com/cherrypickfoods" },
+                            { label: "TikTok", href: "https://tiktok.com/@cherrypickfoods" },
+                            { label: "WhatsApp", href: "https://wa.me/260000000000" },
+                            { label: "Newsletter", href: "https://cherrypickfoods.com" },
+                        ].map((s) => (
+                            <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
+                                style={{ textDecoration: "none", fontFamily: FS, fontSize: 13, fontWeight: 500, color: C.primary, background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, borderRadius: 999, padding: "12px 22px", transition: "all .3s" }}
+                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.borderG; e.currentTarget.style.color = C.accent; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.primary; }}>
+                                {s.label}
+                            </a>
+                        ))}
+                    </div>
                 </div>
             </div>
 
