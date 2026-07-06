@@ -24,6 +24,15 @@ const FD = "'Playfair Display', serif";
 const FS = "'Inter', sans-serif";
 const FM = "'Space Mono', monospace";
 
+const DEFAULT_FARM_IMG = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80";
+
+/** Pull the province/region label from a free-text address ("Chongwe, Lusaka Province" -> "Lusaka Province"). */
+function provinceOf(address?: string | null): string {
+    if (!address) return "";
+    const parts = address.split(",").map((s) => s.trim()).filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : "";
+}
+
 const meta: React.CSSProperties = { fontFamily: FM, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted };
 const serif: React.CSSProperties = { fontFamily: FD, fontWeight: 500, lineHeight: 1.1, letterSpacing: "-0.02em", color: C.white };
 const body: React.CSSProperties = { fontFamily: FS, fontSize: "1rem", lineHeight: 1.65, color: C.secondary, fontWeight: 300 };
@@ -86,11 +95,51 @@ export default function LookupPage() {
     const [batchCode, setBatchCode] = useState("");
     const [isSearching, setIsSearching] = useState(false);
     const [error, setError] = useState("");
+    const [liveFarmers, setLiveFarmers] = useState<{ name: string; crop: string; region: string; img: string }[] | null>(null);
+    const [stats, setStats] = useState<{ farmers: number; batches: number; provinces: number; verifiedPct: number } | null>(null);
     const router = useRouter();
 
     useEffect(() => {
         injectStyles();
         return () => { const el = document.getElementById("cp-lookup-v2"); if (el) el.remove(); };
+    }, []);
+
+    // Pull live platform data so the portal reflects real farmers and actual counts.
+    useEffect(() => {
+        (async () => {
+            try {
+                const { supabase } = await import("@/lib/supabase");
+                if (!supabase) return;
+                const [farmersRes, batchCountRes] = await Promise.all([
+                    supabase.from("farmers").select("name, crops, location_address, profile_photo, verified, status").order("created_at", { ascending: false }).limit(80),
+                    supabase.from("batches").select("id", { count: "exact", head: true }),
+                ]);
+                const all = farmersRes.data || [];
+                const provinces = new Set(all.map((f: any) => provinceOf(f.location_address)).filter(Boolean));
+                const verifiedCount = all.filter((f: any) => f.verified).length;
+                const verifiedPct = all.length ? Math.round((verifiedCount / all.length) * 1000) / 10 : 0;
+                setStats({
+                    farmers: all.length,
+                    batches: batchCountRes.count || 0,
+                    provinces: provinces.size,
+                    verifiedPct,
+                });
+
+                // Prefer approved/verified farmers for the public carousel.
+                const visible = all.filter((f: any) => f.verified || f.status === "approved");
+                const source = (visible.length ? visible : all).filter((f: any) => f.name);
+                if (source.length > 0) {
+                    setLiveFarmers(source.map((f: any) => ({
+                        name: f.name,
+                        crop: (Array.isArray(f.crops) && f.crops[0]) ? f.crops[0] : "Produce",
+                        region: provinceOf(f.location_address) || "Zambia",
+                        img: f.profile_photo || DEFAULT_FARM_IMG,
+                    })));
+                }
+            } catch {
+                /* keep editorial fallbacks if live data is unavailable */
+            }
+        })();
     }, []);
 
     const handleSearch = async (e: React.FormEvent) => {
@@ -124,12 +173,16 @@ export default function LookupPage() {
         { name: "Ruth Mulenga", crop: "Sweet Potato", region: "Copperbelt", img: "https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&w=600&q=80" },
     ];
 
+    // Live where available; fall back to a neutral placeholder while loading.
     const impact = [
-        { Icon: Users, num: "2,400+", label: "Farmers Empowered" },
-        { Icon: Package, num: "18,900", label: "Batches Traced" },
-        { Icon: Globe2, num: "10", label: "Provinces Covered" },
-        { Icon: CheckCircle2, num: "99.7%", label: "Verification Rate" },
+        { Icon: Users, num: stats ? stats.farmers.toLocaleString() : "—", label: "Farmers Empowered" },
+        { Icon: Package, num: stats ? stats.batches.toLocaleString() : "—", label: "Batches Traced" },
+        { Icon: Globe2, num: stats ? String(stats.provinces) : "—", label: "Provinces Covered" },
+        { Icon: CheckCircle2, num: stats && stats.farmers > 0 ? `${stats.verifiedPct}%` : "—", label: "Verification Rate" },
     ];
+
+    // Show real registered farmers when we have them, otherwise editorial samples.
+    const displayFarmers = liveFarmers && liveFarmers.length > 0 ? liveFarmers : farmers;
 
     const steps = [
         { Icon: QrCode, title: "Scan or Enter Code", desc: "Find the batch code printed on your product's packaging or scan the QR label." },
@@ -259,7 +312,7 @@ export default function LookupPage() {
 
                 <div style={{ position: "relative", overflow: "hidden", maskImage: "linear-gradient(90deg, transparent, #020503 8%, #020503 92%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, #020503 8%, #020503 92%, transparent)" }}>
                     <div className="cp-marquee">
-                        {[...farmers, ...farmers].map((f, i) => (
+                        {[...displayFarmers, ...displayFarmers].map((f, i) => (
                             <div key={i} className="cp-farmer-card">
                                 <img src={f.img} alt={f.name} loading="lazy" onError={(e) => { (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=600&q=80"; }} />
                                 <div className="cp-farmer-overlay">
