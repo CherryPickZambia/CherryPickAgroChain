@@ -38,6 +38,11 @@ const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string
 const USDC_DECIMALS = 6;
 const BASE_NETWORK = "base" as const;
 
+// Fiat withdrawal fee (Kwacha), paid by the farmer/user (NOT absorbed by the
+// platform). Sized to cover the Lenco payout fee (~K11) and leave the platform
+// a small margin (~K4): K11 (Lenco) + K4 (platform) = K15.
+const WITHDRAWAL_FEE_ZMW = 15;
+
 const ERC20_TRANSFER_ABI = [
   {
     name: "transfer",
@@ -408,8 +413,15 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
     const paymentType = payment.payment_type || payment.type;
 
     if (paymentType === 'milestone') return 'Milestone Payment';
-    if (paymentType === 'platform_fee') return 'Verification Fee';
+    if (paymentType === 'platform_fee') {
+      // Withdrawal fees and verifier fees share the 'platform_fee' type; the
+      // transaction-hash prefix (FEE-WD-/FEE-BANK-) marks a withdrawal fee.
+      const hash = payment.transaction_hash || '';
+      if (/^FEE-(WD|BANK)-/i.test(hash)) return 'Withdrawal Fee';
+      return 'Verification Fee';
+    }
     if (paymentType === 'refund') return 'Refund';
+    if (paymentType === 'adjustment') return 'Balance Correction';
 
     const source = getFundingSource(payment);
     const suffix = source ? ` · ${source}` : '';
@@ -469,12 +481,13 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
 
       } else if (withdrawMethod === 'mobile-money') {
         // ── Fiat: Mobile Money via Lenco ──
-        const WITHDRAW_FEE = 8;
+        const WITHDRAW_FEE = WITHDRAWAL_FEE_ZMW;
         if (amount > fiatBalance) { toast.error('Insufficient Kwacha balance'); setWithdrawing(false); return; }
         if (amount <= WITHDRAW_FEE) { toast.error(`Minimum withdrawal must be more than K${WITHDRAW_FEE}`); setWithdrawing(false); return; }
         if (!momoPhone) { toast.error('Please enter a phone number'); setWithdrawing(false); return; }
 
         const netAmount = amount - WITHDRAW_FEE;
+        const feeRef = `FEE-WD-${Date.now()}`;
         const result = await lencoService.sendMobileMoneyTransfer({
           amount: netAmount,
           phone: momoPhone,
@@ -485,11 +498,14 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         });
 
         if (supabase) {
+          // Ledger must net to zero: record the NET amount actually sent to the
+          // user on the withdrawal line, and the fee on a separate line. Recording
+          // the gross here (while also charging the fee) is what caused the -K8 bug.
           await supabase.from('payments').insert([
             {
               from_address: walletAddress,
               to_address: `momo-${momoPhone}`,
-              amount,
+              amount: netAmount,
               currency: 'ZMW',
               transaction_hash: result.reference || `WD-${Date.now()}`,
               status: result.success ? 'confirmed' : 'pending',
@@ -501,17 +517,17 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
               amount: WITHDRAW_FEE,
               currency: 'ZMW',
               payment_type: 'platform_fee',
-              transaction_hash: `FEE-WD-${Date.now()}`,
+              transaction_hash: feeRef,
               status: 'confirmed',
               confirmed_at: new Date().toISOString(),
             },
           ]);
         }
-        toast.success(`📱 K${netAmount} sent to ${momoPhone} (K${WITHDRAW_FEE} fee deducted)`, { duration: 5000 });
+        toast.success(`📱 K${netAmount} sent to ${momoPhone} (K${WITHDRAW_FEE} fee)`, { duration: 5000 });
 
       } else if (withdrawMethod === 'bank') {
         // ── Fiat: Bank Transfer via Lenco ──
-        const WITHDRAW_FEE = 8;
+        const WITHDRAW_FEE = WITHDRAWAL_FEE_ZMW;
         if (amount > fiatBalance) { toast.error('Insufficient Kwacha balance'); setWithdrawing(false); return; }
         if (amount <= WITHDRAW_FEE) { toast.error(`Minimum withdrawal must be more than K${WITHDRAW_FEE}`); setWithdrawing(false); return; }
         if (!bankAccountNumber || !selectedBankId) { toast.error('Please fill in bank details'); setWithdrawing(false); return; }
@@ -528,11 +544,12 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         });
 
         if (supabase) {
+          // Ledger must net to zero: withdrawal line = NET sent, fee line = fee.
           await supabase.from('payments').insert([
             {
               from_address: walletAddress,
               to_address: `bank-${bankAccountNumber}`,
-              amount,
+              amount: netAmount,
               currency: 'ZMW',
               transaction_hash: result.reference || reference,
               status: result.success ? 'confirmed' : 'pending',
@@ -551,7 +568,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           ]);
         }
         const bankName = bankList.find(b => b.id === selectedBankId)?.name || selectedBankId;
-        toast.success(`🏦 K${netAmount} sent to ${bankName} account (K${WITHDRAW_FEE} fee deducted)`, { duration: 5000 });
+        toast.success(`🏦 K${netAmount} sent to ${bankName} account (K${WITHDRAW_FEE} fee)`, { duration: 5000 });
       }
 
       setShowWithdrawModal(false);
@@ -1012,20 +1029,20 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                 )}
 
                 {/* Fee breakdown for mobile money / bank */}
-                {withdrawMethod !== 'base' && withdrawAmount && parseFloat(withdrawAmount) > 8 && (
+                {withdrawMethod !== 'base' && withdrawAmount && parseFloat(withdrawAmount) > WITHDRAWAL_FEE_ZMW && (
                   <div className="p-3 rounded-xl" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.08)' }}>
                     <div className="flex items-center justify-between text-sm" style={{ color: '#0C2D3A' }}>
                       <span>Withdrawal amount</span>
                       <span className="font-semibold">K{parseFloat(withdrawAmount).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm mt-1" style={{ color: '#DC2626' }}>
-                      <span>Service fee</span>
-                      <span className="font-semibold">- K8.00</span>
+                      <span>Transaction fee</span>
+                      <span className="font-semibold">- K{WITHDRAWAL_FEE_ZMW.toFixed(2)}</span>
                     </div>
                     <div className="border-t mt-2 pt-2" style={{ borderColor: 'rgba(12,45,58,0.1)' }}>
                       <div className="flex items-center justify-between text-sm font-bold" style={{ color: '#0C2D3A' }}>
                         <span>You receive</span>
-                        <span>K{(parseFloat(withdrawAmount) - 8).toFixed(2)}</span>
+                        <span>K{(parseFloat(withdrawAmount) - WITHDRAWAL_FEE_ZMW).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -1048,8 +1065,8 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                 <div className="p-3 bg-blue-50 rounded-lg">
                   <p className="text-xs text-blue-700 text-center">
                     {withdrawMethod === 'base' ? '💡 USDC withdrawn directly from your Base wallet. No fees.' :
-                      withdrawMethod === 'mobile-money' ? '💡 A K8 service fee applies. You will receive K' + (withdrawAmount ? (parseFloat(withdrawAmount) - 8).toFixed(2) : '0.00') + ' on your mobile money.' :
-                        '💡 A K8 service fee applies. You will receive K' + (withdrawAmount ? (parseFloat(withdrawAmount) - 8).toFixed(2) : '0.00') + ' in your bank account.'}
+                      withdrawMethod === 'mobile-money' ? '💡 A K' + WITHDRAWAL_FEE_ZMW + ' transaction fee applies. You will receive K' + (withdrawAmount ? (parseFloat(withdrawAmount) - WITHDRAWAL_FEE_ZMW).toFixed(2) : '0.00') + ' on your mobile money.' :
+                        '💡 A K' + WITHDRAWAL_FEE_ZMW + ' transaction fee applies. You will receive K' + (withdrawAmount ? (parseFloat(withdrawAmount) - WITHDRAWAL_FEE_ZMW).toFixed(2) : '0.00') + ' in your bank account.'}
                   </p>
                 </div>
               </div>

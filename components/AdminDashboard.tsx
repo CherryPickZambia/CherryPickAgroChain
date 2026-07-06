@@ -2612,7 +2612,9 @@ export default function AdminDashboard() {
             onApproveAction={async (adminNotes: string) => {
               // Approve milestone and trigger payment release
               try {
-                const farmerPayment = selectedVerification.payment_amount;
+                // Round to 2 decimals (currency) to avoid float artefacts on amounts like 500.08
+                const farmerPayment = Math.round((selectedVerification.payment_amount || 0) * 100) / 100;
+                const farmerWallet = selectedVerification.farmer_wallet;
 
                 // Resolve verifier wallet - look up from DB if not in metadata
                 let resolvedOfficerWallet = selectedVerification.officer_wallet;
@@ -2654,8 +2656,24 @@ export default function AdminDashboard() {
                   selectedVerification.total_milestones,
                   selectedVerification.custom_verifier_fee_percent
                 );
-                const verifierFee = feeBreakdown.feePerMilestone;
-                const totalRequired = farmerPayment + verifierFee;
+                const verifierFee = Math.round((feeBreakdown.feePerMilestone || 0) * 100) / 100;
+
+                // A verifier fee should ONLY be charged when a real officer actually
+                // verified this milestone. Milestones with no verification requirement
+                // (self/admin-completed) have no officer on file - officer_name stays
+                // the placeholder 'Verifier', no officer wallet, and no officer evidence.
+                // Previously we recorded a fee for these too, so they showed up as
+                // "Verification Fee PENDING" on non-key milestones.
+                const hasOfficerVerification = Boolean(
+                  resolvedOfficerWallet ||
+                  (selectedVerification.officer_name && selectedVerification.officer_name !== 'Verifier') ||
+                  selectedVerification.officer_notes ||
+                  (selectedVerification.evidence_images && selectedVerification.evidence_images.length > 0) ||
+                  (selectedVerification.officer_iot_readings && selectedVerification.officer_iot_readings.length > 0) ||
+                  selectedVerification.officer_ai_analysis
+                );
+                const effectiveVerifierFee = hasOfficerVerification ? verifierFee : 0;
+                const totalRequired = farmerPayment + effectiveVerifierFee;
 
  // PRE-APPROVAL FUND CHECK
                 // Check if the admin/platform wallet has sufficient funds before approving
@@ -2687,9 +2705,60 @@ export default function AdminDashboard() {
                 }
  // END FUND CHECK
 
-                // Update milestone status in database
                 if (supabase) {
-                  // First get existing metadata
+                  // ── STEP 1: Record the money movement FIRST ──
+                  // A milestone must never be marked paid/completed unless the payment
+                  // rows are actually written. Previously the milestone was updated to
+                  // completed BEFORE this insert, so any insert failure (e.g. a missing
+                  // farmer wallet -> NOT NULL violation on to_address) left the milestone
+                  // showing "completed" while no money moved. We now insert payments
+                  // first and abort the whole approval if the insert fails.
+                  // Uses only real DB columns: from_address, to_address, amount, currency,
+                  // payment_type, reference_id, reference_type, transaction_hash, status, confirmed_at
+                  const paymentInserts: Array<Record<string, unknown>> = [
+                    {
+                      to_address: farmerWallet || 'pending-wallet',
+                      from_address: evmAddress || 'platform',
+                      amount: farmerPayment,
+                      currency: 'ZMW',
+                      payment_type: 'milestone',
+                      reference_id: selectedVerification.milestone_id,
+                      reference_type: 'milestone',
+                      transaction_hash: `MS-${selectedVerification.milestone_id}-${Date.now()}`,
+                      status: farmerWallet ? 'confirmed' : 'pending',
+                      confirmed_at: farmerWallet ? new Date().toISOString() : null,
+                    },
+                  ];
+
+                  // Record verifier payment only when an officer actually verified.
+                  // Mark as confirmed if wallet exists, otherwise pending so admin can resolve it later.
+                  if (effectiveVerifierFee > 0) {
+                    paymentInserts.push({
+                      to_address: resolvedOfficerWallet || 'pending-wallet',
+                      from_address: evmAddress || 'platform',
+                      amount: effectiveVerifierFee,
+                      currency: 'ZMW',
+                      payment_type: 'platform_fee',
+                      reference_id: selectedVerification.milestone_id,
+                      reference_type: 'milestone',
+                      transaction_hash: resolvedOfficerWallet
+                        ? `VF-${selectedVerification.milestone_id}-${Date.now()}`
+                        : `VF-PENDING-${selectedVerification.milestone_id}-${Date.now()}`,
+                      status: resolvedOfficerWallet ? 'confirmed' : 'pending',
+                      confirmed_at: resolvedOfficerWallet ? new Date().toISOString() : null,
+                    });
+                  }
+
+                  const { error: paymentError } = await supabase.from('payments').insert(paymentInserts);
+                  if (paymentError) {
+                    console.error('Error recording payments:', paymentError);
+                    throw new Error(
+                      `Payment could not be recorded (${paymentError.message}). The milestone was NOT approved - please try again.`
+                    );
+                  }
+                  console.log('Payments recorded successfully for farmer + verifier');
+
+                  // ── STEP 2: Mark the milestone verified / paid ──
                   const { data: existingMilestone } = await supabase
                     .from('milestones')
                     .select('metadata')
@@ -2702,15 +2771,15 @@ export default function AdminDashboard() {
                     .from('milestones')
                     .update({
                       status: 'verified',
-                      payment_status: 'completed',
+                      payment_status: farmerWallet ? 'completed' : 'pending',
                       verified_at: new Date().toISOString(),
                       metadata: {
                         ...existingMetadata,
                         admin_notes: adminNotes,
                         approved_at: new Date().toISOString(),
                         farmer_payment_zmw: farmerPayment,
-                        verifier_fee_zmw: verifierFee,
-                        verifier_fee_percent: feeBreakdown.feePerMilestonePercent,
+                        verifier_fee_zmw: effectiveVerifierFee,
+                        verifier_fee_percent: hasOfficerVerification ? feeBreakdown.feePerMilestonePercent : 0,
                         total_verifier_fee_percent: feeBreakdown.totalFeePercent,
                       },
                     })
@@ -2723,6 +2792,7 @@ export default function AdminDashboard() {
 
                   console.log('Milestone updated successfully:', selectedVerification.milestone_id);
 
+                  // ── STEP 3: Contract completion + traceability ──
                   // Check if this was the last milestone - if so, mark contract as completed
                   const { data: contractMilestones } = await supabase
                     .from('milestones')
@@ -2805,58 +2875,28 @@ export default function AdminDashboard() {
                     // Don't fail the whole approval if traceability logging fails
                   }
  // END TRACEABILITY LOGGING
-
-                  // Record payments in database for dashboard display
-                  // Uses only real DB columns: from_address, to_address, amount, currency, payment_type, reference_id, reference_type, transaction_hash, status, confirmed_at
-                  const paymentInserts: Array<Record<string, unknown>> = [
-                    {
-                      to_address: selectedVerification.farmer_wallet,
-                      from_address: evmAddress || 'platform',
-                      amount: farmerPayment,
-                      currency: 'ZMW',
-                      payment_type: 'milestone',
-                      reference_id: selectedVerification.milestone_id,
-                      reference_type: 'milestone',
-                      transaction_hash: `MS-${selectedVerification.milestone_id}-${Date.now()}`,
-                      status: 'confirmed',
-                      confirmed_at: new Date().toISOString(),
-                    },
-                  ];
-
-                  // Always record verifier payment so the fee is never silently skipped.
-                  // Mark as confirmed if wallet exists, otherwise pending so admin can resolve it later.
-                  if (verifierFee > 0) {
-                    paymentInserts.push({
-                      to_address: resolvedOfficerWallet || 'pending-wallet',
-                      from_address: evmAddress || 'platform',
-                      amount: verifierFee,
-                      currency: 'ZMW',
-                      payment_type: 'platform_fee',
-                      reference_id: selectedVerification.milestone_id,
-                      reference_type: 'milestone',
-                      transaction_hash: resolvedOfficerWallet
-                        ? `VF-${selectedVerification.milestone_id}-${Date.now()}`
-                        : `VF-PENDING-${selectedVerification.milestone_id}-${Date.now()}`,
-                      status: resolvedOfficerWallet ? 'confirmed' : 'pending',
-                      confirmed_at: resolvedOfficerWallet ? new Date().toISOString() : null,
-                    });
-                  }
-
-                  const { error: paymentError } = await supabase.from('payments').insert(paymentInserts);
-                  if (paymentError) {
-                    console.error('Error recording payments:', paymentError);
-                  } else {
-                    console.log('Payments recorded successfully for farmer + verifier');
-                  }
                 }
 
-                // Show success with payment details
-                toast.success(
-                  `✅ Milestone Approved!\n` +
-                  `💰 Farmer: K${farmerPayment.toLocaleString(undefined, { minimumFractionDigits: 2 })} → ${selectedVerification.farmer_name}\n` +
-                  `🔍 Verifier: K${verifierFee.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${feeBreakdown.feePerMilestonePercent.toFixed(2)}%) → ${selectedVerification.officer_name}`,
-                  { duration: 5000 }
-                );
+                // Show success with payment details. If the farmer had no wallet on
+                // file the payment was queued as pending rather than sent, so make
+                // that explicit instead of implying money moved.
+                if (farmerWallet) {
+                  const verifierLine = effectiveVerifierFee > 0
+                    ? `\n🔍 Verifier: K${effectiveVerifierFee.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${feeBreakdown.feePerMilestonePercent.toFixed(2)}%) → ${selectedVerification.officer_name}`
+                    : '';
+                  toast.success(
+                    `✅ Milestone Approved!\n` +
+                    `💰 Farmer: K${farmerPayment.toLocaleString(undefined, { minimumFractionDigits: 2 })} → ${selectedVerification.farmer_name}` +
+                    verifierLine,
+                    { duration: 5000 }
+                  );
+                } else {
+                  toast(
+                    `⚠️ Milestone approved, but ${selectedVerification.farmer_name} has no wallet on file.\n` +
+                    `K${farmerPayment.toLocaleString(undefined, { minimumFractionDigits: 2 })} is queued as PENDING - set the farmer's wallet to release it.`,
+                    { duration: 7000, icon: '⚠️' }
+                  );
+                }
 
                 // Remove from pending list
                 setPendingVerifications(prev => prev.filter(v => v.id !== selectedVerification.id));
@@ -2865,7 +2905,7 @@ export default function AdminDashboard() {
                 setSelectedVerification(null);
               } catch (error: any) { // Keep any for logging if preferred, or unknown
                 console.error('Approval error:', error);
-                toast.error('Failed to process approval');
+                toast.error(error?.message || 'Failed to process approval', { duration: 6000 });
                 throw error;
               }
             }}
