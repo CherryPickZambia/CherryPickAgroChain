@@ -29,15 +29,15 @@ SELECT
   f.from_address                AS to_address,
   f.amount                      AS amount,
   f.currency                    AS currency,
-  'adjustment'                  AS payment_type,
-  'ADJ-' || f.transaction_hash  AS transaction_hash,
-  'confirmed'                   AS status,
-  NOW()                         AS confirmed_at
+  'adjustment'                       AS payment_type,
+  concat('ADJ-', f.transaction_hash) AS transaction_hash,
+  'confirmed'                        AS status,
+  NOW()                              AS confirmed_at
 FROM payments f
 WHERE f.payment_type = 'platform_fee'
   AND f.transaction_hash ~* '^FEE-(WD|BANK)-'
   AND NOT EXISTS (
-    SELECT 1 FROM payments a WHERE a.transaction_hash = 'ADJ-' || f.transaction_hash
+    SELECT 1 FROM payments a WHERE a.transaction_hash = concat('ADJ-', f.transaction_hash)
   );
 
 DO $$ BEGIN RAISE NOTICE 'Withdrawal fee double-count correction applied.'; END $$;
