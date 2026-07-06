@@ -204,7 +204,7 @@ export default function FarmerBiddingPanel({ farmerId, isPending }: FarmerBiddin
                                     <div className="mt-3 flex items-start gap-2 text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 p-3 rounded-lg">
                                         <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-emerald-600" />
                                         <span>
-                                            Bid accepted! A contract with a <strong>Delivery milestone</strong> has been created in your <strong>Contracts</strong> tab. Deliver the produce and log the delivery there — your payment is released once delivery is verified.
+                                            Bid accepted! A contract with a <strong>Delivery milestone</strong> has been created in your <strong>Contracts</strong> tab. Deliver the produce and log the delivery there - your payment is released once delivery is verified.
                                         </span>
                                     </div>
                                 )}

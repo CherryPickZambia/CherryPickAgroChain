@@ -78,7 +78,7 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
         })
         .eq('id', milestone.id);
 
-      // --- TRACEABILITY LOGGING ---
+ // TRACEABILITY LOGGING
       try {
         const { data: batchData } = await supabase
           .from('batches')
@@ -120,7 +120,7 @@ export default function MilestoneCard({ milestone, contractId, canSubmit, isNext
       } catch (traceError) {
         console.error("Error logging traceability events:", traceError);
       }
-      // --- END TRACEABILITY LOGGING ---
+ // END TRACEABILITY LOGGING
 
       // If there's a key milestone, create a verification request
       if (hasKeyMilestone && location) {

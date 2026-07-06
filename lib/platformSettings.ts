@@ -45,7 +45,7 @@ export async function loadPlatformSettings(): Promise<PlatformSettings> {
       }
     }
   } catch {
-    /* table may not exist yet — fall through */
+    /* table may not exist yet - fall through */
   }
   try {
     if (typeof window !== "undefined") {

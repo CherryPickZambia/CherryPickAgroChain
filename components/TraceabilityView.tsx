@@ -375,7 +375,7 @@ export default function TraceabilityView({
 
         <div style={{ height: 16 }} />
 
-        {/* SECTION 2 — YOUR PRODUCT */}
+        {/* SECTION 2 - YOUR PRODUCT */}
         <div id="cp-product" style={{ position: "relative", top: -80 }} />
         <FadeIn delay={0.05}>
           <div style={{ margin: "8px 16px 24px", background: "rgba(255,255,255,0.04)", borderRadius: 24, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -409,7 +409,7 @@ export default function TraceabilityView({
           </div>
         </FadeIn>
 
-        {/* SECTION 3 — MEET YOUR FARMER */}
+        {/* SECTION 3 - MEET YOUR FARMER */}
         <FadeIn delay={0.1}>
           <div style={{ margin: "0 16px 24px", background: "rgba(255,255,255,0.04)", borderRadius: 24, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
             <div style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "12px 20px" }}>
@@ -590,7 +590,7 @@ export default function TraceabilityView({
                     </div>
                   </div>
                 ))}
-                {/* You — the final step of the journey */}
+                {/* You - the final step of the journey */}
                 <div style={{ position: "relative", marginTop: 24 }}>
                   <div style={{ position: "absolute", left: -25, top: 2, width: 16, height: 16, borderRadius: "50%", background: LIME, border: `2px solid ${LIME}`, zIndex: 2 }} />
                   <div style={{ paddingLeft: 10 }}>
@@ -606,7 +606,7 @@ export default function TraceabilityView({
           </div>
         </FadeIn>
 
-        {/* SECTION 5 — BEHIND THE SCENES */}
+        {/* SECTION 5 - BEHIND THE SCENES */}
         {(galleryPhotos.length > 0 || galleryVideos.length > 0) && (
           <FadeIn delay={0.1}>
             <div style={{ margin: "0 16px 24px", background: "rgba(255,255,255,0.04)", borderRadius: 24, padding: "24px 20px", boxShadow: "0 4px 20px rgba(0,0,0,0.15)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
@@ -615,7 +615,7 @@ export default function TraceabilityView({
                 <div style={{ height: 1, flex: 1, background: "rgba(255,255,255,0.06)" }} />
               </div>
               <p style={{ color: "#9aa89d", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px", fontFamily: "'Inter', sans-serif" }}>
-                Authentic moments from the farm, drying, processing and packaging — captured along the way.
+                Authentic moments from the farm, drying, processing and packaging - captured along the way.
               </p>
               {galleryVideos.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 12 }}>
@@ -635,7 +635,7 @@ export default function TraceabilityView({
           </FadeIn>
         )}
 
-        {/* SECTION 6 — YOUR IMPACT (live counters) */}
+        {/* SECTION 6 - YOUR IMPACT (live counters) */}
         <FadeIn delay={0.1}>
           <div style={{ margin: "0 16px 24px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
@@ -693,7 +693,7 @@ export default function TraceabilityView({
           </FadeIn>
         )}
 
-        {/* SECTION 7 — CONTINUE THE JOURNEY */}
+        {/* SECTION 7 - CONTINUE THE JOURNEY */}
         <FadeIn delay={0.1}>
           <div style={{ margin: "0 16px 24px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
@@ -715,7 +715,7 @@ export default function TraceabilityView({
           </div>
         </FadeIn>
 
-        {/* SECTION 8 — JOIN THE CHERRY-PICK LIFESTYLE */}
+        {/* SECTION 8 - JOIN THE CHERRY-PICK LIFESTYLE */}
         <FadeIn delay={0.1}>
           <div style={{ margin: "0 16px 24px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 24, padding: 24, textAlign: "center" }}>
             <p style={{ color: "#4ade80", fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 3, textTransform: "uppercase", fontWeight: 700, margin: "0 0 10px" }}>The Cherry-Pick Lifestyle</p>
@@ -739,12 +739,12 @@ export default function TraceabilityView({
           </div>
         </FadeIn>
 
-        {/* SECTION 9 — HELP US IMPROVE */}
+        {/* SECTION 9 - HELP US IMPROVE */}
         <FadeIn delay={0.1}>
           <div style={{ margin: "0 16px 32px", background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.15)", borderRadius: 20, padding: 22, textAlign: "center" }}>
             <p style={{ color: "#9aa89d", fontSize: 11, fontFamily: "'Space Mono', monospace", letterSpacing: 2, textTransform: "uppercase", margin: "0 0 6px" }}>Help Us Improve</p>
             <p style={{ color: "#cdd8cf", fontSize: 13, lineHeight: 1.6, margin: "0 0 16px", fontFamily: "'Inter', sans-serif" }}>
-              Something not right with this pack? Let us know — your report is linked directly to this batch for a fast investigation.
+              Something not right with this pack? Let us know - your report is linked directly to this batch for a fast investigation.
             </p>
             <button
               onClick={() => setComplaintOpen(true)}

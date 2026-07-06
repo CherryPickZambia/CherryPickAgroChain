@@ -97,6 +97,8 @@ export default function LookupPage() {
     const [error, setError] = useState("");
     const [liveFarmers, setLiveFarmers] = useState<{ name: string; crop: string; region: string; img: string }[] | null>(null);
     const [stats, setStats] = useState<{ farmers: number; batches: number; provinces: number; verifiedPct: number } | null>(null);
+    const [gallery, setGallery] = useState<string[]>([]);
+    const [galleryVideos, setGalleryVideos] = useState<string[]>([]);
     const router = useRouter();
 
     useEffect(() => {
@@ -110,9 +112,11 @@ export default function LookupPage() {
             try {
                 const { supabase } = await import("@/lib/supabase");
                 if (!supabase) return;
-                const [farmersRes, batchCountRes] = await Promise.all([
+                const [farmersRes, batchCountRes, eventsRes, batchMetaRes] = await Promise.all([
                     supabase.from("farmers").select("name, crops, location_address, profile_photo, verified, status").order("created_at", { ascending: false }).limit(80),
                     supabase.from("batches").select("id", { count: "exact", head: true }),
+                    supabase.from("traceability_events").select("photos").not("photos", "is", null).order("created_at", { ascending: false }).limit(80),
+                    supabase.from("batches").select("ipfs_metadata").order("created_at", { ascending: false }).limit(40),
                 ]);
                 const all = farmersRes.data || [];
                 const provinces = new Set(all.map((f: any) => provinceOf(f.location_address)).filter(Boolean));
@@ -136,6 +140,25 @@ export default function LookupPage() {
                         img: f.profile_photo || DEFAULT_FARM_IMG,
                     })));
                 }
+
+                // Behind-the-scenes media: authentic photos/videos captured across
+                // real batches (farmer logs, processing, packaging) + curated imagery.
+                const photos: string[] = [];
+                const videos: string[] = [];
+                (eventsRes.data || []).forEach((e: any) => {
+                    if (Array.isArray(e.photos)) e.photos.forEach((p: any) => { if (typeof p === "string" && p) photos.push(p); });
+                });
+                (batchMetaRes.data || []).forEach((b: any) => {
+                    try {
+                        const m = JSON.parse(b.ipfs_metadata || "{}");
+                        if (typeof m.batch_image === "string") photos.push(m.batch_image);
+                        if (typeof m.productImage === "string") photos.push(m.productImage);
+                        if (Array.isArray(m.gallery)) m.gallery.forEach((g: any) => { if (typeof g === "string") photos.push(g); });
+                        if (Array.isArray(m.videos)) m.videos.forEach((v: any) => { if (typeof v === "string") videos.push(v); });
+                    } catch { /* ignore unparseable metadata */ }
+                });
+                setGallery(Array.from(new Set(photos)).slice(0, 12));
+                setGalleryVideos(Array.from(new Set(videos)).slice(0, 3));
             } catch {
                 /* keep editorial fallbacks if live data is unavailable */
             }
@@ -175,10 +198,10 @@ export default function LookupPage() {
 
     // Live where available; fall back to a neutral placeholder while loading.
     const impact = [
-        { Icon: Users, num: stats ? stats.farmers.toLocaleString() : "—", label: "Farmers Empowered" },
-        { Icon: Package, num: stats ? stats.batches.toLocaleString() : "—", label: "Batches Traced" },
-        { Icon: Globe2, num: stats ? String(stats.provinces) : "—", label: "Provinces Covered" },
-        { Icon: CheckCircle2, num: stats && stats.farmers > 0 ? `${stats.verifiedPct}%` : "—", label: "Verification Rate" },
+        { Icon: Users, num: stats ? stats.farmers.toLocaleString() : "-", label: "Farmers Empowered" },
+        { Icon: Package, num: stats ? stats.batches.toLocaleString() : "-", label: "Batches Traced" },
+        { Icon: Globe2, num: stats ? String(stats.provinces) : "-", label: "Provinces Covered" },
+        { Icon: CheckCircle2, num: stats && stats.farmers > 0 ? `${stats.verifiedPct}%` : "-", label: "Verification Rate" },
     ];
 
     // Show real registered farmers when we have them, otherwise editorial samples.
@@ -219,7 +242,7 @@ export default function LookupPage() {
                     </h1>
 
                     <p style={{ ...body, maxWidth: 560, margin: "0 0 20px", fontSize: "1.05rem", color: C.primary }}>
-                        Every better choice creates healthier lifestyles, supports local farmers and contributes to a more resilient food system. This pack has travelled an incredible journey before reaching your hands — let&apos;s discover it together.
+                        Every better choice creates healthier lifestyles, supports local farmers and contributes to a more resilient food system. This pack has travelled an incredible journey before reaching your hands - let&apos;s discover it together.
                     </p>
 
                     <p style={{ ...body, maxWidth: 520, margin: "0 0 48px" }}>
@@ -332,6 +355,35 @@ export default function LookupPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Behind The Scenes */}
+            {(gallery.length > 0 || galleryVideos.length > 0) && (
+                <div className="cp-section" style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>
+                    <span style={{ ...meta, color: C.accent, display: "block", marginBottom: 16 }}>Behind The Scenes</span>
+                    <h2 style={{ ...serif, fontSize: "clamp(2rem, 4vw, 3rem)", margin: "0 0 20px", maxWidth: 640 }}>
+                        Real moments from<br /><em style={{ fontStyle: "italic", color: C.accent }}>farm to pack.</em>
+                    </h2>
+                    <p style={{ ...body, fontSize: 14, maxWidth: 520, margin: "0 0 40px" }}>
+                        Authentic photos and video captured across our farms, drying, processing and packaging - straight from the people growing your food.
+                    </p>
+                    {galleryVideos.length > 0 && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginBottom: 12 }}>
+                            {galleryVideos.map((v, i) => (
+                                <video key={i} src={v} controls playsInline style={{ width: "100%", borderRadius: 12, border: `1px solid ${C.border}`, background: "#000" }} />
+                            ))}
+                        </div>
+                    )}
+                    {gallery.length > 0 && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10 }}>
+                            {gallery.map((p, i) => (
+                                <img key={i} src={p} alt="Behind the scenes" loading="lazy"
+                                    style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: 12, border: `1px solid ${C.border}` }}
+                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Our Impact */}
             <div className="cp-section" style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "80px 32px 40px" }}>

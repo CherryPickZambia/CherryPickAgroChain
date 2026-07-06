@@ -1,4 +1,4 @@
-/** ARKTOS dashboard design tokens — shared across role dashboards */
+/** ARKTOS dashboard design tokens - shared across role dashboards */
 
 export const D = {
   deep: "#0C2D3A",

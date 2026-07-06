@@ -153,7 +153,7 @@ export default function LandingPage() {
   return (
     <div className="cp-landing" style={{ background: C.deep, minHeight: "100vh" }}>
 
-      {/* ══════ FIXED NAV (Sentient style — mix-blend-mode difference) ══════ */}
+      {/* ══════ FIXED NAV (Sentient style - mix-blend-mode difference) ══════ */}
       <nav style={{ position: "fixed", top: 0, left: 0, width: "100%", padding: "2rem 5vw", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 100, mixBlendMode: "difference" }}>
         <Link href="/" style={{ textDecoration: "none" }}>
           <img src="/logo-new.png" alt="AgroChain 360" style={{ height: 36, width: "auto", objectFit: "contain" }} />
@@ -170,7 +170,7 @@ export default function LandingPage() {
 
       {/* ══════ HERO (Sentient immersive + Nourish accent bar) ══════ */}
       <header ref={heroRef} style={{ position: "relative", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        {/* Background — image or looping hero video */}
+        {/* Background - image or looping hero video */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
           {content.hero.mediaType === "video" && content.hero.videoUrl ? (
             <video

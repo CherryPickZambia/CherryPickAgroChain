@@ -19,11 +19,11 @@ export async function POST(req: NextRequest) {
         const signature = req.headers.get("x-cb-signature");
         const rawBody = await req.text();
 
-        // Signature verification is MANDATORY — this webhook marks contracts as
+        // Signature verification is MANDATORY - this webhook marks contracts as
         // funded/active, so it must never be processed unverified.
         const secret = process.env.BASE_PAY_WEBHOOK_SECRET;
         if (!secret) {
-            console.error("BASE_PAY_WEBHOOK_SECRET is not configured — rejecting webhook.");
+            console.error("BASE_PAY_WEBHOOK_SECRET is not configured - rejecting webhook.");
             return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
         }
         if (!signature) {

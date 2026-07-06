@@ -1,4 +1,4 @@
--- Landing page CMS — run on your Supabase project
+-- Landing page CMS - run on your Supabase project
 CREATE TABLE IF NOT EXISTS landing_page_content (
   id TEXT PRIMARY KEY DEFAULT 'main',
   content JSONB NOT NULL DEFAULT '{}'::jsonb,

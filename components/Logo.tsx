@@ -8,7 +8,7 @@ interface LogoProps {
 }
 
 /**
- * Cherry Pick brand logo. Single source of truth — swap LOGO_SRC here to
+ * Cherry Pick brand logo. Single source of truth - swap LOGO_SRC here to
  * change the logo platform-wide.
  */
 export const LOGO_SRC = "/logo-new.png";

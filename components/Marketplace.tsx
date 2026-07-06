@@ -201,7 +201,7 @@ export default function Marketplace() {
   const calculateTotal = () => cart.reduce((sum, item) => sum + item.listing.pricePerKg * item.qty, 0);
 
   // The amount actually charged at checkout. In auction-winner mode the cart is
-  // empty, so we must charge the winning bid (price × quantity) — previously
+  // empty, so we must charge the winning bid (price × quantity) - previously
   // calculateTotal() returned 0 and buyers were charged ZK 0 for auction wins.
   const getCheckoutAmount = () => {
     if (auctionWinnerMode && auctionToPay) {
@@ -257,7 +257,7 @@ export default function Marketplace() {
           const isConfirmed = momoStatus === "success" || momoStatus === "successful" || result.success === true;
           const isPending = momoStatus === "pending" || momoStatus === "processing";
           // Record the order for pending payments too, but do NOT mark it paid
-          // until the provider confirms — pending is not success.
+          // until the provider confirms - pending is not success.
           success = isConfirmed || isPending;
           paymentConfirmed = isConfirmed;
           txHash = result.reference || result.id || `MP-${Date.now()}`;
@@ -323,7 +323,7 @@ export default function Marketplace() {
           }
         }
         setCart([]); setCheckoutStep("success");
-        toast.success(paymentConfirmed ? "Payment successful!" : "Order placed — awaiting payment confirmation.");
+        toast.success(paymentConfirmed ? "Payment successful!" : "Order placed - awaiting payment confirmation.");
       } else { toast.error("Payment failed. Please try again."); }
     } catch (error: any) {
       toast.error(error.message || "Unknown error");
@@ -760,7 +760,7 @@ export default function Marketplace() {
       {/* ═══ MAIN CONTENT ═══ */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-7">
 
-        {/* Hero Banner — ARKTOS */}
+        {/* Hero Banner - ARKTOS */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-3xl relative overflow-hidden" style={{ background: '#0C2D3A' }}>
           <div className="absolute inset-0" style={{ pointerEvents: 'none' }}>
@@ -795,7 +795,7 @@ export default function Marketplace() {
           </div>
         </motion.div>
 
-        {/* Tabs — ARKTOS */}
+        {/* Tabs - ARKTOS */}
         <div className="flex items-center gap-1 p-1 rounded-2xl w-fit" style={{ background: 'rgba(12,45,58,0.05)', border: '1px solid rgba(12,45,58,0.08)' }}>
           {[
             { id: "browse", label: "Browse Products" },

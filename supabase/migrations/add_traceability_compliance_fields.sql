@@ -1,5 +1,5 @@
 -- ============================================================
--- AgroChain 360 — Traceability Compliance Fields
+-- AgroChain 360 - Traceability Compliance Fields
 -- Standards: ISO 22005, ISO 22000/HACCP, GLOBALG.A.P., GMP
 -- ============================================================
 

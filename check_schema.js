@@ -13,7 +13,7 @@ async function checkSchema() {
     const tables = ['supply_demands', 'farmer_bids', 'growth_activities', 'farmers'];
 
     for (const table of tables) {
-        console.log(`--- Checking table: ${table} ---`);
+        console.log(`Checking table: ${table}`);
         const { data, error } = await supabase
             .from(table)
             .select('*')

@@ -165,7 +165,7 @@ async function main() {
   }
 
   if (payments.length) {
-    lines.push('-- Platform wallet ledger (optional — restores admin K/USDC balance in app)');
+    lines.push('-- Platform wallet ledger (optional - restores admin K/USDC balance in app)');
     lines.push('-- Skip this section if you only need admin login access.');
     for (const payment of payments) {
       const cols = [

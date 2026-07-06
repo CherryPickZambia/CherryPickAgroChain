@@ -15,7 +15,7 @@ export default function UniversalQRCode({
     showDownload = true,
     className = ""
 }: UniversalQRCodeProps) {
-    // Always encode the production domain — not window.location (avoids Vercel URLs on printed QR)
+    // Always encode the production domain - not window.location (avoids Vercel URLs on printed QR)
     const lookupUrl = publicLookupUrl();
     const lookupLabel = `${PUBLIC_SITE_URL.replace(/^https?:\/\//, '')}/lookup`;
 

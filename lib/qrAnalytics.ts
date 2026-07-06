@@ -131,7 +131,7 @@ export async function getQrAnalytics(): Promise<QrAnalyticsSummary> {
     let scansLast7Days = 0;
 
     data.forEach((r: any) => {
-      const code = r.batch_code || "—";
+      const code = r.batch_code || "-";
       batchCounts[code] = (batchCounts[code] || 0) + 1;
       const dev = r.device_type || "Unknown";
       deviceCounts[dev] = (deviceCounts[dev] || 0) + 1;

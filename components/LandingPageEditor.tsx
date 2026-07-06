@@ -175,10 +175,10 @@ function HeroMediaField({
 
       if (data.mediaType === "video") {
         onChange({ ...hero, mediaType: "video", videoUrl: data.url });
-        toast.success("Hero video uploaded — click Save changes");
+        toast.success("Hero video uploaded - click Save changes");
       } else {
         onChange({ ...hero, mediaType: "image", imageUrl: data.url });
-        toast.success("Hero image uploaded — click Save changes");
+        toast.success("Hero image uploaded - click Save changes");
       }
     } catch (error) {
       const sniffed = await resolveUploadMediaType(file, intent);
@@ -192,7 +192,7 @@ function HeroMediaField({
           /* fall through */
         }
       }
-      toast.error(error instanceof Error ? error.message : "Upload failed — try pasting a direct MP4 URL");
+      toast.error(error instanceof Error ? error.message : "Upload failed - try pasting a direct MP4 URL");
     } finally {
       setUploading(false);
     }
@@ -208,7 +208,7 @@ function HeroMediaField({
 
     if (sniffed === "image") {
       if (hero.mediaType === "video") {
-        toast.error("That is an image. Use “Choose hero video file” for MP4/MOV — poster upload is for JPG/PNG only.");
+        toast.error("That is an image. Use “Choose hero video file” for MP4/MOV - poster upload is for JPG/PNG only.");
         return;
       }
       await uploadMediaFile(file, "image");
@@ -288,7 +288,7 @@ function HeroMediaField({
               <ImageIcon className="h-8 w-8 opacity-40" />
             )}
             <span className="text-xs">
-              {dragOver ? "Drop file here" : `No ${hero.mediaType} yet — or drag & drop`}
+              {dragOver ? "Drop file here" : `No ${hero.mediaType} yet - or drag & drop`}
             </span>
           </div>
         )}
@@ -296,7 +296,7 @@ function HeroMediaField({
 
       {hero.mediaType === "video" ? (
         <div className="space-y-3">
-          {/* Dedicated video picker — NO accept filter (macOS blocks MP4 with image/*) */}
+          {/* Dedicated video picker - NO accept filter (macOS blocks MP4 with image/*) */}
           <input
             ref={videoInputRef}
             id="hero-video-file-input"
@@ -319,7 +319,7 @@ function HeroMediaField({
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
             Choose hero video file (MP4, MOV…)
           </label>
-          <p className="text-xs text-[#94B3C1]">Opens all files — select your .mp4 or Runway export. Or drag onto preview above.</p>
+          <p className="text-xs text-[#94B3C1]">Opens all files - select your .mp4 or Runway export. Or drag onto preview above.</p>
 
           <input
             type="text"
@@ -331,7 +331,7 @@ function HeroMediaField({
 
           <div className="rounded-xl border border-[#0C2D3A]/10 bg-[#F7F9FB] p-3">
             <span className={dc.labelSm}>Poster still (optional, images only)</span>
-            <p className="text-xs text-[#94B3C1] mt-0.5 mb-2">JPG/PNG shown while video loads — not for MP4</p>
+            <p className="text-xs text-[#94B3C1] mt-0.5 mb-2">JPG/PNG shown while video loads - not for MP4</p>
             <input
               ref={posterInputRef}
               id="hero-poster-file-input"
@@ -516,7 +516,7 @@ export default function LandingPageEditor() {
     const result = await saveLandingPageContent(content, evmAddress ?? undefined);
     setSaving(false);
     if (result.error) {
-      toast.success("Saved locally — cloud sync had an issue");
+      toast.success("Saved locally - cloud sync had an issue");
     } else {
       toast.success("Landing page saved");
     }
@@ -618,7 +618,7 @@ export default function LandingPageEditor() {
             value={content.farmers.imageUrl}
             onChange={(v) => patch("farmers", { ...content.farmers, imageUrl: v })}
             aspect="feature"
-            hint="4:5 portrait slot — image fills the frame"
+            hint="4:5 portrait slot - image fills the frame"
           />
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">

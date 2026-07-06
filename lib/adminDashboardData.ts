@@ -196,7 +196,7 @@ export async function getContractFinancials(): Promise<ContractFinancials> {
     const contractById: Record<string, { code: string; crop: string }> = {};
     let totalContractValue = 0;
     contracts.forEach((c: any) => {
-      contractById[c.id] = { code: c.contract_code || c.id?.slice(0, 8), crop: c.crop_type || "—" };
+      contractById[c.id] = { code: c.contract_code || c.id?.slice(0, 8), crop: c.crop_type || "-" };
       if (c.status !== "cancelled") totalContractValue += Number(c.total_value || 0);
     });
 
@@ -220,9 +220,9 @@ export async function getContractFinancials(): Promise<ContractFinancials> {
         if (due && due <= in30) dueNext30Days += amount;
         upcoming.push({
           id: m.id,
-          contractCode: contractById[m.contract_id]?.code || "—",
+          contractCode: contractById[m.contract_id]?.code || "-",
           milestoneName: m.name || "Milestone",
-          cropType: contractById[m.contract_id]?.crop || "—",
+          cropType: contractById[m.contract_id]?.crop || "-",
           amount,
           dueDate: m.expected_date || "",
           status,
@@ -370,8 +370,8 @@ export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
       cropType: (c.crop_type as string) || "Unknown",
       status: (c.status as string) || "pending",
       value: Number(c.total_value || 0),
-      createdAt: c.created_at ? new Date(c.created_at as string).toLocaleDateString() : "—",
-      harvestDate: "—",
+      createdAt: c.created_at ? new Date(c.created_at as string).toLocaleDateString() : "-",
+      harvestDate: "-",
       milestones: milestonesByContract[c.id as string] || [],
     });
   });
@@ -401,7 +401,7 @@ export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
       locationLng: coords.lng,
       farmSize: Number(f.farm_size_hectares ?? f.farm_size ?? 0),
       crops,
-      joined: f.created_at ? new Date(f.created_at as string).toLocaleDateString() : "—",
+      joined: f.created_at ? new Date(f.created_at as string).toLocaleDateString() : "-",
       verified: f.status === "approved",
       totalEarnings: earningsByFarmer[id] || 0,
       completedMilestones: milestoneStats[id]?.completed || 0,
@@ -464,7 +464,7 @@ export async function getRecentMarketplaceOrders(limit = 8): Promise<Marketplace
     buyer: (row.buyer_name as string) || "Buyer",
     crop: (row.crop_type as string) || row.listing?.crop_type || "Produce",
     amount: `ZK ${Number(row.total_amount || 0).toLocaleString()}`,
-    date: row.created_at ? new Date(row.created_at as string).toLocaleDateString() : "—",
+    date: row.created_at ? new Date(row.created_at as string).toLocaleDateString() : "-",
     status: (row.status as string) || "pending",
   }));
 }
@@ -516,10 +516,10 @@ export async function getRecentPayments(limit = 20): Promise<PaymentDashboardRow
     to: resolve(p.to_address as string),
     amount: `ZK ${Number(p.amount || 0).toLocaleString()}`,
     status: (p.status as string) || "pending",
-    date: p.created_at ? new Date(p.created_at as string).toLocaleDateString() : "—",
+    date: p.created_at ? new Date(p.created_at as string).toLocaleDateString() : "-",
     hash: p.transaction_hash
       ? `${(p.transaction_hash as string).slice(0, 8)}…`
-      : "—",
+      : "-",
   }));
 }
 
@@ -542,7 +542,7 @@ export async function getRecentGrowthActivities(limit = 5): Promise<GrowthActivi
       ? new Date(row.date as string).toLocaleDateString()
       : row.created_at
         ? new Date(row.created_at as string).toLocaleDateString()
-        : "—",
+        : "-",
     activityType: (row.activity_type as string) || "activity",
   }));
 }
@@ -557,7 +557,7 @@ export function computeAnalyticsGrowth(
   trend: MonthlyTrendPoint[]
 ): { farmerGrowth: string; revenueLabel: string; latestVolume: string } {
   if (trend.length < 2) {
-    return { farmerGrowth: "—", revenueLabel: "—", latestVolume: "ZK 0" };
+    return { farmerGrowth: "-", revenueLabel: "-", latestVolume: "ZK 0" };
   }
   const prev = trend[trend.length - 2].cost;
   const latest = trend[trend.length - 1].cost;

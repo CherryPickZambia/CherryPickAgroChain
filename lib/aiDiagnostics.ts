@@ -113,7 +113,7 @@ export function fileToBase64(file: File): Promise<string> {
  * compact, well-formed payload.
  *
  * This is the root-cause fix for the iOS Safari error
- * "Crop analysis failed: The string did not match the expected pattern" — that
+ * "Crop analysis failed: The string did not match the expected pattern" - that
  * error is thrown when the API receives an oversized, HEIC, or otherwise
  * malformed data URL. Re-encoding through a canvas guarantees a valid
  * image/jpeg base64 string for every supported OS / browser.

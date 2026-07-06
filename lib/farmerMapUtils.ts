@@ -90,7 +90,7 @@ export function buildFarmMapEntries(
       id: farmer.id,
       name: `${farmer.name}'s Farm`,
       farmer: farmer.name,
-      phone: farmer.phone || '—',
+      phone: farmer.phone || '-',
       location: farmer.location || 'Zambia',
       lat: farmer.locationLat,
       lng: farmer.locationLng,

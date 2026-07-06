@@ -1,5 +1,5 @@
 -- =============================================================================
--- Admin fix for L1dobbuku@gmail.com — run on NEW Supabase SQL Editor
+-- Admin fix for L1dobbuku@gmail.com - run on NEW Supabase SQL Editor
 -- Run AFTER supabase/agrochain360_new_project.sql
 -- =============================================================================
 

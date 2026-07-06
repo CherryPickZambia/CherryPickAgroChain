@@ -168,7 +168,7 @@ export default function CropDiagnostics({
             onChange={handleFileSelect}
             className="hidden"
           />
-          {/* Hidden camera input — capture="environment" forces the rear camera on
+          {/* Hidden camera input - capture="environment" forces the rear camera on
               mobile while still falling back to the file picker on desktop. */}
           <input
             ref={cameraInputRef}

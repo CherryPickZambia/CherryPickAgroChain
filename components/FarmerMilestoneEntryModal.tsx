@@ -141,7 +141,7 @@ export default function FarmerMilestoneEntryModal({
   const [currentChecklistItem, setCurrentChecklistItem] = useState("");
   const [checklistItems, setChecklistItems] = useState<string[]>([]);
 
-  // AI Diagnostics State — runs on an uploaded evidence photo (same as the officer flow)
+  // AI Diagnostics State - runs on an uploaded evidence photo (same as the officer flow)
   const [aiResult, setAiResult] = useState<AIDiagnosisResult | null>(null);
   const [selectedAiImageIndex, setSelectedAiImageIndex] = useState<number | null>(null);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
@@ -287,7 +287,7 @@ export default function FarmerMilestoneEntryModal({
 
     // Fold harvest storage details into notes so record continuity is preserved.
     const storageNote = isHarvest && (storageLocation.trim() || storageConditions.trim())
-      ? `Storage location: ${storageLocation.trim() || "—"}. Storage conditions: ${storageConditions.trim() || "—"}.`
+      ? `Storage location: ${storageLocation.trim() || "-"}. Storage conditions: ${storageConditions.trim() || "-"}.`
       : "";
     const combinedNotes = [notes.trim(), storageNote].filter(Boolean).join("\n");
 
@@ -793,7 +793,7 @@ export default function FarmerMilestoneEntryModal({
                       <Camera className="w-4 h-4" />
                       Evidence Photos {hasContract ? "(Recommended)" : "(Optional)"}
                     </label>
-                    <p className="text-[11px] text-blue-600 mb-3">Tap a photo to select it, then run AI diagnosis — the result is saved with this log for traceability.</p>
+                    <p className="text-[11px] text-blue-600 mb-3">Tap a photo to select it, then run AI diagnosis - the result is saved with this log for traceability.</p>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-2">
                       {imagePreviews.map((src, idx) => (
                         <div

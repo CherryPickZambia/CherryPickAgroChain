@@ -281,7 +281,7 @@ export async function getContractsByFarmer(farmerId: string) {
 
   if (msErr) {
     console.error('milestones fetch error:', msErr.message || msErr.code);
-    // Don't fail the whole load — return contracts with empty milestones.
+    // Don't fail the whole load - return contracts with empty milestones.
   }
 
   const milestonesByContract = new Map<string, Milestone[]>();
@@ -426,7 +426,7 @@ export async function submitMilestoneEvidence(
 
   if (milestoneError) throw milestoneError;
 
-  // --- TRACEABILITY LOGGING ---
+ // TRACEABILITY LOGGING
   try {
     const { getBatchesByContract, addTraceabilityEvent } = await import('./traceabilityService');
     const batches = await getBatchesByContract(milestoneData.contract_id);
@@ -451,7 +451,7 @@ export async function submitMilestoneEvidence(
 /**
  * Officer verifies a milestone - sets status to 'submitted' (for admin review) and stores evidence
  * This is different from submitMilestoneEvidence which is for farmer submissions.
- * The officer RECOMMENDS approval — admin gives final approval.
+ * The officer RECOMMENDS approval - admin gives final approval.
  */
 export async function officerVerifyMilestone(
   milestoneId: string,
@@ -546,7 +546,7 @@ export async function officerVerifyMilestone(
     throw milestoneError;
   }
 
-  // --- TRACEABILITY LOGGING ---
+ // TRACEABILITY LOGGING
   try {
     const { getBatchesByContract, addTraceabilityEvent } = await import('./traceabilityService');
     const batches = await getBatchesByContract(milestoneData.contract_id);

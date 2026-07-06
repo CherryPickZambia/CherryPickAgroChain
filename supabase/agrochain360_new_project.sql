@@ -1,5 +1,5 @@
 -- =============================================================================
--- AgroChain360 / Cherry Pick — Full Supabase schema for a NEW project
+-- AgroChain360 / Cherry Pick - Full Supabase schema for a NEW project
 -- =============================================================================
 -- How to use:
 --   1. Create a new Supabase project
@@ -928,7 +928,7 @@ CREATE TRIGGER trg_landing_page_content_updated_at
   BEFORE UPDATE ON landing_page_content FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ---------------------------------------------------------------------------
--- ROW LEVEL SECURITY (permissive — app uses wallet auth, not Supabase Auth)
+-- ROW LEVEL SECURITY (permissive - app uses wallet auth, not Supabase Auth)
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE

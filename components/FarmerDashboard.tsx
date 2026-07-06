@@ -213,7 +213,7 @@ export default function FarmerDashboard() {
     }
   };
 
-  // Pending farmer check — restricts traceability, batches, bidding, contracts
+  // Pending farmer check - restricts traceability, batches, bidding, contracts
   const isPending = farmerData?.status !== 'approved';
 
   const stats = {
@@ -406,7 +406,7 @@ export default function FarmerDashboard() {
       setIsEditingProfile(false);
       toast.success(
         shouldGeocode && saved.location_lat
-          ? 'Profile saved — farm location placed on the map.'
+          ? 'Profile saved - farm location placed on the map.'
           : 'Profile updated successfully!',
       );
     } catch (error: unknown) {
@@ -549,7 +549,7 @@ export default function FarmerDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dashboard-shell">
-      {/* Header — ARKTOS */}
+      {/* Header - ARKTOS */}
       <div className="mb-8">
         <div style={{ fontFamily: "'Manrope', sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>Farmer Portal v1.0</div>
         <h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "clamp(1.8rem, 4vw, 2.8rem)", lineHeight: 0.95, letterSpacing: "-0.03em", color: "#0C2D3A" }}>
@@ -896,7 +896,7 @@ export default function FarmerDashboard() {
                     </button>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Type your farm area above and save — we&apos;ll place it on the map automatically. Use Precise Pin only if you&apos;re at the farm.
+                    Type your farm area above and save - we&apos;ll place it on the map automatically. Use Precise Pin only if you&apos;re at the farm.
                   </p>
 
                   {profileForm.location_lat !== 0 && (

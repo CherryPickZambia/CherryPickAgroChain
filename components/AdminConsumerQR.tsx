@@ -142,7 +142,7 @@ export default function AdminConsumerQR() {
                       <div style={{ flex: 1, minWidth: 240 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
                           <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, color: DEEP }}>{c.issueType}</span>
-                          <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 11, color: MUTE, background: "rgba(12,45,58,0.05)", padding: "2px 10px", borderRadius: 999 }}>{c.batchCode || "—"}</span>
+                          <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 11, color: MUTE, background: "rgba(12,45,58,0.05)", padding: "2px 10px", borderRadius: 999 }}>{c.batchCode || "-"}</span>
                           {c.productName && <span style={{ fontFamily: "'Manrope',sans-serif", fontSize: 11, color: MUTE }}>{c.productName}</span>}
                         </div>
                         <p style={{ fontFamily: "'Manrope',sans-serif", fontSize: 14, color: "#334155", margin: "0 0 8px", lineHeight: 1.5 }}>{c.description}</p>

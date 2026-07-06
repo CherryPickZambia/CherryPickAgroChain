@@ -641,13 +641,13 @@ export default function AdminDashboard() {
     }
   };
 
-  // Handle creating a new job (local only — growth activities come from farmer logs)
+  // Handle creating a new job (local only - growth activities come from farmer logs)
   const handleCreateJob = (_newJob: JobData) => {
     toast.success("Job logged locally. Farm activities sync from farmer milestone logs.");
   };
 
   // Handle creating a new contract. Reload from the DB so the list reflects the
-  // real persisted row (correct id, contract_code, created date, farmer, value) —
+  // real persisted row (correct id, contract_code, created date, farmer, value) -
   // building an optimistic row here caused "contract undefined", an invalid date,
   // and a fake id that failed to open the detail modal until a manual refresh.
   const handleCreateContract = async () => {
@@ -828,7 +828,7 @@ export default function AdminDashboard() {
             <h1 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, letterSpacing: "-0.03em" }} className="text-3xl text-[#0C2D3A]">{activeMenuItem.label}</h1>
             <p style={{ fontFamily: "'Manrope', sans-serif" }} className="text-[#5A7684] mt-1 text-sm">
               {selectedView === "landing"
-                ? "Edit homepage images, copy, metrics, and farmer reviews — saved changes appear on the public site."
+                ? "Edit homepage images, copy, metrics, and farmer reviews - saved changes appear on the public site."
                 : "Manage farmers, contracts, verifications, payments, and marketplace activity from one place."}
             </p>
           </div>
@@ -1097,7 +1097,7 @@ export default function AdminDashboard() {
             </>
           )}
 
-          {/* Verifications View — ARKTOS */}
+          {/* Verifications View - ARKTOS */}
           {selectedView === "verifications" && (
             <div style={{ background: "#F7F9FB", borderRadius: 24, overflow: "hidden" }}>
               <div style={{ padding: "48px 40px 0" }}>
@@ -1193,7 +1193,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Contracts View — ARKTOS */}
+          {/* Contracts View - ARKTOS */}
           {selectedView === "contracts" && (
             <div style={{ background: "#F7F9FB", borderRadius: 24, overflow: "hidden" }}>
               <div style={{ padding: "48px 40px 0" }}>
@@ -1253,7 +1253,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Farmers View — ARKTOS */}
+          {/* Farmers View - ARKTOS */}
           {selectedView === "farmers" && (
             <div style={{ background: "#F7F9FB", borderRadius: 24, overflow: "hidden" }}>
               <div style={{ padding: "48px 40px 0" }}>
@@ -1413,7 +1413,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Buyers View — ARKTOS-inspired Brand System */}
+          {/* Buyers View - ARKTOS-inspired Brand System */}
           {selectedView === "buyers" && (() => {
             const BK = {
               lime: "#BFFF00", limeHover: "#A3D900", deep: "#0C2D3A", mid: "#2C5263",
@@ -1462,7 +1462,7 @@ export default function AdminDashboard() {
                         { label: "Total Orders", value: String(totalOrders), bg: BK.deep, color: "#fff", name: "Marketplace" },
                         { label: "Total Spent", value: `ZK ${totalSpent.toLocaleString()}`, bg: BK.stone, color: BK.deep, name: "Buyer spend" },
                         { label: "Platform Commission", value: `ZK ${platformCommission.toLocaleString()}`, bg: "#fff", color: BK.deep, name: `${settings.platformFeePercent || 0}% of spend` },
-                        { label: "Avg Order Value", value: avgOrder > 0 ? `ZK ${avgOrder.toLocaleString()}` : "—", bg: "#fff", color: BK.deep, name: "Per Transaction" },
+                        { label: "Avg Order Value", value: avgOrder > 0 ? `ZK ${avgOrder.toLocaleString()}` : "-", bg: "#fff", color: BK.deep, name: "Per Transaction" },
                       ].map((s, i) => (
                         <motion.div key={i} whileHover={{ scale: 1.02 }} transition={{ duration: 0.3 }}
                           style={{ background: s.bg, color: s.color, borderRadius: BK.rd, padding: 28, display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 200, position: "relative", overflow: "hidden", border: s.bg === "#fff" ? "1px solid rgba(0,0,0,0.05)" : "none", cursor: "default" }}>
@@ -2163,7 +2163,7 @@ export default function AdminDashboard() {
                   verifiedAt: new Date().toISOString().split('T')[0]
                 }]);
 
-                // --- TRACEABILITY LOGGING ---
+ // TRACEABILITY LOGGING
                 try {
                   const { addTraceabilityEvent, getTraceabilityByBatchCode, logMilestoneEvent } = await import('@/lib/traceabilityService');
                   const traceData = await getTraceabilityByBatchCode(processingData.batchCode);
@@ -2321,7 +2321,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Analytics View — ARKTOS */}
+          {/* Analytics View - ARKTOS */}
           {selectedView === "analytics" && (
             <div style={{ background: "#F7F9FB", borderRadius: 24, overflow: "hidden" }}>
               <div style={{ padding: "48px 40px 0" }}>
@@ -2403,7 +2403,7 @@ export default function AdminDashboard() {
                         <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid rgba(12,45,58,0.05)" }}>
                           <div>
                             <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "0.85rem", color: "#0C2D3A" }}>{o.milestoneName} · {o.cropType}</div>
-                            <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.72rem", color: "#9aa5a8" }}>{o.contractCode} • due {o.dueDate ? new Date(o.dueDate).toLocaleDateString() : "—"} • {o.status}</div>
+                            <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.72rem", color: "#9aa5a8" }}>{o.contractCode} • due {o.dueDate ? new Date(o.dueDate).toLocaleDateString() : "-"} • {o.status}</div>
                           </div>
                           <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, color: "#0C2D3A" }}>K{o.amount.toLocaleString()}</span>
                         </div>
@@ -2415,7 +2415,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Payments View — ARKTOS */}
+          {/* Payments View - ARKTOS */}
           {selectedView === "payments" && (
             <div style={{ background: "#F7F9FB", borderRadius: 24, overflow: "hidden" }}>
               <div style={{ padding: "48px 40px 0" }}>
@@ -2478,7 +2478,7 @@ export default function AdminDashboard() {
             <AdminConsumerQR />
           )}
 
-          {/* Settings View — ARKTOS */}
+          {/* Settings View - ARKTOS */}
           {selectedView === "settings" && (
             <div style={{ background: "#F7F9FB", borderRadius: 24, overflow: "hidden" }}>
               <div style={{ padding: "48px 40px 0" }}>
@@ -2657,7 +2657,7 @@ export default function AdminDashboard() {
                 const verifierFee = feeBreakdown.feePerMilestone;
                 const totalRequired = farmerPayment + verifierFee;
 
-                // --- PRE-APPROVAL FUND CHECK ---
+ // PRE-APPROVAL FUND CHECK
                 // Check if the admin/platform wallet has sufficient funds before approving
                 if (supabase && evmAddress) {
                   const { data: adminPayments } = await supabase
@@ -2685,7 +2685,7 @@ export default function AdminDashboard() {
                     return;
                   }
                 }
-                // --- END FUND CHECK ---
+ // END FUND CHECK
 
                 // Update milestone status in database
                 if (supabase) {
@@ -2747,7 +2747,7 @@ export default function AdminDashboard() {
                       toast.success('🎉 All milestones completed! Contract marked as completed.', { duration: 5000 });
                     }
 
-                    // --- NEW: Traceability Integration ---
+ // NEW: Traceability Integration
                     // Log the milestone event in traceability system
                     // This will also update the batch status (e.g., to 'at_warehouse' or 'harvested')
                     try {
@@ -2776,11 +2776,11 @@ export default function AdminDashboard() {
                       console.error('Failed to log traceability event:', traceError);
                       // Don't throw, just log. We don't want to break the main approval flow
                     }
-                    // --- END Traceability Integration ---
+ // END Traceability Integration
                   }
 
 
-                  // --- TRACEABILITY LOGGING ---
+ // TRACEABILITY LOGGING
                   try {
                     console.log('Logging milestone to traceability...');
                     const batches = await getBatchesByContract(selectedVerification.contract_id);
@@ -2804,7 +2804,7 @@ export default function AdminDashboard() {
                     console.error('Error logging traceability event:', traceError);
                     // Don't fail the whole approval if traceability logging fails
                   }
-                  // --- END TRACEABILITY LOGGING ---
+ // END TRACEABILITY LOGGING
 
                   // Record payments in database for dashboard display
                   // Uses only real DB columns: from_address, to_address, amount, currency, payment_type, reference_id, reference_type, transaction_hash, status, confirmed_at

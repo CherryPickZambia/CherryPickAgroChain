@@ -83,7 +83,7 @@ export function getStatusColor(status: string): string {
     processing: "text-sky-700 bg-sky-50",
     in_progress: "text-sky-700 bg-sky-50",
     assigned: "text-sky-700 bg-sky-50",
-    // Positive / success — brand emerald
+    // Positive / success - brand emerald
     verified: "text-emerald-700 bg-emerald-50",
     active: "text-emerald-700 bg-emerald-50",
     paid: "text-emerald-700 bg-emerald-50",

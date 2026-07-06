@@ -64,11 +64,11 @@ export default function ComplaintModal({
           if (json.url) setPhotos((p) => [...p, json.url]);
         } else {
           // Non-fatal: photo hosting may be unconfigured; allow text-only reports.
-          setError("Photo upload unavailable right now — you can still submit without photos.");
+          setError("Photo upload unavailable right now - you can still submit without photos.");
         }
       }
     } catch {
-      setError("Photo upload failed — you can still submit without photos.");
+      setError("Photo upload failed - you can still submit without photos.");
     } finally {
       setUploading(false);
     }
@@ -248,7 +248,7 @@ function Ctx({ k, v }: { k: string; v?: string }) {
   return (
     <div>
       <span style={{ color: "#5b6b5e", fontFamily: "'Space Mono', monospace", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>{k}</span>
-      <div style={{ color: "#fff", fontWeight: 600, wordBreak: "break-word" }}>{v || "—"}</div>
+      <div style={{ color: "#fff", fontWeight: 600, wordBreak: "break-word" }}>{v || "-"}</div>
     </div>
   );
 }

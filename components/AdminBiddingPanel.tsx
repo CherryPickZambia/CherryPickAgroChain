@@ -129,7 +129,7 @@ export default function AdminBiddingPanel() {
                     requiredQuantity: demand.required_quantity,
                 });
                 toast.success(
-                    `Bid accepted${farmerName ? ` for ${farmerName}` : ""} — contract created with a Delivery milestone. Payment releases once delivery is verified.`,
+                    `Bid accepted${farmerName ? ` for ${farmerName}` : ""} - contract created with a Delivery milestone. Payment releases once delivery is verified.`,
                     { duration: 6000 }
                 );
             } else {

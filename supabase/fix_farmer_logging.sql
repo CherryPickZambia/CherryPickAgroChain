@@ -1,6 +1,6 @@
 -- ============================================================
 -- Fix farmer logging issues: marketplace listings, traceability
--- events, and growth activities. Idempotent — safe to re-run.
+-- events, and growth activities. Idempotent - safe to re-run.
 -- ============================================================
 
 -- 1. growth_activities: ensure permissive activity_type CHECK and
@@ -81,7 +81,7 @@ BEGIN
     END IF;
 END $$;
 
--- 4. Performance indexes — fix Postgres statement-timeout (57014)
+-- 4. Performance indexes - fix Postgres statement-timeout (57014)
 --    on getContractsByFarmer caused by missing indexes on join columns.
 CREATE INDEX IF NOT EXISTS idx_contracts_farmer_id ON contracts(farmer_id);
 CREATE INDEX IF NOT EXISTS idx_contracts_farmer_created ON contracts(farmer_id, created_at DESC);

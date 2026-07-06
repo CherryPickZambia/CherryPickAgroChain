@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 // Lenco signs webhooks with HMAC-SHA512: x-lenco-signature = HMAC_SHA512(rawBody, key).
 // The signing key is the "Signature key" shown in the Lenco dashboard
-// (Webhooks tab) — that value is the precomputed webhook_hash_key = SHA256(API token).
+// (Webhooks tab) - that value is the precomputed webhook_hash_key = SHA256(API token).
 //
 // Set LENCO_WEBHOOK_SECRET (or LENCO_API_TOKEN) in Vercel to the dashboard
 // "Signature key". To be robust we accept EITHER the dashboard Signature key
@@ -39,10 +39,10 @@ export async function POST(req: NextRequest) {
         const rawBody = await req.text();
         const signature = req.headers.get("x-lenco-signature");
 
-        // 1. Security Verification — MANDATORY. This webhook credits user balances,
+        // 1. Security Verification - MANDATORY. This webhook credits user balances,
         // so it must never be processed without a valid signature.
         if (!LENCO_WEBHOOK_VALUE) {
-            console.error("❌ Lenco Webhook: LENCO_WEBHOOK_SECRET is not configured — rejecting.");
+            console.error("❌ Lenco Webhook: LENCO_WEBHOOK_SECRET is not configured - rejecting.");
             return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
         }
         if (!signature) {
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         try {
             payloadCandidates.push(JSON.stringify(JSON.parse(rawBody)));
         } catch {
-            // rawBody isn't valid JSON on its own — ignore the fallback.
+            // rawBody isn't valid JSON on its own - ignore the fallback.
         }
         const hashKeys = candidateHashKeys(LENCO_WEBHOOK_VALUE);
         const signatureValid = hashKeys.some((key) =>

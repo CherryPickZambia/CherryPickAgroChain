@@ -311,7 +311,7 @@ export default function BuyerDashboard() {
 
   return (
     <div className="min-h-screen dashboard-shell" style={{ background: "#F7F9FB" }}>
-      {/* Header — ARKTOS */}
+      {/* Header - ARKTOS */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
@@ -329,7 +329,7 @@ export default function BuyerDashboard() {
             </div>
           </div>
 
-          {/* Tabs — ARKTOS */}
+          {/* Tabs - ARKTOS */}
           <div className="flex space-x-1 mt-6 border-b border-gray-100">
             {[
               { id: "overview", label: "Overview", icon: TrendingUp },

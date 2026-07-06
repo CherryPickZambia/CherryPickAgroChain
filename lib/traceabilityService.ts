@@ -292,7 +292,7 @@ export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' |
 
   if (error) throw error;
 
-  // Automated Yield Prediction Logic — only when AI health score indicates a problem.
+  // Automated Yield Prediction Logic - only when AI health score indicates a problem.
   if (ai_health_score !== undefined && ai_health_score < 90 && data.batch_id) {
     const health = ai_health_score;
     const lossPercent = 100 - health;

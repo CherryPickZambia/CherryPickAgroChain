@@ -57,7 +57,7 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
       const smartAccount = currentUser?.evmSmartAccounts?.[0];
 
       if (paymentMethod === 'smart' && smartAccount) {
-        // --- SMART WALLET FLOW (Batch Transaction) ---
+ // SMART WALLET FLOW (Batch Transaction)
         console.log("Using Smart Wallet:", smartAccount);
         toast.loading("Processing with Smart Wallet...", { id: 'payment-status' });
 
@@ -108,7 +108,7 @@ export default function PaymentModal({ isOpen, onCloseAction, order, onSuccessAc
         }, 3000);
 
       } else {
-        // --- EXTERNAL WALLET FLOW (Legacy/Extension) ---
+ // EXTERNAL WALLET FLOW (Legacy/Extension)
         console.log("Using External Wallet (window.ethereum)");
         const result = await purchaseViaContract({
           to: order.farmer_address,

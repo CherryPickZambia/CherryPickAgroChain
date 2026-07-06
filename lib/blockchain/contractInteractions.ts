@@ -501,7 +501,7 @@ export const VERIFIER_FEE_FLAT_ABOVE = 150;      // K150 flat
 
 /**
  * Compute the fee a verifier earns for approving a single milestone.
- * Pure helper — no side-effects.
+ * Pure helper - no side-effects.
  */
 export function feeForMilestone(milestoneAmount: number): number {
   if (!Number.isFinite(milestoneAmount) || milestoneAmount <= 0) return 0;

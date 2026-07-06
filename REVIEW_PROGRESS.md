@@ -1,4 +1,4 @@
-# Agrochain360 Review – Fix Progress
+# Agrochain360 Review - Fix Progress
 
 ## Critical Bugs (Priority 1)
 - [ ] Contracts: undefined / invalid date / fail to load after creation

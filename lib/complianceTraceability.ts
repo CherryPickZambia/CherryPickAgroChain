@@ -1,5 +1,5 @@
 // ============================================================
-// AgroChain 360 — Compliance Traceability Service
+// AgroChain 360 - Compliance Traceability Service
 // Standards: ISO 22005, ISO 22000/HACCP, GLOBALG.A.P., GMP
 // ============================================================
 

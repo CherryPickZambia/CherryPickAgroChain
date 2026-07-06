@@ -182,7 +182,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           .filter((payment: PaymentHistory, index: number, array: PaymentHistory[]) => array.findIndex((candidate: PaymentHistory) => candidate.id === payment.id) === index)
           .sort((left: PaymentHistory, right: PaymentHistory) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
 
-        // Fiat balance counts only settled (confirmed) payments — never pending/processing
+        // Fiat balance counts only settled (confirmed) payments - never pending/processing
         const fiatTotal = mergedPayments.reduce((sum: number, payment: PaymentHistory) => {
           if (!isFiatCurrency(payment.currency) || !isSettledPaymentStatus(payment.status)) {
             return sum;
@@ -195,7 +195,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         // Recent activity shows settled AND in-flight (pending/processing) payments so
         // the depositor immediately sees their deposit with a status badge. Failed/
         // cancelled payments are hidden. Note: pending items never affect the balance
-        // above — only settled payments are summed.
+        // above - only settled payments are summed.
         setPaymentHistory(
           mergedPayments
             .filter((payment) => normalizePaymentStatus(payment.status) !== 'failed')
@@ -248,7 +248,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
         );
 
         if (externalStatus === 'confirmed' && data?.id) {
-          // Lenco confirmed — update Supabase record immediately
+          // Lenco confirmed - update Supabase record immediately
           await supabase.from('payments').update({
             status: 'confirmed',
             confirmed_at: new Date().toISOString(),
@@ -267,12 +267,12 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           return;
         }
       } catch (lencoErr) {
-        // Lenco status check failed — continue polling Supabase
+        // Lenco status check failed - continue polling Supabase
         console.warn('Lenco status check failed, will retry:', lencoErr);
       }
     }
 
-    // All polling retries exhausted — deposit is still pending.
+    // All polling retries exhausted - deposit is still pending.
     // The Lenco webhook will update the payment when the user completes PIN auth.
     // Do NOT auto-confirm; the user may have cancelled or the request may have failed.
     toast('Deposit is still processing. Please complete authorization on your phone. Your balance will update shortly.', { icon: '⏳', duration: 6000 });
@@ -619,7 +619,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
           console.log(`Lenco collection id ${result.id} mapped to reference ${transactionReference}`);
         }
 
-        toast.success(`Requested K${depositAmount} via Mobile Money. Authorize on your phone — balance updates after confirmation.`);
+        toast.success(`Requested K${depositAmount} via Mobile Money. Authorize on your phone - balance updates after confirmation.`);
         void watchPaymentConfirmation(transactionReference);
 
         setShowDepositModal(false);
@@ -1251,7 +1251,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                   </>
                 )}
 
-                {/* Bank Card — DPO hosted checkout */}
+                {/* Bank Card - DPO hosted checkout */}
                 {depositMethod === 'deposit-card' && (
                   <>
                     <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-900">
@@ -1291,7 +1291,7 @@ export default function WalletBalance({ walletAddress, userRole, userEmail, user
                     {depositing ? (
                       <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
                     ) : depositMethod === 'deposit-card' ? (
-                      <><CreditCard className="h-5 w-5" /> Proceed to DPO Pay — K{depositAmount || '0.00'}</>
+                      <><CreditCard className="h-5 w-5" /> Proceed to DPO Pay - K{depositAmount || '0.00'}</>
                     ) : (
                       <><ArrowDownLeft className="h-5 w-5" /> Deposit K{depositAmount || '0.00'}</>
                     )}

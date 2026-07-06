@@ -81,7 +81,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
     const [fertilizerType, setFertilizerType] = useState("organic");
     const [npkRatio, setNpkRatio] = useState("");
 
-    // Quantity Fields — default unit inherits from the parent contract/batch when provided
+    // Quantity Fields - default unit inherits from the parent contract/batch when provided
     const [quantity, setQuantity] = useState("");
     const [unit, setUnit] = useState<string>(defaultUnit || "kg");
 
@@ -95,7 +95,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
     const [currentChecklistItem, setCurrentChecklistItem] = useState("");
     const [checklistItems, setChecklistItems] = useState<string[]>([]);
 
-    // AI Diagnostics — runs on a selected uploaded evidence photo (same as the officer flow)
+    // AI Diagnostics - runs on a selected uploaded evidence photo (same as the officer flow)
     const [aiResult, setAiResult] = useState<AIDiagnosisResult | null>(null);
     const [selectedAiImageIndex, setSelectedAiImageIndex] = useState<number | null>(null);
     const [aiAnalyzing, setAiAnalyzing] = useState(false);
@@ -567,7 +567,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
                                     <label className="text-xs font-bold text-blue-800 uppercase tracking-wider flex items-center gap-2">
                                         <Camera className="w-4 h-4" /> Evidence Photos
                                     </label>
-                                    <p className="text-[11px] text-blue-600 mt-1">Tap a photo to select it, then run AI diagnosis — the result is saved with this event for traceability.</p>
+                                    <p className="text-[11px] text-blue-600 mt-1">Tap a photo to select it, then run AI diagnosis - the result is saved with this event for traceability.</p>
                                 </div>
                                 <div className="grid grid-cols-5 gap-3">
                                     {imagePreviews.map((src, idx) => (

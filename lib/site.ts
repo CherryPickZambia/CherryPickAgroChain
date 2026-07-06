@@ -7,7 +7,7 @@ export function getCanonicalHost(): string {
   return new URL(PUBLIC_SITE_URL).hostname;
 }
 
-/** www and apex are both valid — only redirect explicit legacy hosts (Vercel URLs). */
+/** www and apex are both valid - only redirect explicit legacy hosts (Vercel URLs). */
 export function isProductionHost(host: string, canonicalHost: string): boolean {
   if (host === canonicalHost) return true;
   const bare = canonicalHost.replace(/^www\./, '');

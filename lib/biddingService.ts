@@ -307,7 +307,7 @@ export interface AcceptBidParams {
  *
  * Creates an active contract plus a single "Delivery" milestone worth 100% of
  * the contract value. The farmer logs the delivery, an officer verifies it and
- * the admin approves it — at which point payment is released (payment-on-delivery)
+ * the admin approves it - at which point payment is released (payment-on-delivery)
  * and the batch moves into the factory-processing queue for the rest of the
  * traceability chain (sorting → packaging → distribution).
  */
@@ -352,7 +352,7 @@ export async function acceptBidAndCreateContract(params: AcceptBidParams): Promi
 
     if (error) throw error;
 
-    // --- Delivery milestone: 100% payment released on verified delivery ---
+ // Delivery milestone: 100% payment released on verified delivery
     try {
         const { error: milestoneError } = await client
             .from('milestones')
@@ -381,7 +381,7 @@ export async function acceptBidAndCreateContract(params: AcceptBidParams): Promi
         console.error('Error creating delivery milestone:', msErr);
     }
 
-    // --- Create Traceability Batch + initial event ---
+ // Create Traceability Batch + initial event
     try {
         const batch = await createBatchForContract(
             contract.id,
@@ -397,7 +397,7 @@ export async function acceptBidAndCreateContract(params: AcceptBidParams): Promi
         await addTraceabilityEvent({
             batch_id: batch.id!,
             event_type: 'verification',
-            event_title: 'Bid Accepted — Contract & Delivery Milestone Created',
+            event_title: 'Bid Accepted - Contract & Delivery Milestone Created',
             event_description: `Bid accepted for ${quantity} ${unit} of ${cropType} at K${pricePerUnit}/${unit} (total K${totalValue.toLocaleString()}). Awaiting delivery.`,
             actor_name: 'System/Admin',
             actor_type: 'admin',
@@ -406,7 +406,7 @@ export async function acceptBidAndCreateContract(params: AcceptBidParams): Promi
         console.error('Failed to create traceability batch or log initial event:', batchError);
     }
 
-    // --- Update the supply demand status ---
+ // Update the supply demand status
     try {
         const filledStatus =
             requiredQuantity && quantity < requiredQuantity ? 'partially_filled' : 'filled';

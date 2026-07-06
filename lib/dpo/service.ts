@@ -1,5 +1,5 @@
 /**
- * DirectPay Online (DPO) — server-side card payment integration.
+ * DirectPay Online (DPO) - server-side card payment integration.
  * Same flow as CherryPick: createToken → hosted page → verifyToken.
  */
 
@@ -55,7 +55,7 @@ function parseXml(xmlString: string): Record<string, string> {
   return out;
 }
 
-// Trim env values and strip accidental surrounding quotes — a trailing newline
+// Trim env values and strip accidental surrounding quotes - a trailing newline
 // or a pasted-in quote is the most common cause of a DPO 802 (invalid token).
 function envClean(value: string | undefined): string {
   return (value || '').trim().replace(/^['"]|['"]$/g, '').trim();
@@ -158,7 +158,7 @@ export async function createDpoToken(data: DpoCreateTokenInput): Promise<DpoCrea
 
     // Map the most common createToken failures to actionable messages.
     // NOTE: 802 = "Company Token does not exist" (DPO auth error), NOT a card
-    // activation issue — the token value/environment is what needs fixing.
+    // activation issue - the token value/environment is what needs fixing.
     let explanation: string;
     switch (result) {
       case '801':
