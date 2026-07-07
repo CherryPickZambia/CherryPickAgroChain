@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Sprout, Loader2, Upload, ImageIcon, Calendar, ChevronRight, ChevronLeft } from "lucide-react";
 import { createBatch, getContractsByFarmer, type TraceabilityContract } from "@/lib/traceabilityService";
 import { uploadImageToIPFS } from "@/lib/ipfsService";
+import { SUPPORTED_CROPS } from "@/lib/config";
 import toast from "react-hot-toast";
 
 interface CreateBatchModalProps {
@@ -12,12 +13,8 @@ interface CreateBatchModalProps {
     onSuccess: () => void;
 }
 
-const SUPPORTED_CROPS = [
-    "Mango", "Pineapple", "Banana", "Cashew nuts", "Apple", "Pear",
-    "Orange", "Lemon", "Lime", "Grapefruit", "Tomato", "Beetroot",
-    "Pawpaw", "Maize", "Wheat", "Soybean", "Coffee", "Avocado",
-    "Onion", "Potato", "Cabbage", "Carrot", "Spinach", "Other"
-];
+// Crop names that are NOT the "Other" catch-all (used to detect a custom crop)
+const PRESET_CROPS = SUPPORTED_CROPS.filter((c) => c !== "Other");
 
 const STEPS = [
     { id: 1, title: "Classification", description: "Crop & Contract" },
@@ -143,9 +140,11 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
         }
     };
 
-    // Filter contracts based on selected crop type
-    const filteredContracts = formData.crop_type
-        ? contracts.filter(c => c.crop_type.toLowerCase().includes(formData.crop_type.toLowerCase()) || formData.crop_type === "Other")
+    // Filter contracts based on selected crop type. For custom crops (not in the
+    // preset list) we can't reliably match, so show all contracts rather than none.
+    const isCustomCrop = !!formData.crop_type && !PRESET_CROPS.includes(formData.crop_type as typeof PRESET_CROPS[number]);
+    const filteredContracts = formData.crop_type && !isCustomCrop
+        ? contracts.filter(c => c.crop_type.toLowerCase().includes(formData.crop_type.toLowerCase()))
         : contracts;
 
     return (
@@ -240,8 +239,12 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                                     <select
                                                         required
                                                         className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm appearance-none"
-                                                        value={formData.crop_type}
-                                                        onChange={(e) => setFormData({ ...formData, crop_type: e.target.value, contract_id: "" })}
+                                                        value={PRESET_CROPS.includes(formData.crop_type as typeof PRESET_CROPS[number]) ? formData.crop_type : (formData.crop_type ? "Other" : "")}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            // Selecting "Other" clears the value so the custom input shows
+                                                            setFormData({ ...formData, crop_type: val === "Other" ? "" : val, contract_id: "" });
+                                                        }}
                                                     >
                                                         <option value="">Select Crop</option>
                                                         {SUPPORTED_CROPS.map(crop => (
@@ -252,6 +255,16 @@ export default function CreateBatchModal({ isOpen, onClose, farmerId, onSuccess 
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                                     </div>
                                                 </div>
+                                                {/* Custom crop name when "Other" is chosen - stores the real name, not "Other" */}
+                                                {!PRESET_CROPS.includes(formData.crop_type as typeof PRESET_CROPS[number]) && (
+                                                    <input
+                                                        type="text"
+                                                        className="mt-2 w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                                                        placeholder="Enter crop name (e.g. Avocado, Passion Fruit)"
+                                                        value={formData.crop_type}
+                                                        onChange={(e) => setFormData({ ...formData, crop_type: e.target.value, contract_id: "" })}
+                                                    />
+                                                )}
                                             </div>
 
                                             <div className="space-y-2">

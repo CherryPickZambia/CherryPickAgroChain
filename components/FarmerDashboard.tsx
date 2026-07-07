@@ -9,6 +9,7 @@ import CropDiagnostics from "./CropDiagnostics";
 import { type SmartContract } from "@/lib/types";
 import { getContractsByFarmer, getFarmerByWallet, createFarmer, updateFarmer } from "@/lib/supabaseService";
 import { publicTraceUrl } from "@/lib/site";
+import { SUPPORTED_CROPS } from "@/lib/config";
 import { getFarmerListings, type MarketplaceListing } from "@/lib/database";
 import { getBatchesByFarmer, Batch } from "@/lib/traceabilityService";
 import BatchList from "./BatchList";
@@ -1090,20 +1091,28 @@ export default function FarmerDashboard() {
                     Crop Type <span className="text-red-500">*</span>
                   </label>
                   <select
-                    value={listingForm.crop_type}
-                    onChange={(e) => setListingForm({ ...listingForm, crop_type: e.target.value })}
+                    value={SUPPORTED_CROPS.includes(listingForm.crop_type as typeof SUPPORTED_CROPS[number]) ? listingForm.crop_type : (listingForm.crop_type ? "Other" : "")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setListingForm({ ...listingForm, crop_type: val === "Other" ? "" : val });
+                    }}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   >
                     <option value="">Select crop type</option>
-                    <option value="Mangoes">Mangoes</option>
-                    <option value="Pineapples">Pineapples</option>
-                    <option value="Cashew nuts">Cashew nuts</option>
-                    <option value="Tomatoes">Tomatoes</option>
-                    <option value="Beetroot">Beetroot</option>
-                    <option value="Bananas">Bananas</option>
-                    <option value="Pawpaw">Pawpaw</option>
-                    <option value="Strawberries">Strawberries</option>
+                    {SUPPORTED_CROPS.map((crop) => (
+                      <option key={crop} value={crop}>{crop}</option>
+                    ))}
                   </select>
+                  {/* Custom crop name when "Other" is chosen - stores the real name, not "Other" */}
+                  {!(SUPPORTED_CROPS.filter((c) => c !== "Other") as readonly string[]).includes(listingForm.crop_type) && (
+                    <input
+                      type="text"
+                      className="mt-2 w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      placeholder="Enter crop name (e.g. Avocado, Passion Fruit)"
+                      value={listingForm.crop_type}
+                      onChange={(e) => setListingForm({ ...listingForm, crop_type: e.target.value })}
+                    />
+                  )}
                 </div>
 
                 {/* Quantity */}

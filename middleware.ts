@@ -8,8 +8,11 @@ import {
   resolveLegacyPublicPath,
 } from '@/lib/site';
 
-// The routes that need to be protected
-const protectedRoutes = ['/dashboard', '/marketplace', '/api/admin', '/api/payments', '/api/lenco'];
+// The routes that need to be protected.
+// NOTE: /marketplace is intentionally PUBLIC so anyone can browse and buy without
+// an account (guest checkout via mobile money / card is handled in the component;
+// role-restricted actions like admin/farmer purchasing are still gated there).
+const protectedRoutes = ['/dashboard', '/api/admin', '/api/payments', '/api/lenco'];
 
 function redirectLegacyHost(request: NextRequest): NextResponse | null {
   const host = (request.headers.get('host') || '').split(':')[0].toLowerCase();
