@@ -40,6 +40,8 @@ export interface FarmerDashboardRow {
   crops: string[];
   joined: string;
   verified: boolean;
+  status: "pending" | "approved" | "rejected" | "suspended";
+  suspensionReason?: string | null;
   totalEarnings: number;
   completedMilestones: number;
   pendingMilestones: number;
@@ -437,6 +439,8 @@ export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
       crops,
       joined: f.created_at ? new Date(f.created_at as string).toLocaleDateString() : "-",
       verified: f.status === "approved",
+      status: ((f.status as string) || "pending") as FarmerDashboardRow["status"],
+      suspensionReason: (f.suspension_reason as string) || null,
       totalEarnings: earningsByFarmer[id] || 0,
       completedMilestones: milestoneStats[id]?.completed || 0,
       pendingMilestones: milestoneStats[id]?.pending || 0,
@@ -601,4 +605,238 @@ export function computeAnalyticsGrowth(
     revenueLabel: `${pct >= 0 ? "+" : ""}${pct}%`,
     latestVolume: `ZK ${latest.toLocaleString()}`,
   };
+}
+
+export interface QrComplaintConversion {
+  totalScans: number;
+  totalComplaints: number;
+  conversionPct: number;
+  openComplaints: number;
+  complaintsPer1000Scans: number;
+}
+
+export interface GmvVsPayouts {
+  marketplaceGmv: number;
+  contractPayouts: number;
+  orderCount: number;
+  payoutCount: number;
+  ratioLabel: string;
+}
+
+export interface MilestoneCycleTimes {
+  avgHoursToVerify: number | null;
+  avgHoursToPay: number | null;
+  verifiedCount: number;
+  paidCount: number;
+  sampleSize: number;
+}
+
+export interface ProvinceCropMixRow {
+  province: string;
+  crop: string;
+  contractValue: number;
+  paymentVolume: number;
+  contracts: number;
+}
+
+export interface ExtendedAnalytics {
+  qrComplaints: QrComplaintConversion;
+  gmvVsPayouts: GmvVsPayouts;
+  cycleTimes: MilestoneCycleTimes;
+  byProvince: ProvinceCropMixRow[];
+}
+
+function provinceFromAddress(address?: string | null): string {
+  if (!address) return "Unknown";
+  const parts = address.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return "Unknown";
+  const last = parts[parts.length - 1];
+  // Prefer “... Province” when present
+  const withProvince = parts.find((p) => /province/i.test(p));
+  return withProvince || last || "Unknown";
+}
+
+function hoursBetween(a?: string | null, b?: string | null): number | null {
+  if (!a || !b) return null;
+  const t0 = new Date(a).getTime();
+  const t1 = new Date(b).getTime();
+  if (!Number.isFinite(t0) || !Number.isFinite(t1) || t1 < t0) return null;
+  return (t1 - t0) / (1000 * 60 * 60);
+}
+
+export async function getExtendedAnalytics(): Promise<ExtendedAnalytics> {
+  const empty: ExtendedAnalytics = {
+    qrComplaints: { totalScans: 0, totalComplaints: 0, conversionPct: 0, openComplaints: 0, complaintsPer1000Scans: 0 },
+    gmvVsPayouts: { marketplaceGmv: 0, contractPayouts: 0, orderCount: 0, payoutCount: 0, ratioLabel: "-" },
+    cycleTimes: { avgHoursToVerify: null, avgHoursToPay: null, verifiedCount: 0, paidCount: 0, sampleSize: 0 },
+    byProvince: [],
+  };
+  if (!supabase) return empty;
+
+  try {
+    const [
+      scansRes,
+      complaintsRes,
+      ordersRes,
+      paymentsRes,
+      milestonesRes,
+      contractsRes,
+      farmersRes,
+    ] = await Promise.all([
+      supabase.from("qr_scans").select("id", { count: "exact", head: true }),
+      supabase.from("complaints").select("id, status"),
+      supabase.from("marketplace_orders").select("id, total_amount, status, payment_status"),
+      supabase
+        .from("payments")
+        .select("amount, status, payment_type, reference_id, confirmed_at, created_at")
+        .in("status", ["confirmed", "completed"]),
+      supabase
+        .from("milestones")
+        .select("id, contract_id, status, payment_amount, completed_date, verified_at, metadata, created_at, updated_at"),
+      supabase.from("contracts").select("id, farmer_id, crop_type, total_value, status"),
+      supabase.from("farmers").select("id, location_address"),
+    ]);
+
+    // ── QR → complaints conversion ──
+    const totalScans = scansRes.count ?? 0;
+    const complaints = complaintsRes.data || [];
+    const totalComplaints = complaints.length;
+    const openComplaints = complaints.filter((c: any) => {
+      const s = (c.status || "").toLowerCase();
+      return s === "open" || s === "investigating";
+    }).length;
+    const conversionPct = totalScans > 0 ? Math.round((totalComplaints / totalScans) * 10000) / 100 : 0;
+    const complaintsPer1000Scans = totalScans > 0 ? Math.round((totalComplaints / totalScans) * 1000 * 10) / 10 : 0;
+
+    // ── Marketplace GMV vs contract payouts ──
+    const orders = ordersRes.data || [];
+    const paidOrders = orders.filter((o: any) => {
+      const s = `${o.status || ""} ${o.payment_status || ""}`.toLowerCase();
+      return /paid|completed|confirmed|delivered|shipped/.test(s) || Number(o.total_amount || 0) > 0;
+    });
+    // Prefer all non-cancelled orders for GMV (marketplace money volume)
+    const gmvOrders = orders.filter((o: any) => {
+      const s = (o.status || "").toLowerCase();
+      return s !== "cancelled" && s !== "failed" && s !== "refunded";
+    });
+    const marketplaceGmv = gmvOrders.reduce((s: number, o: any) => s + Number(o.total_amount || 0), 0);
+
+    const payments = paymentsRes.data || [];
+    const milestonePayouts = payments.filter((p: any) => {
+      const t = (p.payment_type || "").toLowerCase();
+      return !t || t === "milestone";
+    });
+    const contractPayouts = milestonePayouts.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    const ratioLabel =
+      marketplaceGmv <= 0 && contractPayouts <= 0
+        ? "-"
+        : marketplaceGmv <= 0
+          ? "Payouts only"
+          : `${(contractPayouts / marketplaceGmv).toFixed(2)}x payouts / GMV`;
+
+    // ── Time-to-verify / time-to-pay ──
+    const milestones = milestonesRes.data || [];
+    const verifyHours: number[] = [];
+    const payHours: number[] = [];
+    const paymentByMilestone: Record<string, string> = {};
+    milestonePayouts.forEach((p: any) => {
+      const mid = p.reference_id as string | undefined;
+      if (!mid) return;
+      const when = (p.confirmed_at || p.created_at) as string;
+      if (when) paymentByMilestone[mid] = when;
+    });
+
+    milestones.forEach((m: any) => {
+      const meta = m.metadata || {};
+      const submitted =
+        m.completed_date ||
+        meta.submitted_at ||
+        meta.farmer_submitted_at ||
+        null;
+      const verified =
+        m.verified_at ||
+        meta.verified_at ||
+        meta.approved_at ||
+        null;
+      const toVerify = hoursBetween(submitted, verified);
+      if (toVerify != null) verifyHours.push(toVerify);
+
+      const paidAt = paymentByMilestone[m.id as string] || meta.paid_at || null;
+      const toPay = hoursBetween(verified || submitted, paidAt);
+      if (toPay != null) payHours.push(toPay);
+    });
+
+    const avg = (arr: number[]) =>
+      arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null;
+
+    // ── Crop mix + payment volume by province ──
+    const farmerProvince: Record<string, string> = {};
+    (farmersRes.data || []).forEach((f: any) => {
+      farmerProvince[f.id as string] = provinceFromAddress(f.location_address);
+    });
+
+    const paymentsByContract: Record<string, number> = {};
+    // Map milestone reference payments → contract via milestones
+    const milestoneContract: Record<string, string> = {};
+    milestones.forEach((m: any) => {
+      if (m.id && m.contract_id) milestoneContract[m.id as string] = m.contract_id as string;
+    });
+    milestonePayouts.forEach((p: any) => {
+      const mid = p.reference_id as string | undefined;
+      const cid = mid ? milestoneContract[mid] : undefined;
+      if (!cid) return;
+      paymentsByContract[cid] = (paymentsByContract[cid] || 0) + Number(p.amount || 0);
+    });
+
+    const buckets: Record<string, ProvinceCropMixRow> = {};
+    (contractsRes.data || []).forEach((c: any) => {
+      if ((c.status || "").toLowerCase() === "cancelled") return;
+      const province = farmerProvince[c.farmer_id as string] || "Unknown";
+      const crop = (c.crop_type as string) || "Unknown";
+      const key = `${province}||${crop}`;
+      if (!buckets[key]) {
+        buckets[key] = { province, crop, contractValue: 0, paymentVolume: 0, contracts: 0 };
+      }
+      buckets[key].contractValue += Number(c.total_value || 0);
+      buckets[key].paymentVolume += paymentsByContract[c.id as string] || 0;
+      buckets[key].contracts += 1;
+    });
+
+    const byProvince = Object.values(buckets)
+      .sort((a, b) => b.paymentVolume - a.paymentVolume || b.contractValue - a.contractValue)
+      .slice(0, 20)
+      .map((r) => ({
+        ...r,
+        contractValue: Math.round(r.contractValue * 100) / 100,
+        paymentVolume: Math.round(r.paymentVolume * 100) / 100,
+      }));
+
+    return {
+      qrComplaints: {
+        totalScans,
+        totalComplaints,
+        conversionPct,
+        openComplaints,
+        complaintsPer1000Scans,
+      },
+      gmvVsPayouts: {
+        marketplaceGmv: Math.round(marketplaceGmv * 100) / 100,
+        contractPayouts: Math.round(contractPayouts * 100) / 100,
+        orderCount: gmvOrders.length || paidOrders.length,
+        payoutCount: milestonePayouts.length,
+        ratioLabel,
+      },
+      cycleTimes: {
+        avgHoursToVerify: avg(verifyHours),
+        avgHoursToPay: avg(payHours),
+        verifiedCount: verifyHours.length,
+        paidCount: payHours.length,
+        sampleSize: milestones.length,
+      },
+      byProvince,
+    };
+  } catch (e) {
+    console.error("getExtendedAnalytics:", e);
+    return empty;
+  }
 }

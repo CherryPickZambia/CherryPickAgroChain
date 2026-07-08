@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
-import { getUsersByRole, getAllContracts, getOrCreateUser } from "@/lib/supabaseService";
+import { getUsersByRole, getAllContracts, getOrCreateUser, suspendFarmer as suspendFarmerService, reactivateFarmer as reactivateFarmerService, rejectFarmer as rejectFarmerService } from "@/lib/supabaseService";
 import AdminApprovalModal from "./AdminApprovalModal";
 import { getVerificationEvidence } from "@/lib/ipfsService";
 import { STANDARD_MILESTONES, payMilestoneApproval, getUSDCBalance, calculateVerifierFee, getVerifierFeeBreakdown } from "@/lib/blockchain/contractInteractions";
@@ -44,9 +44,11 @@ import {
   getRecentGrowthActivities,
   getRecentMarketplaceOrders,
   getContractFinancials,
+  getExtendedAnalytics,
   formatRevenue,
   computeAnalyticsGrowth,
   type ContractFinancials,
+  type ExtendedAnalytics,
   type AdminDashboardStats,
   type CropDistributionItem,
   type MonthlyTrendPoint,
@@ -137,6 +139,8 @@ interface FarmerUI {
   crops: string[];
   joined: string;
   verified: boolean;
+  status?: "pending" | "approved" | "rejected" | "suspended";
+  suspensionReason?: string | null;
   totalEarnings: number;
   completedMilestones: number;
   pendingMilestones: number;
@@ -202,6 +206,7 @@ export default function AdminDashboard() {
   const [cropData, setCropData] = useState<CropDistributionItem[]>([]);
   const [costData, setCostData] = useState<MonthlyTrendPoint[]>([]);
   const [financials, setFinancials] = useState<ContractFinancials | null>(null);
+  const [extendedAnalytics, setExtendedAnalytics] = useState<ExtendedAnalytics | null>(null);
   const [settings, setSettings] = useState<PlatformSettings>(DEFAULT_SETTINGS);
   const [savingSettings, setSavingSettings] = useState(false);
   const [recentPayments, setRecentPayments] = useState<PaymentDashboardRow[]>([]);
@@ -307,13 +312,14 @@ export default function AdminDashboard() {
   const loadDashboardMetrics = async () => {
     try {
       setLoadingDashboard(true);
-      const [stats, crops, trend, payments, activities, fin] = await Promise.all([
+      const [stats, crops, trend, payments, activities, fin, extended] = await Promise.all([
         getAdminDashboardStats(),
         getCropDistribution(),
         getMonthlyPaymentTrend(),
         getRecentPayments(20),
         getRecentGrowthActivities(5),
         getContractFinancials(),
+        getExtendedAnalytics(),
       ]);
       setDashboardStats(stats);
       setCropData(crops);
@@ -321,6 +327,7 @@ export default function AdminDashboard() {
       setRecentPayments(payments);
       setRecentActivities(activities);
       setFinancials(fin);
+      setExtendedAnalytics(extended);
     } catch (error) {
       console.error("Error loading dashboard metrics:", error);
     } finally {
@@ -357,17 +364,66 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase
         .from('farmers')
-        .update({ status: 'approved' })
+        .update({ status: 'approved', suspension_reason: null, rejection_reason: null })
         .eq('id', farmerId);
 
       if (error) throw error;
 
       toast.success(`${farmerName} has been approved!`);
-      // Refresh the farmers list
       loadFarmers();
     } catch (error) {
       console.error('Error approving farmer:', error);
       toast.error('Failed to approve farmer');
+    }
+  };
+
+  const suspendFarmerAccount = async (farmerId: string, farmerName: string) => {
+    const reason = window.prompt(
+      `Suspend ${farmerName}? They will lose access to contracts, bidding, batches, and paid features.\n\nOptional reason:`,
+      'Suspended by admin'
+    );
+    if (reason === null) return;
+    try {
+      await suspendFarmerService(farmerId, reason.trim() || 'Suspended by admin');
+      toast.success(`${farmerName} has been suspended`);
+      loadFarmers();
+      setSelectedFarmer((prev) =>
+        prev && prev.id === farmerId
+          ? { ...prev, verified: false, status: 'suspended', suspensionReason: reason.trim() || 'Suspended by admin' }
+          : prev
+      );
+    } catch (error) {
+      console.error('Error suspending farmer:', error);
+      toast.error('Failed to suspend farmer');
+    }
+  };
+
+  const reactivateFarmerAccount = async (farmerId: string, farmerName: string) => {
+    try {
+      await reactivateFarmerService(farmerId);
+      toast.success(`${farmerName} has been reactivated`);
+      loadFarmers();
+      setSelectedFarmer((prev) =>
+        prev && prev.id === farmerId
+          ? { ...prev, verified: true, status: 'approved', suspensionReason: null }
+          : prev
+      );
+    } catch (error) {
+      console.error('Error reactivating farmer:', error);
+      toast.error('Failed to reactivate farmer');
+    }
+  };
+
+  const rejectFarmerAccount = async (farmerId: string, farmerName: string) => {
+    const reason = window.prompt(`Reject ${farmerName}? Optional reason:`, 'Application rejected');
+    if (reason === null) return;
+    try {
+      await rejectFarmerService(farmerId, reason.trim() || 'Application rejected');
+      toast.success(`${farmerName} has been rejected`);
+      loadFarmers();
+    } catch (error) {
+      console.error('Error rejecting farmer:', error);
+      toast.error('Failed to reject farmer');
     }
   };
 
@@ -1350,10 +1406,20 @@ export default function AdminDashboard() {
                             </p>
                           </div>
                         </div>
-                        {farmer.verified ? (
+                        {farmer.status === 'suspended' ? (
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-full" style={{ background: 'rgba(220,38,38,0.12)' }}>
+                            <XCircle className="h-3 w-3" style={{ color: '#b91c1c' }} />
+                            <span className="text-xs font-medium" style={{ fontFamily: "'Manrope', sans-serif", color: '#b91c1c' }}>Suspended</span>
+                          </div>
+                        ) : farmer.verified ? (
                           <div className="flex items-center gap-1 px-2 py-1 rounded-full" style={{ background: 'rgba(191,255,0,0.15)' }}>
                             <CheckCircle2 className="h-3 w-3" style={{ color: '#0C2D3A' }} />
                             <span className="text-xs font-medium" style={{ fontFamily: "'Manrope', sans-serif", color: '#0C2D3A' }}>Verified</span>
+                          </div>
+                        ) : farmer.status === 'rejected' ? (
+                          <div className="flex items-center gap-1 px-2 py-1 rounded-full" style={{ background: 'rgba(12,45,58,0.08)' }}>
+                            <XCircle className="h-3 w-3" style={{ color: '#5A7684' }} />
+                            <span className="text-xs font-medium" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>Rejected</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1 px-2 py-1 rounded-full" style={{ background: 'rgba(12,45,58,0.06)' }}>
@@ -1362,6 +1428,12 @@ export default function AdminDashboard() {
                           </div>
                         )}
                       </div>
+
+                      {farmer.status === 'suspended' && farmer.suspensionReason && (
+                        <p className="text-xs mb-3 px-2 py-1.5 rounded-lg" style={{ background: 'rgba(220,38,38,0.06)', color: '#b91c1c' }}>
+                          {farmer.suspensionReason}
+                        </p>
+                      )}
 
                       <div className="grid grid-cols-3 gap-3 mb-4">
                         <div className="text-center p-2 bg-white rounded-lg border border-gray-100">
@@ -1393,15 +1465,48 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {!farmer.verified && (
+                          {farmer.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  approveFarmer(farmer.id, farmer.name);
+                                }}
+                                className="px-3 py-1 text-xs font-medium text-white rounded-lg transition-colors" style={{ background: '#0C2D3A' }}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  rejectFarmerAccount(farmer.id, farmer.name);
+                                }}
+                                className="px-3 py-1 text-xs font-medium rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                          {farmer.status === 'approved' && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                approveFarmer(farmer.id, farmer.name);
+                                suspendFarmerAccount(farmer.id, farmer.name);
                               }}
-                              className="px-3 py-1 text-xs font-medium text-white rounded-lg transition-colors" style={{ background: '#0C2D3A' }}
+                              className="px-3 py-1 text-xs font-medium rounded-lg border border-amber-300 text-amber-800 hover:bg-amber-50"
                             >
-                              Approve
+                              Suspend
+                            </button>
+                          )}
+                          {(farmer.status === 'suspended' || farmer.status === 'rejected') && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                reactivateFarmerAccount(farmer.id, farmer.name);
+                              }}
+                              className="px-3 py-1 text-xs font-medium text-white rounded-lg" style={{ background: '#0C2D3A' }}
+                            >
+                              Reactivate
                             </button>
                           )}
                           <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
@@ -2411,6 +2516,131 @@ export default function AdminDashboard() {
                         </div>
                       ))}
                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 04. QR → Complaints conversion */}
+              <div style={{ padding: "0 40px 48px" }}>
+                <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>04. QR Scans → Complaints</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
+                  {[
+                    { label: "Total Scans", value: String(extendedAnalytics?.qrComplaints.totalScans ?? 0), sub: "consumer QR opens" },
+                    { label: "Complaints Filed", value: String(extendedAnalytics?.qrComplaints.totalComplaints ?? 0), sub: `${extendedAnalytics?.qrComplaints.openComplaints ?? 0} still open` },
+                    { label: "Conversion Rate", value: `${extendedAnalytics?.qrComplaints.conversionPct ?? 0}%`, sub: "complaints / scans" },
+                    { label: "Per 1,000 Scans", value: String(extendedAnalytics?.qrComplaints.complaintsPer1000Scans ?? 0), sub: "complaint intensity" },
+                  ].map((s, i) => (
+                    <div key={i} style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", padding: 20 }}>
+                      <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.8rem", color: "#5A7684", marginBottom: 6 }}>{s.label}</div>
+                      <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "1.5rem", color: "#0C2D3A" }}>{s.value}</div>
+                      <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.72rem", color: "#9aa5a8", marginTop: 4 }}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 05. Marketplace GMV vs contract payouts */}
+              <div style={{ padding: "0 40px 48px" }}>
+                <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>05. Marketplace GMV vs Contract Payouts</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 16 }}>
+                  {[
+                    { label: "Marketplace GMV", value: `K${(extendedAnalytics?.gmvVsPayouts.marketplaceGmv ?? 0).toLocaleString()}`, sub: `${extendedAnalytics?.gmvVsPayouts.orderCount ?? 0} orders` },
+                    { label: "Contract Payouts", value: `K${(extendedAnalytics?.gmvVsPayouts.contractPayouts ?? 0).toLocaleString()}`, sub: `${extendedAnalytics?.gmvVsPayouts.payoutCount ?? 0} milestone payments` },
+                    { label: "Payouts / GMV", value: extendedAnalytics?.gmvVsPayouts.ratioLabel ?? "-", sub: "capital intensity" },
+                  ].map((s, i) => (
+                    <div key={i} style={{ background: i === 0 ? "#0C2D3A" : "#fff", color: i === 0 ? "#fff" : "#0C2D3A", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", padding: 20 }}>
+                      <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.8rem", opacity: 0.75, marginBottom: 6 }}>{s.label}</div>
+                      <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "1.5rem" }}>{s.value}</div>
+                      <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.72rem", opacity: 0.6, marginTop: 4 }}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+                {(() => {
+                  const gmv = extendedAnalytics?.gmvVsPayouts.marketplaceGmv ?? 0;
+                  const pay = extendedAnalytics?.gmvVsPayouts.contractPayouts ?? 0;
+                  const max = Math.max(gmv, pay, 1);
+                  return (
+                    <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", padding: 20 }}>
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Manrope',sans-serif", fontSize: 12, color: "#5A7684", marginBottom: 6 }}>
+                          <span>Marketplace GMV</span><span>K{gmv.toLocaleString()}</span>
+                        </div>
+                        <div style={{ height: 10, borderRadius: 999, background: "rgba(12,45,58,0.08)", overflow: "hidden" }}>
+                          <div style={{ width: `${Math.round((gmv / max) * 100)}%`, height: "100%", background: "#0C2D3A" }} />
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Manrope',sans-serif", fontSize: 12, color: "#5A7684", marginBottom: 6 }}>
+                          <span>Contract payouts</span><span>K{pay.toLocaleString()}</span>
+                        </div>
+                        <div style={{ height: 10, borderRadius: 999, background: "rgba(12,45,58,0.08)", overflow: "hidden" }}>
+                          <div style={{ width: `${Math.round((pay / max) * 100)}%`, height: "100%", background: "#BFFF00" }} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* 06. Milestone cycle times */}
+              <div style={{ padding: "0 40px 48px" }}>
+                <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>06. Time-to-Verify / Time-to-Pay</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+                  {[
+                    {
+                      label: "Avg hours to verify",
+                      value: extendedAnalytics?.cycleTimes.avgHoursToVerify != null
+                        ? `${extendedAnalytics.cycleTimes.avgHoursToVerify}h`
+                        : "-",
+                      sub: `${extendedAnalytics?.cycleTimes.verifiedCount ?? 0} milestones with timestamps`,
+                    },
+                    {
+                      label: "Avg hours to pay",
+                      value: extendedAnalytics?.cycleTimes.avgHoursToPay != null
+                        ? `${extendedAnalytics.cycleTimes.avgHoursToPay}h`
+                        : "-",
+                      sub: `${extendedAnalytics?.cycleTimes.paidCount ?? 0} paid after verification`,
+                    },
+                    {
+                      label: "Milestones sampled",
+                      value: String(extendedAnalytics?.cycleTimes.sampleSize ?? 0),
+                      sub: "all milestones in system",
+                    },
+                  ].map((s, i) => (
+                    <div key={i} style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", padding: 20 }}>
+                      <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.8rem", color: "#5A7684", marginBottom: 6 }}>{s.label}</div>
+                      <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: "1.5rem", color: "#0C2D3A" }}>{s.value}</div>
+                      <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: "0.72rem", color: "#9aa5a8", marginTop: 4 }}>{s.sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 07. Crop mix + payment volume by province */}
+              <div style={{ padding: "0 40px 48px" }}>
+                <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>07. Crop Mix + Payment Volume by Province</div>
+                <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(12,45,58,0.06)", overflow: "hidden" }}>
+                  {(extendedAnalytics?.byProvince?.length ?? 0) === 0 ? (
+                    <p style={{ fontFamily: "'Manrope',sans-serif", color: "#5A7684", textAlign: "center", padding: "32px 0" }}>No contract / province data yet.</p>
+                  ) : (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 0.8fr 1fr 1fr", gap: 8, padding: "12px 20px", background: "#F7F9FB", fontFamily: "'Manrope',sans-serif", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, color: "#5A7684" }}>
+                        <span>Province</span>
+                        <span>Crop</span>
+                        <span>Contracts</span>
+                        <span>Contract value</span>
+                        <span>Paid out</span>
+                      </div>
+                      {extendedAnalytics!.byProvince.map((row, i) => (
+                        <div key={`${row.province}-${row.crop}-${i}`} style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 0.8fr 1fr 1fr", gap: 8, padding: "14px 20px", borderBottom: "1px solid rgba(12,45,58,0.05)", fontFamily: "'Manrope',sans-serif", fontSize: 13, color: "#0C2D3A" }}>
+                          <span style={{ fontWeight: 600 }}>{row.province}</span>
+                          <span>{row.crop}</span>
+                          <span>{row.contracts}</span>
+                          <span>K{row.contractValue.toLocaleString()}</span>
+                          <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700 }}>K{row.paymentVolume.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </>
                   )}
                 </div>
               </div>
