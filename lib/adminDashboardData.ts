@@ -280,10 +280,11 @@ export async function getCropDistribution(): Promise<CropDistributionItem[]> {
 export async function getMonthlyPaymentTrend(): Promise<MonthlyTrendPoint[]> {
   if (!supabase) return [];
 
+  // Payments settle as `confirmed` (legacy rows may also use `completed`).
   const { data, error } = await supabase
     .from("payments")
-    .select("amount, created_at")
-    .eq("status", "completed")
+    .select("amount, created_at, status, payment_type")
+    .in("status", ["confirmed", "completed"])
     .order("created_at", { ascending: true });
 
   if (error) return [];
@@ -295,7 +296,12 @@ export async function getMonthlyPaymentTrend(): Promise<MonthlyTrendPoint[]> {
     buckets[`${d.getFullYear()}-${d.getMonth()}`] = 0;
   }
 
-  data?.forEach((row: { created_at: string; amount?: number | string }) => {
+  data?.forEach((row: { created_at: string; amount?: number | string; payment_type?: string | null }) => {
+    // Count money that actually moved: milestone payouts, orders, and deposits.
+    // Skip pure fee / adjustment lines so the chart reflects real volume.
+    if (row.payment_type === "platform_fee" || row.payment_type === "withdrawal_fee" || row.payment_type === "adjustment") {
+      return;
+    }
     const d = new Date(row.created_at as string);
     const key = `${d.getFullYear()}-${d.getMonth()}`;
     if (key in buckets) buckets[key] += Number(row.amount || 0);
@@ -325,13 +331,23 @@ export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
 
   const farmerIds = farmers.map((f: { id: string }) => f.id as string);
 
+  // Payments are keyed by wallet `to_address` (not recipient_id) and settle as
+  // `confirmed` (not `completed`). The old filters silently returned 0 earnings.
+  const walletToFarmerId: Record<string, string> = {};
+  farmers.forEach((f: { id: string; wallet_address?: string | null }) => {
+    const w = (f.wallet_address || "").toLowerCase();
+    if (w) walletToFarmerId[w] = f.id as string;
+  });
+
   const [contractsRes, paymentsRes, milestonesRes] = await Promise.all([
     supabase.from("contracts").select("id, farmer_id, crop_type, status, total_value, created_at").in("farmer_id", farmerIds),
+    // Pull settled milestone payouts; we match wallets in JS (case-insensitive)
+    // because Postgres text equality on addresses is case-sensitive.
     supabase
       .from("payments")
-      .select("recipient_id, amount")
-      .eq("status", "completed")
-      .in("recipient_id", farmerIds),
+      .select("to_address, amount, status, payment_type")
+      .in("status", ["confirmed", "completed"])
+      .or("payment_type.eq.milestone,payment_type.is.null"),
     supabase
       .from("milestones")
       .select("id, name, status, payment_amount, expected_date, contract_id, contract:contracts(farmer_id)")
@@ -377,9 +393,27 @@ export async function getFarmersWithStats(): Promise<FarmerDashboardRow[]> {
   });
 
   const earningsByFarmer: Record<string, number> = {};
-  paymentsRes.data?.forEach((p: { recipient_id: string; amount?: number | string }) => {
-    const fid = p.recipient_id as string;
+  paymentsRes.data?.forEach((p: { to_address?: string | null; amount?: number | string; payment_type?: string | null }) => {
+    // Skip platform fees / adjustments that happen to land on a farmer wallet
+    if (p.payment_type && p.payment_type !== "milestone") return;
+    const addr = (p.to_address || "").toLowerCase();
+    const fid = walletToFarmerId[addr];
+    if (!fid) return;
     earningsByFarmer[fid] = (earningsByFarmer[fid] || 0) + Number(p.amount || 0);
+  });
+
+  // Fallback: if no payment rows matched a farmer wallet (legacy link / casing),
+  // sum verified milestone amounts so completed-contract farmers don't show ZK 0.
+  const paidFromLedger = new Set(Object.keys(earningsByFarmer));
+  contractsRes.data?.forEach((c: { id: string; farmer_id?: string }) => {
+    const fid = c.farmer_id as string | undefined;
+    if (!fid || paidFromLedger.has(fid)) return;
+    const earned = (milestonesByContract[c.id] || [])
+      .filter((m) => m.status === "verified" || m.status === "paid")
+      .reduce((sum, m) => sum + Number(m.payment || 0), 0);
+    if (earned > 0) {
+      earningsByFarmer[fid] = (earningsByFarmer[fid] || 0) + earned;
+    }
   });
 
   return farmers.map((f: Record<string, unknown>) => {

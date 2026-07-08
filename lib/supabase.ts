@@ -51,6 +51,7 @@ export interface Database {
           compliance_standards?: string[];
           profile_photo?: string | null;
           bio?: string | null;
+          farm_photos?: string[] | null;
           nrc_id?: string | null;
           gender?: string | null;
           verified?: boolean | null;

@@ -29,8 +29,14 @@ function redirectLegacyHost(request: NextRequest): NextResponse | null {
 
   // Old printed QR / bookmarked links on legacy domains → canonical site
   if (LEGACY_REDIRECT_HOSTS.includes(host)) {
-    const destination = new URL(path, PUBLIC_SITE_URL);
-    const batchHandled = path.startsWith('/trace/');
+    // Shop / print assets that still deep-link old Vercel "Admin Login" URLs
+    // (e.g. /signin, /dashboard) land on the live agrochain360.com host.
+    let destPath = path;
+    if (destPath === '/' || destPath === '') {
+      destPath = '/signin';
+    }
+    const destination = new URL(destPath, PUBLIC_SITE_URL);
+    const batchHandled = destPath.startsWith('/trace/');
     if (!batchHandled) {
       request.nextUrl.searchParams.forEach((value, key) => {
         destination.searchParams.set(key, value);

@@ -12,6 +12,11 @@ export interface PlatformSettings {
   minListingQuality: string;
   platformFeePercent: number;
   paymentNetwork: string;
+  /** Admin-curated media for public Behind The Scenes carousels */
+  behindTheScenes?: {
+    photos: string[];
+    videos: string[];
+  };
 }
 
 export const DEFAULT_SETTINGS: PlatformSettings = {

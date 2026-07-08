@@ -33,6 +33,7 @@ import WalletBalance from "./WalletBalance";
 import { dc } from "@/lib/dashboardTheme";
 import LandingPageEditor from "./LandingPageEditor";
 import AdminConsumerQR from "./AdminConsumerQR";
+import AdminBehindTheScenes from "./AdminBehindTheScenes";
 import {
   getAdminDashboardStats,
   getCropDistribution,
@@ -682,6 +683,7 @@ export default function AdminDashboard() {
     { icon: CheckCircle2, label: "Officers", id: "officers" },
     { icon: QrCode, label: "Traceability", id: "traceability" },
     { icon: MessageSquare, label: "Consumer QR", id: "consumer" },
+    { icon: Package, label: "Behind Scenes", id: "behind-scenes" },
     { icon: TrendingUp, label: "Analytics", id: "analytics" },
     { icon: DollarSign, label: "Payments", id: "payments" },
     { icon: Award, label: "Bidding", id: "bidding" },
@@ -2349,8 +2351,8 @@ export default function AdminDashboard() {
               <div style={{ padding: "0 40px 48px" }}>
                 <div style={{ fontFamily: "'Manrope',sans-serif", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, color: "#5A7684", borderBottom: "1px solid rgba(12,45,58,0.1)", paddingBottom: 8, marginBottom: 16 }}>02. Payment Volume</div>
                 <div style={{ background: "#fff", borderRadius: 24, border: "1px solid rgba(12,45,58,0.06)", padding: 32 }}>
-                  {costData.length === 0 ? (
-                    <p style={{ fontFamily: "'Manrope',sans-serif", color: "#5A7684", textAlign: "center", padding: "48px 0" }}>No completed payment history yet</p>
+                  {costData.every((d) => d.cost === 0) ? (
+                    <p style={{ fontFamily: "'Manrope',sans-serif", color: "#5A7684", textAlign: "center", padding: "48px 0" }}>No settled payments in the last 8 months yet</p>
                   ) : (
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -2476,6 +2478,10 @@ export default function AdminDashboard() {
 
           {selectedView === "consumer" && (
             <AdminConsumerQR />
+          )}
+
+          {selectedView === "behind-scenes" && (
+            <AdminBehindTheScenes />
           )}
 
           {/* Settings View - ARKTOS */}

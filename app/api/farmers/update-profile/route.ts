@@ -19,6 +19,7 @@ const ALLOWED_FIELDS = new Set([
   'gender',
   'profile_photo',
   'bio',
+  'farm_photos',
 ]);
 
 function normalizeNullable(value: unknown): unknown {

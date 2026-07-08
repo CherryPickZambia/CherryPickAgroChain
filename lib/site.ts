@@ -21,6 +21,8 @@ export const LEGACY_REDIRECT_HOSTS = (
     'cherry-pi.vercel.app',
     'cherry-pick.vercel.app',
     'agrochain360.vercel.app',
+    'cherrypickagrochain.vercel.app',
+    'cherry-pick-agrochain.vercel.app',
   ].join(',')
 )
   .split(',')

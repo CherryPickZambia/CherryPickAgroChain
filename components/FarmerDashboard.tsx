@@ -35,6 +35,7 @@ interface FarmerProfile {
   gender?: string | null;
   profile_photo?: string | null;
   bio?: string | null;
+  farm_photos?: string[] | null;
   rejection_reason?: string | null;
   created_at?: string;
   user_id?: string;
@@ -62,8 +63,10 @@ export default function FarmerDashboard() {
     gender: 'male',
     profile_photo: '' as string,
     bio: '' as string,
+    farm_photos: [] as string[],
   });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingFarmPhoto, setUploadingFarmPhoto] = useState(false);
   const [showCreateListing, setShowCreateListing] = useState(false);
   const [listingForm, setListingForm] = useState({
     crop_type: '',
@@ -135,6 +138,7 @@ export default function FarmerDashboard() {
         gender: farmer.gender || 'male',
         profile_photo: farmer.profile_photo || '',
         bio: farmer.bio || '',
+        farm_photos: Array.isArray(farmer.farm_photos) ? farmer.farm_photos : [],
       });
       await loadContracts(farmer.id);
       await loadMarketplaceListings(farmer.id);
@@ -394,6 +398,7 @@ export default function FarmerDashboard() {
         gender: profileForm.gender || null,
         profile_photo: profileForm.profile_photo || null,
         bio: profileForm.bio || null,
+        farm_photos: profileForm.farm_photos || [],
       };
 
       const saved = await updateFarmer(farmerId, updateData, { walletAddress: evmAddress });
@@ -431,6 +436,7 @@ export default function FarmerDashboard() {
         gender: farmerData.gender || 'male',
         profile_photo: farmerData.profile_photo || '',
         bio: farmerData.bio || '',
+        farm_photos: Array.isArray(farmerData.farm_photos) ? farmerData.farm_photos : [],
       });
     }
     setIsEditingProfile(false);
@@ -460,6 +466,36 @@ export default function FarmerDashboard() {
       toast.error(err?.message || 'Failed to upload photo');
     } finally {
       setUploadingPhoto(false);
+      if (e.target) e.target.value = '';
+    }
+  };
+
+  const handleFarmPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    try {
+      setUploadingFarmPhoto(true);
+      const { uploadImageToIPFS } = await import('@/lib/ipfsService');
+      const urls: string[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name} is larger than 10MB`);
+          continue;
+        }
+        const result = await uploadImageToIPFS(file);
+        urls.push(result.url);
+      }
+      if (urls.length) {
+        setProfileForm((prev) => ({
+          ...prev,
+          farm_photos: [...(prev.farm_photos || []), ...urls].slice(0, 12),
+        }));
+        toast.success(`Added ${urls.length} farm photo${urls.length > 1 ? 's' : ''}`);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to upload farm photos');
+    } finally {
+      setUploadingFarmPhoto(false);
       if (e.target) e.target.value = '';
     }
   };
@@ -952,6 +988,59 @@ export default function FarmerDashboard() {
                     </a>
                   )}
                 </div>
+              )}
+            </div>
+
+            {/* Bio - used on Meet Your Farmer / QR pages */}
+            <div className="md:col-span-2 group">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Farmer Bio</label>
+              {isEditingProfile ? (
+                <textarea
+                  value={profileForm.bio}
+                  onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white text-sm font-medium text-gray-900"
+                  placeholder="Tell buyers about your farm, crops and practices..."
+                />
+              ) : (
+                <div className="bg-gray-50/80 border border-gray-100 rounded-xl px-4 py-3">
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap">{farmerData?.bio || 'Not set yet - this text appears on the consumer QR page.'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Farm photos - feed Behind The Scenes / Meet Your Farmer */}
+            <div className="md:col-span-2 group">
+              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Farm Pictures</label>
+              <div className="flex flex-wrap gap-3 mb-3">
+                {(isEditingProfile ? profileForm.farm_photos : (farmerData?.farm_photos || [])).map((url, i) => (
+                  <div key={url + i} className="relative w-24 h-24 rounded-xl overflow-hidden border border-gray-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="Farm" className="w-full h-full object-cover" />
+                    {isEditingProfile && (
+                      <button
+                        type="button"
+                        onClick={() => setProfileForm((prev) => ({
+                          ...prev,
+                          farm_photos: prev.farm_photos.filter((_, idx) => idx !== i),
+                        }))}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-md bg-black/70 text-white text-xs"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {!(isEditingProfile ? profileForm.farm_photos : farmerData?.farm_photos)?.length && (
+                  <p className="text-sm text-gray-500">No farm pictures yet.</p>
+                )}
+              </div>
+              {isEditingProfile && (
+                <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold cursor-pointer border border-emerald-100">
+                  <Camera className="h-4 w-4" />
+                  {uploadingFarmPhoto ? 'Uploading...' : 'Add farm pictures'}
+                  <input type="file" accept="image/*" multiple hidden disabled={uploadingFarmPhoto} onChange={handleFarmPhotoUpload} />
+                </label>
               )}
             </div>
 

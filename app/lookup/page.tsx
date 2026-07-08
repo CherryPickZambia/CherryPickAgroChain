@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Search, Shield, ArrowRight, Package, MapPin, Scan, Leaf, FlaskConical, Link2, Truck, QrCode, CheckCircle2, TrendingUp, Users, Globe2, Sparkles } from "lucide-react";
 import Link from "next/link";
+import MediaCarousel from "@/components/MediaCarousel";
+import { getBehindTheScenesMedia, mergeBehindTheScenes } from "@/lib/behindTheScenes";
 
 /* palette + fonts (matches Landing Page) */
 const C = {
@@ -141,8 +143,7 @@ export default function LookupPage() {
                     })));
                 }
 
-                // Behind-the-scenes media: authentic photos/videos captured across
-                // real batches (farmer logs, processing, packaging) + curated imagery.
+                // Behind-the-scenes: admin-curated media first, then journey captures.
                 const photos: string[] = [];
                 const videos: string[] = [];
                 (eventsRes.data || []).forEach((e: any) => {
@@ -157,8 +158,10 @@ export default function LookupPage() {
                         if (Array.isArray(m.videos)) m.videos.forEach((v: any) => { if (typeof v === "string") videos.push(v); });
                     } catch { /* ignore unparseable metadata */ }
                 });
-                setGallery(Array.from(new Set(photos)).slice(0, 12));
-                setGalleryVideos(Array.from(new Set(videos)).slice(0, 3));
+                const curated = await getBehindTheScenesMedia();
+                const merged = mergeBehindTheScenes(curated, Array.from(new Set(photos)), Array.from(new Set(videos)));
+                setGallery(merged.photos.slice(0, 18));
+                setGalleryVideos(merged.videos.slice(0, 6));
             } catch {
                 /* keep editorial fallbacks if live data is unavailable */
             }
@@ -366,22 +369,7 @@ export default function LookupPage() {
                     <p style={{ ...body, fontSize: 14, maxWidth: 520, margin: "0 0 40px" }}>
                         Authentic photos and video captured across our farms, drying, processing and packaging - straight from the people growing your food.
                     </p>
-                    {galleryVideos.length > 0 && (
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12, marginBottom: 12 }}>
-                            {galleryVideos.map((v, i) => (
-                                <video key={i} src={v} controls playsInline style={{ width: "100%", borderRadius: 12, border: `1px solid ${C.border}`, background: "#000" }} />
-                            ))}
-                        </div>
-                    )}
-                    {gallery.length > 0 && (
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: 10 }}>
-                            {gallery.map((p, i) => (
-                                <img key={i} src={p} alt="Behind the scenes" loading="lazy"
-                                    style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: 12, border: `1px solid ${C.border}` }}
-                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-                            ))}
-                        </div>
-                    )}
+                    <MediaCarousel photos={gallery} videos={galleryVideos} tone="dark" />
                 </div>
             )}
 

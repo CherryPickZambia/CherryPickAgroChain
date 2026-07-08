@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { TraceabilityEvent, Batch } from "@/lib/traceabilityService";
 import { recordScan } from "@/lib/qrAnalytics";
 import ComplaintModal from "@/components/ComplaintModal";
+import MediaCarousel from "@/components/MediaCarousel";
+import { getBehindTheScenesMedia, mergeBehindTheScenes } from "@/lib/behindTheScenes";
 
 interface TraceabilityViewProps {
   batch: Batch;
@@ -16,6 +18,7 @@ interface TraceabilityViewProps {
     profile_photo?: string | null;
     bio?: string | null;
     years_farming?: number | null;
+    farm_photos?: string[] | null;
   };
   contract?: {
     contract_code: string;
@@ -238,9 +241,8 @@ export default function TraceabilityView({
   const GROWTH_TYPES = new Set(['planting', 'growth_update', 'input_application', 'irrigation', 'pest_control', 'harvest']);
   const growthUpdates = sortedEvents.filter(e => e.actor_type === 'farmer' || GROWTH_TYPES.has(e.event_type as string));
 
-  // Behind-the-scenes gallery: every photo captured along the journey plus any
-  // curated batch/farmer imagery from metadata.
-  const galleryPhotos = (() => {
+  // Journey-captured photos (events + metadata + farmer farm photos).
+  const journeyPhotos = (() => {
     const set: string[] = [];
     const push = (u?: string | null) => { if (u && typeof u === "string" && !set.includes(u)) set.push(u); };
     sortedEvents.forEach(e => (e.photos || []).forEach(push));
@@ -248,15 +250,34 @@ export default function TraceabilityView({
     push(metadata.productImage);
     push(metadata.farmer_image);
     if (Array.isArray(metadata.gallery)) metadata.gallery.forEach(push);
+    if (Array.isArray(farmer?.farm_photos)) farmer.farm_photos.forEach(push);
     return set;
   })();
-  const galleryVideos: string[] = Array.isArray(metadata.videos) ? metadata.videos.filter((v: any) => typeof v === "string") : [];
+  const journeyVideos: string[] = Array.isArray(metadata.videos) ? metadata.videos.filter((v: any) => typeof v === "string") : [];
+
+  const [galleryPhotos, setGalleryPhotos] = useState<string[]>(journeyPhotos);
+  const [galleryVideos, setGalleryVideos] = useState<string[]>(journeyVideos);
 
   const currentStatus = (metadata.status || (batch as any).status || (contract?.status) || "Verified").toString();
   const productName = cropType;
   const processingDate = metadata.productionDate ? formatDateDayMonth(metadata.productionDate) : (batch.harvest_date ? formatDateDayMonth(batch.harvest_date) : "");
   const mapsQuery = encodeURIComponent(location);
   const farmerBio = farmer?.bio || `${farmerName.split(" ")[0]} grows ${cropType.toLowerCase()} in ${location} using careful, sustainable practices. By choosing this product you are helping create a reliable market for farmers like ${farmerName.split(" ")[0]}.`;
+
+  // Merge admin-curated Behind The Scenes media (shown first) with journey captures.
+  useEffect(() => {
+    let active = true;
+    getBehindTheScenesMedia()
+      .then((curated) => {
+        if (!active) return;
+        const merged = mergeBehindTheScenes(curated, journeyPhotos, journeyVideos);
+        setGalleryPhotos(merged.photos);
+        setGalleryVideos(merged.videos);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batch.batch_code, journeyPhotos.length, journeyVideos.length]);
 
   // Capture the scan for analytics and keep the reference for the feedback loop.
   useEffect(() => {
@@ -617,20 +638,7 @@ export default function TraceabilityView({
               <p style={{ color: "#9aa89d", fontSize: 13, lineHeight: 1.6, margin: "0 0 18px", fontFamily: "'Inter', sans-serif" }}>
                 Authentic moments from the farm, drying, processing and packaging - captured along the way.
               </p>
-              {galleryVideos.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 12 }}>
-                  {galleryVideos.slice(0, 3).map((v, i) => (
-                    <video key={i} src={v} controls playsInline style={{ width: "100%", borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", background: "#000" }} />
-                  ))}
-                </div>
-              )}
-              {galleryPhotos.length > 0 && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {galleryPhotos.slice(0, 9).map((p, i) => (
-                    <img key={i} src={p} alt="Behind the scenes" style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)" }} />
-                  ))}
-                </div>
-              )}
+              <MediaCarousel photos={galleryPhotos.slice(0, 18)} videos={galleryVideos.slice(0, 4)} tone="dark" />
             </div>
           </FadeIn>
         )}

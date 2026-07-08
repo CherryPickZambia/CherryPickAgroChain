@@ -516,7 +516,7 @@ export async function getTraceabilityByBatchCode(batchCodeOrContractId: string):
   if (batch.farmer_id) {
     const { data } = await client
       .from('farmers')
-      .select('name, location_address, farm_size, profile_photo, bio, years_farming')
+      .select('name, location_address, farm_size, profile_photo, bio, years_farming, farm_photos')
       .eq('id', batch.farmer_id)
       .single();
     farmer = data;
