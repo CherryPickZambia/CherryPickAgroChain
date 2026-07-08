@@ -21,6 +21,8 @@ interface FarmerData {
   crops: string[];
   joined: string;
   verified: boolean;
+  status?: "pending" | "approved" | "rejected" | "suspended";
+  suspensionReason?: string | null;
   contracts: ContractData[];
   totalEarnings: number;
   completedMilestones: number;
@@ -95,13 +97,20 @@ export default function FarmerDetailModal({ isOpen, onCloseAction, farmer }: Far
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h2 className="text-2xl" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700 }}>{farmer.name}</h2>
-                      {farmer.verified && (
+                      {farmer.status === 'suspended' ? (
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'rgba(220,38,38,0.2)', color: '#fecaca' }}>
+                          Suspended
+                        </div>
+                      ) : farmer.verified ? (
                         <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs" style={{ background: 'rgba(191,255,0,0.2)', color: '#BFFF00' }}>
                           <CheckCircle2 className="h-3 w-3" />
                           Verified
                         </div>
-                      )}
+                      ) : null}
                     </div>
+                    {farmer.status === 'suspended' && farmer.suspensionReason && (
+                      <p className="text-xs mt-2" style={{ color: 'rgba(254,202,202,0.9)' }}>{farmer.suspensionReason}</p>
+                    )}
                     <div className="flex items-center gap-4 mt-2" style={{ color: 'rgba(255,255,255,0.7)' }}>
                       <span className="flex items-center gap-1 text-sm">
                         <MapPin className="h-4 w-4" />

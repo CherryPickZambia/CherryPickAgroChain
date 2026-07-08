@@ -36,6 +36,7 @@ interface FarmerProfile {
   profile_photo?: string | null;
   bio?: string | null;
   farm_photos?: string[] | null;
+  suspension_reason?: string | null;
   rejection_reason?: string | null;
   created_at?: string;
   user_id?: string;
@@ -218,8 +219,24 @@ export default function FarmerDashboard() {
     }
   };
 
-  // Pending farmer check - restricts traceability, batches, bidding, contracts
+  // Access gates: only fully approved farmers get privileged features.
+  // Suspended / rejected / pending all stay locked (with tailored messaging).
+  const isSuspended = farmerData?.status === 'suspended';
+  const isRejected = farmerData?.status === 'rejected';
   const isPending = farmerData?.status !== 'approved';
+  const lockMessage = isSuspended
+    ? (farmerData?.suspension_reason || 'Your account has been suspended. Contact Cherry-Pick support.')
+    : isRejected
+      ? (farmerData?.rejection_reason || 'Your application was rejected.')
+      : 'Account pending approval.';
+
+  const requireApproved = (action?: () => void) => {
+    if (isPending) {
+      toast.error(lockMessage);
+      return;
+    }
+    action?.();
+  };
 
   const stats = {
     activeContracts: contracts.filter(c => c.status === "active").length,
@@ -594,20 +611,35 @@ export default function FarmerDashboard() {
         </h1>
       </div>
 
-      {/* Pending Approval Banner */}
+      {/* Account status banner */}
       {isPending && (
-        <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl p-4 mb-6 flex items-center gap-3">
-          <div className="p-2 bg-yellow-100 rounded-lg">
-            <AlertCircle className="h-5 w-5 text-yellow-600" />
+        <div
+          className={`rounded-xl p-4 mb-6 flex items-center gap-3 border ${
+            isSuspended
+              ? 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200'
+              : isRejected
+                ? 'bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200'
+                : 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200'
+          }`}
+        >
+          <div className={`p-2 rounded-lg ${isSuspended ? 'bg-red-100' : isRejected ? 'bg-gray-100' : 'bg-yellow-100'}`}>
+            <AlertCircle className={`h-5 w-5 ${isSuspended ? 'text-red-600' : isRejected ? 'text-gray-600' : 'text-yellow-600'}`} />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-yellow-800">Account Pending Approval</p>
-            <p className="text-xs text-yellow-700 mt-0.5">
-              Your farm is being verified. You can edit your profile, use AI diagnostics, and view the marketplace.
-              Contracts, traceability, and batches will unlock after approval.
+            <p className={`text-sm font-semibold ${isSuspended ? 'text-red-800' : isRejected ? 'text-gray-800' : 'text-yellow-800'}`}>
+              {isSuspended ? 'Account Suspended' : isRejected ? 'Application Rejected' : 'Account Pending Approval'}
+            </p>
+            <p className={`text-xs mt-0.5 ${isSuspended ? 'text-red-700' : isRejected ? 'text-gray-600' : 'text-yellow-700'}`}>
+              {isSuspended
+                ? `${lockMessage} You can still view your profile and wallet, but contracts, bidding, batches, listings and growth tools are locked.`
+                : isRejected
+                  ? `${lockMessage} You can update your profile and request review via support.`
+                  : 'Your farm is being verified. You can edit your profile, use AI diagnostics, and view the marketplace. Contracts, traceability, and batches will unlock after approval.'}
             </p>
           </div>
-          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
+          <span className={`px-3 py-1 text-xs font-bold rounded-full capitalize ${
+            isSuspended ? 'bg-red-100 text-red-700' : isRejected ? 'bg-gray-100 text-gray-700' : 'bg-yellow-100 text-yellow-700'
+          }`}>
             {farmerData?.status || 'pending'}
           </span>
         </div>
@@ -627,20 +659,20 @@ export default function FarmerDashboard() {
           <div className="flex items-center gap-2"><FileText className="w-5 h-5" />Contracts</div>
           {activeTab === 'contracts' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
         </button>
-        <button onClick={() => setActiveTab('listings')} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'listings' ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}>
-          <div className="flex items-center gap-2"><ShoppingBag className="w-5 h-5" />Marketplace</div>
+        <button onClick={() => requireApproved(() => setActiveTab('listings'))} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'listings' ? 'text-emerald-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><ShoppingBag className="w-5 h-5" />Marketplace {isPending && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSuspended ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>Locked</span>}</div>
           {activeTab === 'listings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
         </button>
-        <button onClick={() => { if (isPending) { toast.error('Account pending approval.'); return; } setActiveTab('traceability'); }} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'traceability' ? 'text-emerald-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}>
-          <div className="flex items-center gap-2"><QrCode className="w-5 h-5" />Traceability {isPending && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Locked</span>}</div>
+        <button onClick={() => requireApproved(() => setActiveTab('traceability'))} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'traceability' ? 'text-emerald-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><QrCode className="w-5 h-5" />Traceability {isPending && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSuspended ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>Locked</span>}</div>
           {activeTab === 'traceability' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
         </button>
-        <button onClick={() => setActiveTab('bidding')} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'bidding' ? 'text-emerald-600' : 'text-gray-500 hover:text-gray-700'}`}>
-          <div className="flex items-center gap-2"><DollarSign className="w-5 h-5" />Bidding</div>
+        <button onClick={() => requireApproved(() => setActiveTab('bidding'))} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'bidding' ? 'text-emerald-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><DollarSign className="w-5 h-5" />Bidding {isPending && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSuspended ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>Locked</span>}</div>
           {activeTab === 'bidding' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
         </button>
-        <button onClick={() => { if (isPending) { toast.error('Account pending approval.'); return; } setActiveTab('growth'); }} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'growth' ? 'text-emerald-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}>
-          <div className="flex items-center gap-2"><Sprout className="w-5 h-5" />Growth Log {isPending && <span className="text-[10px] bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Locked</span>}</div>
+        <button onClick={() => requireApproved(() => setActiveTab('growth'))} className={`pb-4 px-2 font-medium transition-colors relative whitespace-nowrap ${activeTab === 'growth' ? 'text-emerald-600' : isPending ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700'}`}>
+          <div className="flex items-center gap-2"><Sprout className="w-5 h-5" />Growth Log {isPending && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSuspended ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>Locked</span>}</div>
           {activeTab === 'growth' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-600 rounded-t-full" />}
         </button>
       </div>
@@ -1133,7 +1165,7 @@ export default function FarmerDashboard() {
       )}
 
       {/* Growth Tab */}
-      {activeTab === 'growth' && (
+      {activeTab === 'growth' && !isPending && (
         <FarmerGrowthPanel
           farmerId={farmerId || ''}
           contracts={contracts.map(c => ({ id: c.id, cropType: c.cropType, variety: c.variety, status: c.status }))}
@@ -1143,12 +1175,12 @@ export default function FarmerDashboard() {
       )}
 
       {/* Traceability Tab */}
-      {activeTab === 'traceability' && (
+      {activeTab === 'traceability' && !isPending && (
         <BatchList farmerId={farmerId || ''} userId={farmerData?.user_id} />
       )}
 
       {/* Marketplace Listings Tab */}
-      {activeTab === 'listings' && (
+      {activeTab === 'listings' && !isPending && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -1658,7 +1690,7 @@ export default function FarmerDashboard() {
       )}
 
       {/* Bidding Tab */}
-      {activeTab === 'bidding' && farmerId && (
+      {activeTab === 'bidding' && farmerId && !isPending && (
         <FarmerBiddingPanel farmerId={farmerId} isPending={isPending} />
       )}
 

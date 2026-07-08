@@ -212,13 +212,31 @@ export async function getFarmers() {
 }
 
 export async function approveFarmer(id: string) {
-  return updateFarmer(id, { status: 'approved' });
+  return updateFarmer(id, {
+    status: 'approved',
+    suspension_reason: null,
+    rejection_reason: null,
+  });
 }
 
 export async function rejectFarmer(id: string, reason?: string) {
   return updateFarmer(id, {
     status: 'rejected',
     rejection_reason: reason
+  });
+}
+
+export async function suspendFarmer(id: string, reason?: string) {
+  return updateFarmer(id, {
+    status: 'suspended',
+    suspension_reason: reason || 'Suspended by admin',
+  });
+}
+
+export async function reactivateFarmer(id: string) {
+  return updateFarmer(id, {
+    status: 'approved',
+    suspension_reason: null,
   });
 }
 

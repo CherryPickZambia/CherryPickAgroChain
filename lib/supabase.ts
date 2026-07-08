@@ -35,8 +35,9 @@ export interface Database {
           location_lng: number | null;
           location_address: string;
           farm_size: number | null;
-          status: 'pending' | 'approved' | 'rejected';
+          status: 'pending' | 'approved' | 'rejected' | 'suspended';
           rejection_reason: string | null;
+          suspension_reason?: string | null;
           // GLOBALG.A.P. / ISO 22005 compliance fields
           gps_lat?: number | null;
           gps_lng?: number | null;
