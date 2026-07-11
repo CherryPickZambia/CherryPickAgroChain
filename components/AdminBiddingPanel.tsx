@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, ShoppingBag, Clock, CheckCircle, XCircle, Eye, ChevronDown, Award, User, MapPin, DollarSign, Loader2, Package } from "lucide-react";
+import Image from "next/image";
+import {
+    Plus, ShoppingBag, Clock, Eye, ChevronDown, ChevronUp, User, MapPin,
+    DollarSign, Loader2, Package, ShieldCheck, Link2, Images, Sparkles,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import {
@@ -9,22 +13,62 @@ import {
     getAllSupplyDemands,
     getBidsByDemand,
     updateBidStatus,
-    updateSupplyDemandStatus,
     acceptBidAndCreateContract,
+    getBidTraceabilityStrength,
     type SupplyDemand,
     type FarmerBid,
+    type BidSourceType,
+    type BidTraceabilityMode,
+    type BidTraceabilityStrength,
+    type LinkedBatchSummary,
 } from "@/lib/biddingService";
 import { Farmer } from "@/lib/supabase";
 import { SUPPORTED_CROPS } from "@/lib/config";
+
+const SOURCE_LABELS: Record<BidSourceType, string> = {
+    own_produce: "Own produce",
+    third_party: "Third-party sourced",
+    open_market: "Open market sourced",
+};
+
+const MODE_LABELS: Record<BidTraceabilityMode, string> = {
+    existing_batch: "Existing tracked AgroChain batch",
+    intake_details: "Intake/source traceability provided",
+    basic_declaration: "Basic source declaration",
+};
+
+const STRENGTH_STYLES: Record<BidTraceabilityStrength, string> = {
+    high: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    medium: "bg-amber-100 text-amber-800 border-amber-200",
+    basic: "bg-gray-100 text-gray-700 border-gray-200",
+};
+
+const TRACEABILITY_RANK: Record<BidTraceabilityStrength, number> = {
+    high: 3,
+    medium: 2,
+    basic: 1,
+};
+
+function traceabilityStrengthFor(bid: FarmerBid): BidTraceabilityStrength {
+    return bid.traceability_strength || getBidTraceabilityStrength(bid.traceability_mode, bid.linked_batch_id);
+}
+
+function sortBidsForEvaluation<T extends FarmerBid>(bids: T[]): T[] {
+    return [...bids].sort((a, b) => {
+        const strengthDifference = TRACEABILITY_RANK[traceabilityStrengthFor(b)] - TRACEABILITY_RANK[traceabilityStrengthFor(a)];
+        return strengthDifference || a.proposed_price_per_unit - b.proposed_price_per_unit;
+    });
+}
 
 export default function AdminBiddingPanel() {
     const [demands, setDemands] = useState<SupplyDemand[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [expandedDemand, setExpandedDemand] = useState<string | null>(null);
-    const [demandBids, setDemandBids] = useState<Record<string, (FarmerBid & { farmer?: Farmer })[]>>({});
+    const [demandBids, setDemandBids] = useState<Record<string, (FarmerBid & { farmer?: Farmer; linked_batch?: LinkedBatchSummary })[]>>({});
     const [loadingBids, setLoadingBids] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
+    const [expandedTraceability, setExpandedTraceability] = useState<string | null>(null);
 
     const [form, setForm] = useState({
         title: "",
@@ -125,6 +169,12 @@ export default function AdminBiddingPanel() {
                     quantity: bid.proposed_quantity,
                     pricePerUnit: bid.proposed_price_per_unit,
                     unit: demand.unit,
+                    variety: bid.traceability_details?.variety || demand.variety,
+                    linkedBatchId: bid.linked_batch_id,
+                    traceabilityStrength: traceabilityStrengthFor(bid),
+                    sourceType: bid.source_type,
+                    evidencePhotoUrls: bid.evidence_photo_urls,
+                    aiScanResult: bid.ai_scan_result,
                     deliveryDeadline: bid.delivery_date || demand.delivery_deadline,
                     requiredQuantity: demand.required_quantity,
                 });
@@ -302,9 +352,33 @@ export default function AdminBiddingPanel() {
                                                 <p className="text-center text-gray-500 py-4">No bids received yet</p>
                                             ) : (
                                                 <div className="space-y-3">
-                                                    <p className="text-sm font-medium text-gray-700">{(demandBids[demand.id!] || []).length} bid(s) received</p>
-                                                    {(demandBids[demand.id!] || []).map(bid => (
-                                                        <div key={bid.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-700">{(demandBids[demand.id!] || []).length} bid(s) received</p>
+                                                        <p className="text-xs text-gray-500">Prioritized by traceability strength, then price.</p>
+                                                    </div>
+                                                    {sortBidsForEvaluation(demandBids[demand.id!] || []).map(bid => {
+                                                        const strength = traceabilityStrengthFor(bid);
+                                                        const details = bid.traceability_details || {};
+                                                        const detailRows: [string, string | undefined][] = [
+                                                            ["Harvest date", details.harvest_date],
+                                                            ["Expected harvest window", details.expected_harvest_start || details.expected_harvest_end
+                                                                ? `${details.expected_harvest_start || "Not set"} to ${details.expected_harvest_end || "Not set"}`
+                                                                : undefined],
+                                                            ["Variety", details.variety],
+                                                            ["Block / orchard / location", details.source_block_or_location],
+                                                            ["Supplier/source", details.supplier_name],
+                                                            ["Supplier phone / ID", details.supplier_phone_or_id],
+                                                            ["Claimed origin", details.claimed_origin],
+                                                            ["Seller/source", details.seller_name],
+                                                            ["Seller contact", details.seller_contact],
+                                                            ["Market / source location", details.market_name_or_location],
+                                                            ["Production notes", details.production_notes],
+                                                            ["Source notes", details.source_notes],
+                                                        ].filter((row): row is [string, string] => Boolean(row[1]));
+                                                        const isExpanded = expandedTraceability === bid.id;
+
+                                                        return (
+                                                        <div key={bid.id} className={`bg-white rounded-lg border p-4 ${strength === "high" ? "border-emerald-300" : strength === "medium" ? "border-amber-300" : "border-gray-200"}`}>
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="bg-emerald-50 p-2 rounded-full"><User className="h-5 w-5 text-emerald-600" /></div>
@@ -317,9 +391,80 @@ export default function AdminBiddingPanel() {
                                                                     </div>
                                                                 </div>
                                                                 <div className="text-right">
+                                                                    <span className={`mb-1 inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-bold uppercase tracking-wide ${STRENGTH_STYLES[strength]}`}>
+                                                                        <ShieldCheck className="h-3.5 w-3.5" />
+                                                                        {strength}
+                                                                    </span>
                                                                     <p className="text-lg font-bold text-gray-900">K{bid.proposed_price_per_unit}/{demand.unit}</p>
                                                                     <p className="text-xs text-gray-500">{bid.proposed_quantity} {demand.unit}</p>
                                                                 </div>
+                                                            </div>
+                                                            <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                                                                    <span className="text-gray-700">
+                                                                        <strong>Source:</strong> {bid.source_type ? SOURCE_LABELS[bid.source_type] : "Not declared (legacy bid)"}
+                                                                    </span>
+                                                                    <span className="text-gray-700">
+                                                                        <strong>Mode:</strong> {bid.traceability_mode ? MODE_LABELS[bid.traceability_mode] : "Basic information only"}
+                                                                    </span>
+                                                                    {bid.linked_batch && (
+                                                                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
+                                                                            <Link2 className="h-3.5 w-3.5" />
+                                                                            {bid.linked_batch.batch_code} · {bid.linked_batch.current_status || "tracked"}
+                                                                        </span>
+                                                                    )}
+                                                                    {(detailRows.length > 0 || bid.evidence_photo_urls?.length || bid.ai_scan_result) && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setExpandedTraceability(isExpanded ? null : bid.id!)}
+                                                                            className="ml-auto inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-900"
+                                                                        >
+                                                                            {isExpanded ? "Hide evidence" : "View traceability evidence"}
+                                                                            {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+
+                                                                {isExpanded && (
+                                                                    <div className="mt-3 border-t border-slate-200 pt-3 space-y-3">
+                                                                        {detailRows.length > 0 && (
+                                                                            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                                                {detailRows.map(([label, value]) => (
+                                                                                    <div key={label} className="rounded bg-white p-2">
+                                                                                        <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</dt>
+                                                                                        <dd className="mt-0.5 text-xs text-gray-800 whitespace-pre-wrap">{value}</dd>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </dl>
+                                                                        )}
+                                                                        {bid.evidence_photo_urls && bid.evidence_photo_urls.length > 0 && (
+                                                                            <div>
+                                                                                <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-gray-700">
+                                                                                    <Images className="h-4 w-4" /> Submitted pictures
+                                                                                </p>
+                                                                                <div className="flex flex-wrap gap-2">
+                                                                                    {bid.evidence_photo_urls.map((url, index) => (
+                                                                                        <a key={`${url}-${index}`} href={url} target="_blank" rel="noreferrer" className="block">
+                                                                                            <Image src={url} alt={`Bid evidence ${index + 1}`} width={96} height={96} unoptimized className="h-24 w-24 rounded-lg border border-gray-200 object-cover" />
+                                                                                        </a>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                        {bid.ai_scan_result && (
+                                                                            <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 text-xs text-violet-900">
+                                                                                <p className="flex items-center gap-1 font-semibold">
+                                                                                    <Sparkles className="h-4 w-4" />
+                                                                                    AI scan: {bid.ai_scan_result.healthScore}% health · {bid.ai_scan_result.confidenceScore}% confidence
+                                                                                </p>
+                                                                                <p className="mt-1">{bid.ai_scan_result.diagnosis}</p>
+                                                                                {bid.ai_scan_result.identifiedIssues?.length > 0 && (
+                                                                                    <p className="mt-1"><strong>Issues:</strong> {bid.ai_scan_result.identifiedIssues.join(", ")}</p>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             {bid.notes && <p className="text-sm text-gray-600 mt-2 bg-gray-50 rounded p-2">{bid.notes}</p>}
                                                             <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
@@ -335,7 +480,8 @@ export default function AdminBiddingPanel() {
                                                                 )}
                                                             </div>
                                                         </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>

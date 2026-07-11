@@ -401,6 +401,19 @@ CREATE TABLE IF NOT EXISTS farmer_bids (
   notes TEXT,
   message TEXT,
   admin_notes TEXT,
+  source_type TEXT CHECK (
+    source_type IS NULL OR source_type IN ('own_produce', 'third_party', 'open_market')
+  ),
+  traceability_mode TEXT CHECK (
+    traceability_mode IS NULL OR traceability_mode IN ('existing_batch', 'intake_details', 'basic_declaration')
+  ),
+  linked_batch_id UUID REFERENCES batches(id) ON DELETE SET NULL,
+  traceability_details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  evidence_photo_urls TEXT[] NOT NULL DEFAULT '{}',
+  ai_scan_result JSONB,
+  traceability_strength TEXT CHECK (
+    traceability_strength IS NULL OR traceability_strength IN ('high', 'medium', 'basic')
+  ),
   status TEXT DEFAULT 'submitted' CHECK (
     status IN ('submitted', 'pending', 'accepted', 'rejected', 'withdrawn')
   ),
