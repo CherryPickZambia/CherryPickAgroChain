@@ -175,7 +175,7 @@ export default function FarmerBiddingPanel({ farmerId, isPending }: FarmerBiddin
         }
         setAnalyzing(true);
         try {
-            const imageBase64 = await fileToJpegDataUrl(evidenceFiles[0], { maxDim: 1280, quality: 0.85 });
+            const imageBase64 = await fileToJpegDataUrl(evidenceFiles[0], { maxDim: 2000, quality: 0.9 });
             const result = await analyzeCropHealth({
                 imageBase64,
                 cropType: selectedDemand.crop_type,

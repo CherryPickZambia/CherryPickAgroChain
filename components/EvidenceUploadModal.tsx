@@ -120,7 +120,7 @@ export default function EvidenceUploadModal({
 
     try {
       // Re-encode to JPEG so iOS HEIC and oversized phone photos work reliably.
-      const imageBase64 = await fileToJpegDataUrl(images[selectedAiImageIndex], { maxDim: 1280, quality: 0.85 });
+      const imageBase64 = await fileToJpegDataUrl(images[selectedAiImageIndex], { maxDim: 2000, quality: 0.9 });
       const additionalContext = [
         `Verifier evidence for milestone: ${milestoneName}`,
         notes.trim() ? `Verifier notes: ${notes.trim()}` : "",

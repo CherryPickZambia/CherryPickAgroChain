@@ -601,6 +601,17 @@ export async function acceptBidAndCreateContract(params: AcceptBidParams): Promi
             actor_name: 'System/Admin',
             actor_type: 'admin',
             photos: evidencePhotoUrls,
+            // Bid-acceptance carries commercial (pricing) info, so it stays
+            // internal-only until an admin chooses to publish it.
+            is_public: false,
+            ...(aiScanResult
+                ? {
+                      ai_disease: aiScanResult.diagnosis,
+                      ai_health_score: aiScanResult.healthScore,
+                      ai_confidence: aiScanResult.confidenceScore,
+                      ai_treatment_rec: aiScanResult.recommendations?.join('; ') || undefined,
+                  }
+                : {}),
         });
     } catch (batchError) {
         console.error('Failed to create traceability batch or log initial event:', batchError);

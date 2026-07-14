@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   X, Clock, CheckCircle2, AlertCircle, Package, MapPin, Truck, Leaf,
-  ShieldCheck, Camera, Bug, Droplets, ThermometerSun, User, Eye,
+  ShieldCheck, Camera, Bug, Droplets, ThermometerSun, User, Eye, EyeOff,
   ChevronDown, ChevronUp, Loader2, FileText, Sprout, Factory,
   AlertTriangle, ExternalLink
 } from "lucide-react";
@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import {
   getBatchesByContract, getBatchTraceability, getBatchesByFarmer,
+  setTraceabilityEventVisibility,
   type Batch, type TraceabilityEvent
 } from "@/lib/traceabilityService";
 import toast from "react-hot-toast";
@@ -90,6 +91,22 @@ export default function AdminTraceabilityHistoryModal({
   const [filter, setFilter] = useState<FilterType>('all');
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(batchId || null);
+  const [savingVisibility, setSavingVisibility] = useState<string | null>(null);
+
+  const toggleVisibility = async (event: TraceabilityEvent) => {
+    if (!event.id) return;
+    const next = event.is_public === false;
+    setSavingVisibility(event.id);
+    try {
+      await setTraceabilityEventVisibility(event.id, next);
+      setEvents(prev => prev.map(e => (e.id === event.id ? { ...e, is_public: next } : e)));
+      toast.success(next ? 'Now visible on public trace' : 'Now internal-only');
+    } catch {
+      toast.error('Could not update visibility');
+    } finally {
+      setSavingVisibility(null);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && (contractId || batchId)) {
@@ -380,6 +397,24 @@ export default function AdminTraceabilityHistoryModal({
                                         <span className="flex items-center gap-0.5 text-[10px] text-gray-400">
                                           <Camera className="h-3 w-3" /> {event.photos!.length}
                                         </span>
+                                      )}
+                                      {event.id && (
+                                        <button
+                                          type="button"
+                                          disabled={savingVisibility === event.id}
+                                          onClick={(e) => { e.stopPropagation(); toggleVisibility(event); }}
+                                          className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase transition-colors disabled:opacity-50"
+                                          style={event.is_public === false
+                                            ? { background: 'rgba(120,120,120,0.12)', color: '#6b7280', border: '1px solid rgba(120,120,120,0.25)' }
+                                            : { background: 'rgba(34,197,94,0.1)', color: '#166534', border: '1px solid rgba(34,197,94,0.25)' }}
+                                          title={event.is_public === false ? 'Internal only — click to publish to the public trace page' : 'Published on public trace — click to make internal only'}
+                                        >
+                                          {savingVisibility === event.id
+                                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                                            : event.is_public === false
+                                              ? <><EyeOff className="h-3 w-3" /> Internal</>
+                                              : <><Eye className="h-3 w-3" /> Public</>}
+                                        </button>
                                       )}
                                     </div>
                                     {event.event_description && (

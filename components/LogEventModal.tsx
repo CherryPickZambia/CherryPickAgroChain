@@ -164,7 +164,7 @@ export default function LogEventModal({ isOpen, onCloseAction, batchId, farmerId
 
         setAiAnalyzing(true);
         try {
-            const imageBase64 = await fileToJpegDataUrl(evidenceImages[selectedAiImageIndex], { maxDim: 1280, quality: 0.85 });
+            const imageBase64 = await fileToJpegDataUrl(evidenceImages[selectedAiImageIndex], { maxDim: 2000, quality: 0.9 });
             const additionalContext = [
                 title.trim() ? `Event: ${title.trim()}` : "",
                 description.trim() ? `Details: ${description.trim()}` : "",

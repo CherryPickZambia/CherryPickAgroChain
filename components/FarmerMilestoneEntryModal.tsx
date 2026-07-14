@@ -200,7 +200,7 @@ export default function FarmerMilestoneEntryModal({
     setAiAnalyzing(true);
     try {
       // Normalize to JPEG so iOS HEIC / oversized phone photos analyze reliably.
-      const imageBase64 = await fileToJpegDataUrl(evidenceImages[selectedAiImageIndex], { maxDim: 1280, quality: 0.85 });
+      const imageBase64 = await fileToJpegDataUrl(evidenceImages[selectedAiImageIndex], { maxDim: 2000, quality: 0.9 });
       const additionalContext = [
         `Farmer evidence for milestone: ${milestoneName}`,
         notes.trim() ? `Farmer notes: ${notes.trim()}` : "",

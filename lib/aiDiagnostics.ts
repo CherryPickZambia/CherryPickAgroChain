@@ -8,7 +8,10 @@ export interface CropDiagnosisResult {
   recommendations: string[];
   confidenceScore: number;
   cropType?: string;
+  cropTypeCandidates?: string[];
   growthStage?: string;
+  isPlant?: boolean;
+  imageQuality?: 'good' | 'fair' | 'poor';
   rawResponse?: any;
 }
 
@@ -72,13 +75,16 @@ export async function analyzeCropHealth(
     const result = await response.json();
 
     return {
-      healthScore: result.healthScore || 50,
+      healthScore: result.healthScore ?? 0,
       diagnosis: result.diagnosis || 'Unable to determine',
       identifiedIssues: result.identifiedIssues || [],
       recommendations: result.recommendations || [],
-      confidenceScore: result.confidenceScore || 0,
+      confidenceScore: result.confidenceScore ?? 0,
       cropType: result.cropType,
+      cropTypeCandidates: result.cropTypeCandidates,
       growthStage: result.growthStage,
+      isPlant: result.isPlant,
+      imageQuality: result.imageQuality,
       rawResponse: result,
     };
   } catch (error: any) {
@@ -122,8 +128,8 @@ export async function fileToJpegDataUrl(
   file: File,
   options: { maxDim?: number; quality?: number } = {}
 ): Promise<string> {
-  const maxDim = options.maxDim ?? 1280;
-  const quality = options.quality ?? 0.85;
+  const maxDim = options.maxDim ?? 2000;
+  const quality = options.quality ?? 0.9;
 
   // If we're not in a browser, fall back to raw base64 (e.g. for SSR/unit tests)
   if (typeof window === 'undefined' || typeof document === 'undefined') {

@@ -59,7 +59,7 @@ export default function CropDiagnostics({
       setSelectedFile(file);
       // Always convert to a normalized JPEG data URL so iOS HEIC and giant
       // phone photos work reliably across all OS / browsers.
-      const jpegDataUrl = await fileToJpegDataUrl(file, { maxDim: 1280, quality: 0.85 });
+      const jpegDataUrl = await fileToJpegDataUrl(file, { maxDim: 2000, quality: 0.9 });
       setSelectedImage(jpegDataUrl);
       setResult(null);
     } catch (err: any) {
@@ -304,6 +304,21 @@ export default function CropDiagnostics({
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
+              {/* No plant detected / low-quality image warning */}
+              {(result.isPlant === false || result.imageQuality === 'poor') && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-amber-800">
+                    <p className="font-semibold">
+                      {result.isPlant === false ? 'No crop detected in this image' : 'Image quality is low'}
+                    </p>
+                    <p className="mt-1">
+                      For accurate results, upload a clear, well-lit close-up of the plant&apos;s leaves or fruit, filling most of the frame.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Health Score */}
               <div className="bg-gray-50 rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -348,12 +363,17 @@ export default function CropDiagnostics({
 
                   <div className="flex-1">
                     <p className="text-gray-700">{result.diagnosis}</p>
-                    {result.cropType && (
+                    {result.cropType ? (
                       <p className="text-sm text-gray-500 mt-2">
                         <span className="font-medium">Detected Crop:</span> {result.cropType}
                         {result.growthStage && ` (${result.growthStage})`}
                       </p>
-                    )}
+                    ) : result.cropTypeCandidates && result.cropTypeCandidates.length > 0 ? (
+                      <p className="text-sm text-gray-500 mt-2">
+                        <span className="font-medium">Possible Crop:</span> {result.cropTypeCandidates.join(', ')}
+                        {result.growthStage && ` (${result.growthStage})`}
+                      </p>
+                    ) : null}
                     <p className="text-xs text-gray-400 mt-1">
                       Confidence: {result.confidenceScore}%
                     </p>

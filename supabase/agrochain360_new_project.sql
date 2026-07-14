@@ -303,6 +303,7 @@ CREATE TABLE IF NOT EXISTS traceability_events (
   previous_event_id UUID REFERENCES traceability_events(id) ON DELETE SET NULL,
   event_hash TEXT,
   compliance_data JSONB,
+  is_public BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

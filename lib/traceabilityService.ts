@@ -55,6 +55,8 @@ export interface TraceabilityEvent {
   ipfs_hash?: string;
   previous_event_id?: string;
   event_hash?: string;
+  /** When false, the event is internal-only and hidden from the public trace page. */
+  is_public?: boolean;
   created_at?: string;
 }
 
@@ -266,30 +268,56 @@ export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' |
   // Generate event hash for verification
   const eventHash = await generateEventHash(event);
 
-  // Strip AI-specific fields that aren't columns on traceability_events;
-  // append them to the description so they're preserved in the audit trail.
-  const { ai_disease, ai_confidence, ai_health_score, ai_treatment_rec, ...rest } = event;
-  let eventDescription = rest.event_description || '';
+  const { ai_disease, ai_confidence, ai_health_score, ai_treatment_rec, is_public, ...rest } = event;
+
+  // Human-readable AI summary preserved in the description so the audit trail
+  // survives even on older databases that lack the dedicated AI columns.
+  let aiSummary = '';
   if (ai_health_score !== undefined || ai_disease) {
-    const aiSummary = [
+    aiSummary = [
       ai_disease ? `AI Diagnosis: ${ai_disease}` : null,
       ai_health_score !== undefined ? `Health Score: ${ai_health_score}%` : null,
       ai_confidence !== undefined ? `Confidence: ${ai_confidence}%` : null,
       ai_treatment_rec ? `Treatment: ${ai_treatment_rec}` : null,
     ].filter(Boolean).join(' | ');
-    eventDescription = eventDescription ? `${eventDescription} | ${aiSummary}` : aiSummary;
   }
 
-  const { data, error } = await client
+  const basePayload: Record<string, unknown> = {
+    ...rest,
+    event_description: rest.event_description || '',
+    event_hash: eventHash,
+  };
+
+  // Preferred payload: store AI results and publish flag in dedicated columns.
+  const fullPayload: Record<string, unknown> = {
+    ...basePayload,
+    is_public: is_public ?? true,
+    ...(ai_disease !== undefined ? { ai_disease } : {}),
+    ...(ai_confidence !== undefined ? { ai_confidence } : {}),
+    ...(ai_health_score !== undefined ? { ai_health_score } : {}),
+    ...(ai_treatment_rec !== undefined ? { ai_treatment_rec } : {}),
+  };
+
+  let insertResult = await client
     .from('traceability_events')
-    .insert({
-      ...rest,
-      event_description: eventDescription,
-      event_hash: eventHash,
-    })
+    .insert(fullPayload)
     .select()
     .single();
 
+  // Fallback for databases missing the AI / is_public columns: fold the AI
+  // summary into the description and retry without the optional columns.
+  if (insertResult.error && /column .* does not exist/i.test(insertResult.error.message || '')) {
+    const legacyDescription = aiSummary
+      ? (basePayload.event_description ? `${basePayload.event_description} | ${aiSummary}` : aiSummary)
+      : basePayload.event_description;
+    insertResult = await client
+      .from('traceability_events')
+      .insert({ ...basePayload, event_description: legacyDescription })
+      .select()
+      .single();
+  }
+
+  const { data, error } = insertResult;
   if (error) throw error;
 
   // Automated Yield Prediction Logic - only when AI health score indicates a problem.
@@ -309,6 +337,7 @@ export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' |
         location_address: data.location_address,
         actor_type: 'admin',
         actor_name: 'AI_ENGINE',
+        is_public: false,
       });
 
     const { data: batch } = await client
@@ -327,6 +356,16 @@ export async function addTraceabilityEvent(event: Omit<TraceabilityEvent, 'id' |
   }
 
   return data;
+}
+
+// Admin control: publish an event to the public trace, or keep it internal-only.
+export async function setTraceabilityEventVisibility(eventId: string, isPublic: boolean): Promise<void> {
+  const client = checkSupabase();
+  const { error } = await client
+    .from('traceability_events')
+    .update({ is_public: isPublic })
+    .eq('id', eventId);
+  if (error) throw error;
 }
 
 // Get all events for a batch (full traceability chain)
@@ -430,8 +469,9 @@ export async function getTraceabilityByBatchCode(batchCodeOrContractId: string):
 
   if (!batch) return null;
 
-  // Get events
-  let events = await getBatchTraceability(batch.id!);
+  // Get events. Only published events are exposed on the public trace page;
+  // internal-only events (e.g. bid/pricing details) are filtered out here.
+  let events = (await getBatchTraceability(batch.id!)).filter(e => e.is_public !== false);
 
   // If we have a contract_id, also get growth_activities
   if (batch.contract_id) {

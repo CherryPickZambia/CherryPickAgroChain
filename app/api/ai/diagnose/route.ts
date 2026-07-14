@@ -1,33 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const CROP_ANALYSIS_PROMPT = `You are an expert agricultural scientist and crop health analyst. Analyze this crop image and provide a detailed assessment.
+const CROP_ANALYSIS_PROMPT = `You are an expert agronomist, plant pathologist, and crop health analyst. You carefully identify the crop/plant species first, then assess its health from the image.
 
-Respond in the following JSON format only:
+Work step by step internally, then respond with ONLY this JSON object:
 {
+  "isPlant": <true|false>,
+  "imageQuality": "<good|fair|poor>",
+  "cropType": "<specific crop/plant species if identifiable, else empty string>",
+  "cropTypeCandidates": ["<up to 3 plausible species, most likely first>"],
+  "growthStage": "<seedling|vegetative|flowering|fruiting|mature|unknown>",
   "healthScore": <number 0-100>,
-  "diagnosis": "<brief overall diagnosis>",
-  "cropType": "<identified crop type if visible>",
-  "growthStage": "<growth stage if identifiable>",
-  "identifiedIssues": [
-    "<issue 1>",
-    "<issue 2>"
-  ],
-  "recommendations": [
-    "<actionable recommendation 1>",
-    "<actionable recommendation 2>"
-  ],
+  "diagnosis": "<concise overall diagnosis in plain language>",
+  "identifiedIssues": ["<issue 1>", "<issue 2>"],
+  "recommendations": ["<actionable recommendation 1>", "<actionable recommendation 2>"],
   "confidenceScore": <number 0-100>
 }
 
-Consider:
-- Leaf color and texture (yellowing, browning, spots)
-- Signs of pest damage or disease
-- Nutrient deficiencies (nitrogen, phosphorus, potassium, etc.)
-- Water stress indicators
-- Overall plant vigor and growth patterns
-- Environmental stress signs
+Rules for accuracy (very important):
+- FIRST determine if the image actually shows a plant/crop. If it does not (e.g. a person, animal, object, blurry or dark photo), set "isPlant" to false, "confidenceScore" to a low value, "healthScore" to 0, and put a clear message in "diagnosis" such as "No crop detected — please upload a clear, well-lit photo of the plant, focusing on leaves/fruit.".
+- Identify the specific species when you can (e.g. "Maize (Zea mays)", "Tomato", "Cassava"). If genuinely unsure, leave "cropType" empty and list your best guesses in "cropTypeCandidates" with a lower "confidenceScore".
+- Do NOT invent diseases or issues. If the plant looks healthy, say so, use a high "healthScore", and keep "identifiedIssues" empty.
+- Calibrate "confidenceScore" honestly: high only when the crop and its condition are clearly visible; low for partial, blurry, distant, or ambiguous images.
+- If "imageQuality" is "poor", lower confidence and recommend retaking the photo.
 
-Provide practical, actionable recommendations suitable for smallholder farmers in Zambia.`;
+When a plant IS present, consider:
+- Leaf color and texture (yellowing, chlorosis, browning, necrosis, spots, mosaic patterns)
+- Pest damage and visible insects; fungal, bacterial, and viral disease signs
+- Nutrient deficiencies (nitrogen, phosphorus, potassium, magnesium, etc.)
+- Water stress (wilting, curling) and environmental/heat stress
+- Overall vigor and growth stage
+
+Give practical, low-cost, actionable recommendations suitable for smallholder farmers in Zambia.`;
 
 // MIME types that the OpenAI Vision API actually accepts.
 const SUPPORTED_VISION_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
@@ -91,7 +94,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: process.env.OPENAI_VISION_MODEL || 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -114,8 +117,8 @@ export async function POST(request: NextRequest) {
             ],
           },
         ],
-        max_tokens: 1000,
-        temperature: 0.3,
+        max_tokens: 1200,
+        temperature: 0.2,
         response_format: { type: 'json_object' },
       }),
     });
