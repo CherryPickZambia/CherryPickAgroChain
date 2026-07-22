@@ -32,6 +32,19 @@ interface AdminApprovalModalProps {
       date: string;
       notes?: string;
       photos?: string[];
+      location?: string;
+      logisticsDetails?: {
+        transportCompany?: string;
+        driverName?: string;
+        vehicleReg?: string;
+        contactNumber?: string;
+        dispatchLocation?: string;
+      };
+      fertilizerDetails?: {
+        brand?: string;
+        type?: string;
+        npkRatio?: string;
+      };
     }>;
     officerEvidence: {
       images: string[];
@@ -186,6 +199,49 @@ export default function AdminApprovalModal({
                               Quantity: <span style={{ fontWeight: 600, color: S.dark }}>{activity.quantity} {activity.unit}</span>
                             </p>
                           )}
+                          {activity.logisticsDetails && (
+                            <div className="mt-2 p-2.5 rounded-lg" style={{ background: S.bg, border: `1px solid ${S.cardBorder}` }}>
+                              <p className="text-[10px] uppercase tracking-wider font-bold mb-1.5" style={{ fontFamily: S.body, color: S.dark }}>Delivery Details</p>
+                              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs" style={{ fontFamily: S.body, color: S.muted }}>
+                                {activity.logisticsDetails.transportCompany && (
+                                  <p>Company: <span style={{ fontWeight: 600, color: S.dark }}>{activity.logisticsDetails.transportCompany}</span></p>
+                                )}
+                                {activity.logisticsDetails.driverName && (
+                                  <p>Driver: <span style={{ fontWeight: 600, color: S.dark }}>{activity.logisticsDetails.driverName}</span></p>
+                                )}
+                                {activity.logisticsDetails.vehicleReg && (
+                                  <p>Vehicle: <span style={{ fontWeight: 600, color: S.dark }}>{activity.logisticsDetails.vehicleReg}</span></p>
+                                )}
+                                {activity.logisticsDetails.contactNumber && (
+                                  <p>Phone: <span style={{ fontWeight: 600, color: S.dark }}>{activity.logisticsDetails.contactNumber}</span></p>
+                                )}
+                                {activity.logisticsDetails.dispatchLocation && (
+                                  <p className="col-span-2">From: <span style={{ fontWeight: 600, color: S.dark }}>{activity.logisticsDetails.dispatchLocation}</span></p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {activity.fertilizerDetails && (
+                            <div className="mt-2 p-2.5 rounded-lg" style={{ background: S.bg, border: `1px solid ${S.cardBorder}` }}>
+                              <p className="text-[10px] uppercase tracking-wider font-bold mb-1.5" style={{ fontFamily: S.body, color: S.dark }}>Fertilizer Details</p>
+                              <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs" style={{ fontFamily: S.body, color: S.muted }}>
+                                {activity.fertilizerDetails.brand && (
+                                  <p>Brand: <span style={{ fontWeight: 600, color: S.dark }}>{activity.fertilizerDetails.brand}</span></p>
+                                )}
+                                {activity.fertilizerDetails.type && (
+                                  <p>Type: <span style={{ fontWeight: 600, color: S.dark }}>{activity.fertilizerDetails.type}</span></p>
+                                )}
+                                {activity.fertilizerDetails.npkRatio && (
+                                  <p>NPK Ratio: <span style={{ fontWeight: 600, color: S.dark }}>{activity.fertilizerDetails.npkRatio}</span></p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {activity.location && (
+                            <p className="text-xs mt-1" style={{ fontFamily: S.body, color: S.muted }}>
+                              Location: <span style={{ fontWeight: 600, color: S.dark }}>{activity.location}</span>
+                            </p>
+                          )}
                           {activity.notes && (
                             <p className="text-xs mt-1 italic" style={{ fontFamily: S.body, color: S.muted }}>{activity.notes}</p>
                           )}
@@ -314,6 +370,16 @@ export default function AdminApprovalModal({
                           <p className="text-xs mt-0.5" style={{ fontFamily: S.body, color: S.muted }}>{activity.description}</p>
                           {activity.quantity && (
                             <p className="text-xs mt-0.5" style={{ fontFamily: S.body, color: S.muted }}>Qty: {activity.quantity} {activity.unit}</p>
+                          )}
+                          {activity.logisticsDetails && (
+                            <p className="text-xs mt-0.5" style={{ fontFamily: S.body, color: S.muted }}>
+                              Delivery: {[
+                                activity.logisticsDetails.transportCompany,
+                                activity.logisticsDetails.driverName && `Driver ${activity.logisticsDetails.driverName}`,
+                                activity.logisticsDetails.vehicleReg,
+                                activity.logisticsDetails.dispatchLocation && `from ${activity.logisticsDetails.dispatchLocation}`,
+                              ].filter(Boolean).join(' • ')}
+                            </p>
                           )}
                         </div>
                       </div>

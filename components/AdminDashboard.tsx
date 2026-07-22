@@ -84,6 +84,31 @@ interface ContractUI {
   farmer_id?: string;
 }
 
+// Farmer-entered activity as displayed to the admin during milestone review.
+// Mirrors the FarmActivity shape saved in milestones.metadata.farmer_activities.
+interface FarmerActivityView {
+  type: string;
+  description: string;
+  quantity?: number;
+  unit?: string;
+  date: string;
+  notes?: string;
+  photos?: string[];
+  location?: string;
+  logisticsDetails?: {
+    transportCompany?: string;
+    driverName?: string;
+    vehicleReg?: string;
+    contactNumber?: string;
+    dispatchLocation?: string;
+  };
+  fertilizerDetails?: {
+    brand?: string;
+    type?: string;
+    npkRatio?: string;
+  };
+}
+
 interface PendingVerification {
   id: string;
   milestone_id: string;
@@ -112,15 +137,8 @@ interface PendingVerification {
     unit: string;
     timestamp: string;
   }>;
-  // Farmer activities from traceability events
-  farmer_activities: Array<{
-    type: string;
-    description: string;
-    quantity?: number;
-    unit?: string;
-    date: string;
-    notes?: string;
-  }>;
+  // Farmer activities from milestone metadata / traceability events
+  farmer_activities: FarmerActivityView[];
   // AI analysis from officer verification
   officer_ai_analysis?: any;
 }
@@ -530,15 +548,16 @@ export default function AdminDashboard() {
       });
 
       // Fetch farmer traceability activities per contract (parallel)
-      const farmerActivitiesByContract: Record<string, Array<{ type: string; description: string; quantity?: number; unit?: string; date: string; notes?: string; photos?: string[] }>> = {};
+      const farmerActivitiesByContract: Record<string, FarmerActivityView[]> = {};
       await Promise.all(contractIds.map(async (contractId) => {
         try {
           const batches = await getBatchesByContract(contractId);
           if (batches && batches.length > 0) {
             const events = await getBatchTraceability(batches[0].id!);
-            // Filter to farmer-logged activities only (exclude system/admin/verifier events)
+            // Filter to farmer-logged activities (delivery events are logged with actor_type
+            // 'transporter' even though the farmer entered them, so include those too).
             const farmerEvents = events.filter((e: TraceabilityEvent) =>
-              e.actor_type === 'farmer' || !e.actor_type
+              e.actor_type === 'farmer' || e.actor_type === 'transporter' || !e.actor_type
             );
             farmerActivitiesByContract[contractId] = farmerEvents.map((e: TraceabilityEvent) => ({
               type: e.event_type || 'update',
@@ -548,6 +567,14 @@ export default function AdminDashboard() {
               date: e.created_at || new Date().toISOString(),
               notes: e.location_address ? `Location: ${e.location_address}` : undefined,
               photos: e.photos || undefined,
+              logisticsDetails: (e.vehicle_registration || e.driver_name || e.driver_phone || e.origin_location)
+                ? {
+                    driverName: e.driver_name,
+                    vehicleReg: e.vehicle_registration,
+                    contactNumber: e.driver_phone,
+                    dispatchLocation: e.origin_location,
+                  }
+                : undefined,
             }));
           }
         } catch (err) {
@@ -594,7 +621,7 @@ export default function AdminDashboard() {
           // Prefer activities the farmer logged through MilestoneCard (stored in milestone.metadata.farmer_activities).
           // Fall back to traceability events when present, otherwise empty array.
           farmer_activities: (() => {
-            const fromMetadata = Array.isArray(metadata.farmer_activities)
+            const fromMetadata: FarmerActivityView[] = Array.isArray(metadata.farmer_activities)
               ? metadata.farmer_activities.map((a: any) => ({
                   type: a.entryType === 'observation' ? (a.type || 'observation') : (a.type || 'activity'),
                   description: a.description || a.title || '',
@@ -603,6 +630,9 @@ export default function AdminDashboard() {
                   date: a.date || a.created_at || milestone.completed_date || new Date().toISOString(),
                   notes: a.notes || a.recommendations,
                   photos: a.evidencePhotos || a.photos || [],
+                  location: a.location,
+                  logisticsDetails: a.logisticsDetails || undefined,
+                  fertilizerDetails: a.fertilizerDetails || undefined,
                 }))
               : [];
             const fromTraceability = farmerActivitiesByContract[milestone.contract_id] || [];

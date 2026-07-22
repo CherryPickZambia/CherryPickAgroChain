@@ -1,7 +1,8 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
-import { X, Camera, CheckCircle, XCircle, Loader2, MapPin, Sparkles } from "lucide-react";
+import { X, Camera, CheckCircle, XCircle, Loader2, MapPin, Sparkles, Calendar, Truck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import EvidenceUploadModal, { type EvidenceAIAnalysis, IoTReading } from "./EvidenceUploadModal";
@@ -47,6 +48,44 @@ export default function OfficerVerificationModal({
   } | null>(null);
   const [officerNotes, setOfficerNotes] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Farmer-entered activities saved by MilestoneCard in milestones.metadata.farmer_activities
+  const farmerActivities: Array<{
+    type: string;
+    description: string;
+    quantity?: number;
+    unit?: string;
+    date: string;
+    notes?: string;
+    photos: string[];
+    location?: string;
+    logisticsDetails?: {
+      transportCompany?: string;
+      driverName?: string;
+      vehicleReg?: string;
+      contactNumber?: string;
+      dispatchLocation?: string;
+    };
+    fertilizerDetails?: {
+      brand?: string;
+      type?: string;
+      npkRatio?: string;
+    };
+  }> = Array.isArray(milestone.metadata?.farmer_activities)
+    ? milestone.metadata.farmer_activities.map((a: any) => ({
+        type: a.type || (a.entryType === 'observation' ? 'observation' : 'activity'),
+        description: a.description || a.title || '',
+        quantity: a.quantity,
+        unit: a.unit,
+        date: a.date || a.created_at || milestone.metadata?.submitted_at || new Date().toISOString(),
+        notes: a.notes || a.recommendations,
+        photos: a.evidencePhotos || a.photos || [],
+        location: a.location,
+        logisticsDetails: a.logisticsDetails || undefined,
+        fertilizerDetails: a.fertilizerDetails || undefined,
+      }))
+    : [];
 
   const CHECKLIST_ITEMS = [
     { id: 'soil_moisture', label: 'Soil Moisture Adequate' },
@@ -197,6 +236,98 @@ export default function OfficerVerificationModal({
                     <p className="font-medium">{milestone.contract?.farmer?.location_address || 'Unknown Location'}</p>
                   </div>
                 </div>
+              </div>
+
+              {/* Farmer Submission */}
+              <div className="rounded-2xl p-4 mb-6" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.08)' }}>
+                <h3 className="mb-3" style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, color: '#0C2D3A' }}>
+                  Farmer Submission ({farmerActivities.length})
+                </h3>
+                {farmerActivities.length === 0 ? (
+                  <p className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
+                    No activity details were submitted by the farmer for this milestone.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {farmerActivities.map((activity, index) => (
+                      <div key={index} className="p-3 rounded-xl bg-white" style={{ border: '1px solid rgba(12,45,58,0.08)' }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, color: '#0C2D3A' }}>
+                            {activity.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                          </span>
+                          <span className="text-xs flex items-center gap-1" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
+                            <Calendar className="h-3 w-3" />
+                            {new Date(activity.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <p className="text-sm" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>{activity.description}</p>
+                        {activity.quantity && (
+                          <p className="text-xs mt-1" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
+                            Quantity: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.quantity} {activity.unit}</span>
+                          </p>
+                        )}
+                        {activity.logisticsDetails && (
+                          <div className="mt-2 p-2.5 rounded-lg" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.08)' }}>
+                            <p className="text-[10px] uppercase tracking-wider font-bold mb-1.5 flex items-center gap-1" style={{ fontFamily: "'Manrope', sans-serif", color: '#0C2D3A' }}>
+                              <Truck className="h-3 w-3" />
+                              Delivery Details
+                            </p>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
+                              {activity.logisticsDetails.transportCompany && (
+                                <p>Company: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.logisticsDetails.transportCompany}</span></p>
+                              )}
+                              {activity.logisticsDetails.driverName && (
+                                <p>Driver: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.logisticsDetails.driverName}</span></p>
+                              )}
+                              {activity.logisticsDetails.vehicleReg && (
+                                <p>Vehicle: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.logisticsDetails.vehicleReg}</span></p>
+                              )}
+                              {activity.logisticsDetails.contactNumber && (
+                                <p>Phone: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.logisticsDetails.contactNumber}</span></p>
+                              )}
+                              {activity.logisticsDetails.dispatchLocation && (
+                                <p className="col-span-2">From: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.logisticsDetails.dispatchLocation}</span></p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {activity.fertilizerDetails && (
+                          <div className="mt-2 p-2.5 rounded-lg" style={{ background: '#F7F9FB', border: '1px solid rgba(12,45,58,0.08)' }}>
+                            <p className="text-[10px] uppercase tracking-wider font-bold mb-1.5" style={{ fontFamily: "'Manrope', sans-serif", color: '#0C2D3A' }}>Fertilizer Details</p>
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
+                              {activity.fertilizerDetails.brand && (
+                                <p>Brand: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.fertilizerDetails.brand}</span></p>
+                              )}
+                              {activity.fertilizerDetails.type && (
+                                <p>Type: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.fertilizerDetails.type}</span></p>
+                              )}
+                              {activity.fertilizerDetails.npkRatio && (
+                                <p>NPK Ratio: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.fertilizerDetails.npkRatio}</span></p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {activity.location && (
+                          <p className="text-xs mt-1" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>
+                            Location: <span style={{ fontWeight: 600, color: '#0C2D3A' }}>{activity.location}</span>
+                          </p>
+                        )}
+                        {activity.notes && (
+                          <p className="text-xs mt-1 italic" style={{ fontFamily: "'Manrope', sans-serif", color: '#5A7684' }}>{activity.notes}</p>
+                        )}
+                        {activity.photos.length > 0 && (
+                          <div className="grid grid-cols-3 gap-1 mt-2">
+                            {activity.photos.map((photo, pi) => (
+                              <div key={pi} className="aspect-square rounded-lg overflow-hidden cursor-pointer" onClick={() => setSelectedImage(photo)}>
+                                <img src={photo} alt={`Farmer photo ${pi + 1}`} className="w-full h-full object-cover" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Evidence Section */}
@@ -358,6 +489,23 @@ export default function OfficerVerificationModal({
           </motion.div>
         </div>
       </AnimatePresence>
+
+      {/* Image Lightbox */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black/90 z-[10001] flex items-center justify-center p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img src={selectedImage} alt="Full size" className="max-w-full max-h-full object-contain rounded-xl" />
+          <button
+            onClick={() => setSelectedImage(null)}
+            className="absolute top-4 right-4 p-2 rounded-full transition-colors"
+            style={{ background: 'rgba(255,255,255,0.15)' }}
+          >
+            <X className="h-6 w-6 text-white" />
+          </button>
+        </div>
+      )}
 
       {/* Evidence Upload Modal */}
       <EvidenceUploadModal
